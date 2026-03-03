@@ -1,20 +1,20 @@
 {
   "properties" : { },
-  "id" : "64ba47c2a11346e1972c63245cbf962c",
+  "id" : "530c445f0e69494581d1420cd5311440",
   "script" : null,
-  "groupId" : "4f0230049d7e4f39b1e0897cc0f46f9a",
-  "name" : "修改登录状态",
+  "groupId" : "6f106ebdee21489db34b956f7770ff03",
+  "name" : "获取最后一版代码",
   "createTime" : null,
-  "updateTime" : 1651932570354,
-  "lock" : "0",
+  "updateTime" : 1710082965250,
+  "lock" : null,
   "createBy" : null,
   "updateBy" : null,
-  "path" : "/change/login/status",
+  "path" : "/getLastCode",
   "method" : "GET",
   "parameters" : [ ],
   "options" : [ {
     "name" : "permission",
-    "value" : "user:change:login:status",
+    "value" : "component:get:last:code",
     "description" : "允许拥有该权限的访问",
     "required" : false,
     "dataType" : "String",
@@ -34,9 +34,11 @@
   "responseBodyDefinition" : null
 }
 ================================
-import cn.dev33.satoken.stp.StpUtil
-
-if(isLogin == '1'){
-    StpUtil.logout(id);
-}
-return db.table("sys_user").column("isLogin", isLogin).where().eq("id",id).update()
+return db.selectOne("""
+    select 
+        source_code,
+        create_date,
+        (select username from sys_user where id = sdch.create_by) create_by
+    from sys_dynamic_component_history sdch where component_id = #{componentId}
+    order by create_date desc limit 1
+""")

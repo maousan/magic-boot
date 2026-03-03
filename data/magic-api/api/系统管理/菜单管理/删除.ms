@@ -5,10 +5,10 @@
   "groupId" : "67b2ce258e24491194b74992958c74aa",
   "name" : "删除",
   "createTime" : null,
-  "updateTime" : 1665500654624,
+  "updateTime" : 1712806455648,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : "guyi",
+  "updateBy" : null,
   "path" : "/delete",
   "method" : "DELETE",
   "parameters" : [ {
@@ -130,12 +130,28 @@
   }
 }
 ================================
-import '@get:/system/menu/cache/delete' as cacheDelete;
+import org.ssssssss.magicapi.modules.db.cache.SqlCache
+var userIds = db.select("""
+    select user_id from sys_user_role where role_id in (
+        select role_id from sys_role_menu where menu_id = #{id}
+    ) and user_id is not null
+""")
+for(item in userIds){
+    SqlCache.delete(`permissions:${item.userId}`)
+}
+SqlCache.delete('permissions:1')
+
+let recursionDelete = (list) => {
+    list.forEach(it => {
+        db.table('sys_role_menu').where().eq("menu_id",it.id).delete();
+        db.table("sys_menu").logic().where().eq("id",it.id).delete()
+        let children = db.select("select id from sys_menu where is_del = 0 and pid = #{it.id}")
+        if(children && children.size() > 0){
+            recursionDelete(children)
+        }
+    })
+}
+recursionDelete(db.select("select id from sys_menu where is_del = 0 and pid = #{id}"))
 
 db.table('sys_role_menu').where().eq("menu_id",id).delete();
-var result = db.table("sys_menu").logic().where().eq("id",id).delete();
-
-var menuId = id
-cacheDelete();
-
-return result
+return db.table("sys_menu").logic().where().eq("id",id).delete();
