@@ -1,0 +1,157 @@
+version: '3.8'
+
+services:
+  # MySQL 8.0 数据库服务
+  mysql:
+    image: mysql:8.0
+    container_name: magic-boot-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: magic-boot
+      MYSQL_USER: magic
+      MYSQL_PASSWORD: Magic@2026
+      # 字符集和排序规则
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      # 数据持久化
+      - mysql_data:/var/lib/mysql
+      # 初始化脚本（如果存在）
+      - ./db:/docker-entrypoint-initdb.d:ro
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+      - --max_connections=1000
+      - --max_allowed_packet=64M
+    networks:
+      - magic-boot-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Redis 缓存服务
+  redis:
+    image: redis:7-alpine
+    container_name: magic-boot-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      # Redis数据持久化
+      - redis_data:/data
+    command:
+      - redis-server
+      - --appendonly yes
+      - --requirepass Magic@Redis2026
+      - --maxmemory 512mb
+      - --maxmemory-policy allkeys-lru
+    networks:
+      - magic-boot-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "Magic@Redis2026", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Redis Commander (Redis可视化管理工具，可选)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: magic-boot-redis-ui
+    restart: unless-stopped
+    environment:
+      - REDIS_HOSTS=local:redis:6379:0:Magic@Redis2026
+    ports:
+      - "8082:8081"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - magic-boot-network
+    profiles:
+      - tools  # 使用 --profile tools 启用
+
+  # Spring Boot 应用服务
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: magic-boot-app
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      # Spring 环境
+      - SPRING_PROFILES_ACTIVE=dev
+      # MySQL 数据库配置
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/magic-boot?useSSL=false&zeroDateTimeBehavior=convertToNull&useUnicode=true&characterEncoding=UTF8&autoReconnect=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+      - SPRING_DATASOURCE_USERNAME=magic
+      - SPRING_DATASOURCE_PASSWORD=Magic@2026
+      # Redis 配置（如需要，请取消注释并在pom.xml添加依赖）
+      # - SPRING_DATA_REDIS_HOST=redis
+      # - SPRING_DATA_REDIS_PORT=6379
+      # - SPRING_DATA_REDIS_PASSWORD=Magic@Redis2026
+      # - SPRING_DATA_REDIS_DATABASE=0
+      # JVM 配置
+      - JAVA_OPTS=-Xms512m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+    volumes:
+      # Magic-API 资源目录（支持热更新）
+      - ./data/magic-api:/app/data/magic-api:rw
+      # 文件上传目录
+      - ./uploads:/app/uploads:rw
+      # 日志目录
+      - ./logs:/app/logs:rw
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - magic-boot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 60s
+
+  # Nginx 反向代理（可选，用于生产环境）
+  nginx:
+    image: nginx:alpine
+    container_name: magic-boot-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - magic-boot-network
+    profiles:
+      - production  # 使用 --profile production 启用
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  magic-boot-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16

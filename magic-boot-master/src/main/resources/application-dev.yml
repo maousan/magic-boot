@@ -4,8 +4,8 @@ server:
 
 spring:
   datasource:
-    username: root
-    password: 123456789
+    username: magic
+    password: Magic@2026
 
 upload:
   dir: /Users/lvjinze/mb/

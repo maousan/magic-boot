@@ -1,0 +1,19 @@
+{
+  "properties" : { },
+  "id" : "wshfzngtoe8cgynzyuc45m28crzvbdmq",
+  "script" : null,
+  "groupId" : "datasource:0",
+  "name" : "bamboo",
+  "createTime" : 1767272277377,
+  "updateTime" : null,
+  "lock" : null,
+  "createBy" : "admin",
+  "updateBy" : null,
+  "url" : "jdbc:mysql://192.168.2.48:3306/bamboo-scrm?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&allowMultiQueries=true",
+  "username" : "root",
+  "password" : "5aeef638e4fce25fc8351bd54c77aa83",
+  "key" : "bamboo",
+  "maxRows" : -1,
+  "driverClassName" : "com.mysql.cj.jdbc.Driver",
+  "type" : "com.alibaba.druid.pool.DruidDataSource"
+}

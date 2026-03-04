@@ -1,0 +1,19 @@
+{
+  "properties" : { },
+  "id" : "6xdlhstuhqigfsfbmtnumazwyduo8rwh",
+  "script" : null,
+  "groupId" : "datasource:0",
+  "name" : "hscmp",
+  "createTime" : 1767272277386,
+  "updateTime" : null,
+  "lock" : null,
+  "createBy" : "admin",
+  "updateBy" : null,
+  "url" : "jdbc:oracle:thin:@192.168.2.99:1521:ORCL",
+  "username" : "hscmp",
+  "password" : "3Vo3m!8kk<>",
+  "key" : "hscmp",
+  "maxRows" : -1,
+  "driverClassName" : "oracle.jdbc.OracleDriver",
+  "type" : "com.alibaba.druid.pool.DruidDataSource"
+}

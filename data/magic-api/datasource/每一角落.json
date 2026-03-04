@@ -1,0 +1,19 @@
+{
+  "properties" : { },
+  "id" : "cpcex0qnz92xjwvslk4eoar0vuyli3pb",
+  "script" : null,
+  "groupId" : "datasource:0",
+  "name" : "每一角落",
+  "createTime" : 1767272277428,
+  "updateTime" : 1772518114435,
+  "lock" : null,
+  "createBy" : "admin",
+  "updateBy" : "admin",
+  "url" : "jdbc:mysql://192.168.2.90:3306/erp?socketTimeout=60000&useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8",
+  "username" : "root",
+  "password" : "Corners#2022",
+  "key" : "myjl",
+  "maxRows" : -1,
+  "driverClassName" : "com.mysql.cj.jdbc.Driver",
+  "type" : "com.alibaba.druid.pool.DruidDataSource"
+}

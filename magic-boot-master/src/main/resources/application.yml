@@ -17,9 +17,9 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     type: com.alibaba.druid.pool.DruidDataSource
-    url: jdbc:mysql://localhost/magic-boot?useSSL=false&zeroDateTimeBehavior=convertToNull&useUnicode=true&characterEncoding=UTF8&autoReconnect=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
-    username: root
-    password: root
+    url: jdbc:mysql://192.168.2.90/magic-boot?useSSL=false&zeroDateTimeBehavior=convertToNull&useUnicode=true&characterEncoding=UTF8&autoReconnect=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+    username: magic
+    password: Magic@2026
     druid:
       # 下面为连接池的补充设置，应用到上面所有数据源中
       # 初始化大小，最小，最大
@@ -85,9 +85,25 @@ magic-api:
   crud: # CRUD相关配置
     logic-delete-column: is_del #逻辑删除列
     logic-delete-value: 1 #逻辑删除值
-#  security:
-#    username: admin
-#    password: 123456
+  security:
+    username: admin
+    password: admin123456
+#  swagger:
+#    version: 1.0
+#    description: MagicAPI 接口信息
+#    title: MagicAPI Swagger Docs
+#    name: MagicAPI 接口
+#    location: /v2/api-docs/magic-api/swagger2.json
+  springdoc:
+    version: 1.0
+    description: MagicAPI 接口信息
+    title: MagicAPI Swagger Docs
+    name: MagicAPI 接口
+    location: /v2/api-docs/magic-api/swagger2.json
+    groupName: magic-api
+  date-pattern:
+    - yyyy-MM-dd
+    - yyyy-MM-dd HH:mm:ss
 
 # Sa-Token配置
 sa-token:
@@ -115,3 +131,25 @@ oss:
   roleSessionName: ""
   bucket: ""
   bucketDomain: ""
+
+forest:
+  variables:
+    username: foo      # 声明全局变量，变量名: username，变量值: foo
+    userpwd: bar       # 声明全局变量，变量名: userpwd，变量值: bar
+  backend: okhttp3             # 后端HTTP框架（默认为 okhttp3）
+  max-connections: 1000        # 连接池最大连接数（默认为 500）
+  max-route-connections: 500   # 每个路由的最大连接数（默认为 500）
+  max-request-queue-size: 100  # [自v1.5.22版本起可用] 最大请求等待队列大小
+  max-async-thread-size: 300   # [自v1.5.21版本起可用] 最大异步线程数
+  max-async-queue-size: 16     # [自v1.5.22版本起可用] 最大异步线程池队列大小
+  timeout: 3000                # [已不推荐使用] 请求超时时间，单位为毫秒（默认为 3000）
+  connect-timeout: 3000        # 连接超时时间，单位为毫秒（默认为 timeout）
+  read-timeout: 3000           # 数据读取超时时间，单位为毫秒（默认为 timeout）
+  max-retry-count: 0           # 请求失败后重试次数（默认为 0 次不重试）
+  ssl-protocol: TLS            # 单向验证的HTTPS的默认TLS协议（默认为 TLS）
+  log-enabled: true            # 打开或关闭日志（默认为 true）
+  log-request: true            # 打开/关闭Forest请求日志（默认为 true）
+  log-response-status: true    # 打开/关闭Forest响应状态日志（默认为 true）
+  log-response-content: true   # 打开/关闭Forest响应内容日志（默认为 false）
+  async-mode: platform         # [自v1.5.27版本起可用] 异步模式（默认为 platform）
+

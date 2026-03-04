@@ -1,0 +1,19 @@
+{
+  "properties" : { },
+  "id" : "z4eg1y5wyvjolemdtish3zeyxpiwxiop",
+  "script" : null,
+  "groupId" : "datasource:0",
+  "name" : "仓库物流库",
+  "createTime" : 1767272277417,
+  "updateTime" : null,
+  "lock" : null,
+  "createBy" : "admin",
+  "updateBy" : null,
+  "url" : "jdbc:jtds:sqlserver://192.168.2.195:16532;DatabaseName=TRADE_WMS_MISDB",
+  "username" : "TJMIS",
+  "password" : "TongJian@2014",
+  "key" : "wms",
+  "maxRows" : -1,
+  "driverClassName" : "net.sourceforge.jtds.jdbc.Driver",
+  "type" : "com.alibaba.druid.pool.DruidDataSource"
+}

@@ -1,0 +1,25 @@
+{
+  "properties" : {
+    "host" : "127.0.0.1",
+    "port" : "6379",
+    "password" : "zintis",
+    "database" : "3",
+    "pool" : {
+      "max-active" : "100",
+      "max-idle" : "100",
+      "min-idle" : "100",
+      "max-wait" : "1000"
+    }
+  },
+  "id" : "a12f66e26a4c47b5998fe61f834280e5",
+  "script" : null,
+  "groupId" : "redis:0",
+  "name" : "redis",
+  "createTime" : 1772600888470,
+  "updateTime" : null,
+  "lock" : null,
+  "createBy" : "admin",
+  "updateBy" : null,
+  "key" : "redis",
+  "type" : "single"
+}

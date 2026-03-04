@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "dd1aa7ab04da4b30b39e28e1f47e164d",
+  "name" : "任务管理",
+  "type" : "task",
+  "parentId" : "0",
+  "path" : "/job",
+  "createTime" : null,
+  "updateTime" : 1772600997841,
+  "createBy" : null,
+  "updateBy" : "admin",
+  "paths" : [ ],
+  "options" : [ ]
+}

@@ -1,0 +1,19 @@
+{
+  "properties" : { },
+  "id" : "tsenaxunnaidmeq5s4k4fpo4c1tdbq3i",
+  "script" : null,
+  "groupId" : "datasource:0",
+  "name" : "starrocks",
+  "createTime" : 1767272277409,
+  "updateTime" : 1747731519568,
+  "lock" : null,
+  "createBy" : "admin",
+  "updateBy" : "admin",
+  "url" : "jdbc:mysql://192.168.2.92:9030/erp?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&allowMultiQueries=true",
+  "username" : "admin",
+  "password" : "admin",
+  "key" : "starrocks",
+  "maxRows" : -1,
+  "driverClassName" : "com.mysql.cj.jdbc.Driver",
+  "type" : "com.alibaba.druid.pool.DruidDataSource"
+}

@@ -1,0 +1,19 @@
+{
+  "properties" : { },
+  "id" : "sqw33wrbumiinve9gifrq5ajvrissfnd",
+  "script" : null,
+  "groupId" : "datasource:0",
+  "name" : "readhscmp",
+  "createTime" : 1767272277398,
+  "updateTime" : null,
+  "lock" : null,
+  "createBy" : "admin",
+  "updateBy" : null,
+  "url" : "jdbc:oracle:thin:@192.168.2.99:1521:ORCL",
+  "username" : "readhscmp",
+  "password" : "S6F60?NZ",
+  "key" : "readhscmp",
+  "maxRows" : -1,
+  "driverClassName" : "oracle.jdbc.OracleDriver",
+  "type" : "com.alibaba.druid.pool.DruidDataSource"
+}

@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "6d28d3be72754dc090a8b7e5cc935b53",
+  "name" : "AI",
+  "type" : "api",
+  "parentId" : "0",
+  "path" : "/ai",
+  "createTime" : null,
+  "updateTime" : 1772516524771,
+  "createBy" : null,
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}
