@@ -23,6 +23,33 @@ public class JobInfo extends PathMagicEntity {
 	 */
 	private String description;
 
+    // 新增字段用于 Quartz 高级功能
+    /**
+     * 错过触发策略
+     */
+    private MisfirePolicy misfirePolicy = MisfirePolicy.SMART;
+
+    /**
+     * 是否允许并发执行
+     */
+    private boolean concurrent = false;
+
+    /**
+     * 依赖的任务ID
+     */
+    private String dependsOn;
+
+    /**
+     * 最大重试次数
+     */
+    private int maxRetry = 0;
+
+    /**
+     * 超时时间(秒)
+     */
+    private long timeout = 0;
+
+
 
 	public String getCron() {
 		return cron;
@@ -48,12 +75,77 @@ public class JobInfo extends PathMagicEntity {
 		this.description = description;
 	}
 
+
+    public enum MisfirePolicy {
+        SMART("智能处理：立即执行一次"),
+        IGNORE("忽略：不做任何处理"),
+        FIRE_ONCE_NOW("立即执行一次");
+
+        private final String description;
+
+        MisfirePolicy(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
+
+
+
+
+    public MisfirePolicy getMisfirePolicy() {
+        return misfirePolicy;
+    }
+
+    public void setMisfirePolicy(MisfirePolicy misfirePolicy) {
+        this.misfirePolicy = misfirePolicy;
+    }
+
+    public boolean isConcurrent() {
+        return concurrent;
+    }
+
+    public void setConcurrent(boolean concurrent) {
+        this.concurrent = concurrent;
+    }
+
+    public String getDependsOn() {
+        return dependsOn;
+    }
+
+    public void setDependsOn(String dependsOn) {
+        this.dependsOn = dependsOn;
+    }
+
+    public int getMaxRetry() {
+        return maxRetry;
+    }
+
+    public void setMaxRetry(int maxRetry) {
+        this.maxRetry = maxRetry;
+    }
+
+    public long getTimeout() {
+        return timeout;
+    }
+
+    public void setTimeout(long timeout) {
+        this.timeout = timeout;
+    }
+
 	public JobInfo copy() {
 		JobInfo info = new JobInfo();
 		super.copyTo(info);
 		info.setCron(this.cron);
 		info.setEnabled(this.enabled);
 		info.setDescription(this.description);
+		info.setMisfirePolicy(this.misfirePolicy);
+		info.setConcurrent(this.concurrent);
+		info.setDependsOn(this.dependsOn);
+		info.setMaxRetry(this.maxRetry);
+		info.setTimeout(this.timeout);
 		return info;
 	}
 
@@ -76,11 +168,17 @@ public class JobInfo extends PathMagicEntity {
 				Objects.equals(name, taskInfo.name) &&
 				Objects.equals(cron, taskInfo.cron) &&
 				Objects.equals(description, taskInfo.description) &&
-				Objects.equals(enabled, taskInfo.enabled);
+				Objects.equals(enabled, taskInfo.enabled) &&
+				Objects.equals(misfirePolicy, taskInfo.misfirePolicy) &&
+				Objects.equals(concurrent, taskInfo.concurrent) &&
+				Objects.equals(dependsOn, taskInfo.dependsOn) &&
+				Objects.equals(maxRetry, taskInfo.maxRetry) &&
+				Objects.equals(timeout, taskInfo.timeout);
+
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, path, script, name, groupId, cron, enabled, description);
+		return Objects.hash(id, path, script, name, groupId, cron, enabled, description, misfirePolicy, concurrent, dependsOn, maxRetry, timeout);
 	}
 }

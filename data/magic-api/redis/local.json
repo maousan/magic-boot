@@ -14,12 +14,12 @@
   "id" : "a12f66e26a4c47b5998fe61f834280e5",
   "script" : null,
   "groupId" : "redis:0",
-  "name" : "redis",
+  "name" : "local",
   "createTime" : 1772600888470,
-  "updateTime" : null,
+  "updateTime" : 1772612776958,
   "lock" : null,
   "createBy" : "admin",
-  "updateBy" : null,
-  "key" : "redis",
+  "updateBy" : "admin",
+  "key" : "local",
   "type" : "single"
 }

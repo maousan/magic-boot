@@ -62,7 +62,12 @@
         <dependency>
             <groupId>org.ssssssss</groupId>
             <artifactId>magic-api-plugin-redis</artifactId>
-            <version>2.2.2</version>
+            <version>${magic-api.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.ssssssss</groupId>
+            <artifactId>magic-api-plugin-liteflow</artifactId>
+            <version>${magic-api.version}</version>
         </dependency>
         <dependency>
             <groupId>mysql</groupId>
@@ -84,11 +89,11 @@
             <artifactId>sa-token-spring-boot3-starter</artifactId>
             <version>${sa-token.version}</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>org.ssssssss</groupId>-->
-<!--            <artifactId>magic-api-plugin-task</artifactId>-->
-<!--            <version>${magic-api.version}</version>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>org.ssssssss</groupId>
+            <artifactId>magic-api-plugin-job</artifactId>
+            <version>${magic-api.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>

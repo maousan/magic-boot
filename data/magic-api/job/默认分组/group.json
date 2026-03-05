@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "4a3c0ad862bb4b5fb16c4c673b5a75a3",
+  "name" : "默认分组",
+  "type" : "job",
+  "parentId" : "0",
+  "path" : "/job",
+  "createTime" : null,
+  "updateTime" : 1772601685807,
+  "createBy" : null,
+  "updateBy" : "admin",
+  "paths" : [ ],
+  "options" : [ ]
+}

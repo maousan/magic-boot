@@ -21,7 +21,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-quartz</artifactId>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>cn.hutool</groupId>
@@ -34,30 +33,9 @@
             <optional>true</optional>
         </dependency>
     </dependencies>
-    
-    <profiles>
-        <!-- 开发环境：跳过前端构建，直接使用已有的 dist 文件 -->
-        <profile>
-            <id>dev</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <skip.npm>true</skip.npm>
-            </properties>
-        </profile>
-        <!-- 生产环境：执行完整的前端构建 -->
-        <profile>
-            <id>prod</id>
-            <properties>
-                <skip.npm>false</skip.npm>
-            </properties>
-        </profile>
-    </profiles>
-    
+
     <build>
         <plugins>
-            <!-- npm install && npm run build -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
@@ -96,8 +74,6 @@
                     </execution>
                 </executions>
             </plugin>
-
-
             <plugin>
                 <artifactId>maven-resources-plugin</artifactId>
                 <version>3.2.0</version>

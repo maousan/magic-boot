@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "c81a0bceabdf4f2a965b46fdc22e3288",
+  "name" : "示例",
+  "type" : "liteflow-chain",
+  "parentId" : "0",
+  "path" : "/test",
+  "createTime" : 1772616766375,
+  "updateTime" : 1772673239395,
+  "createBy" : "admin",
+  "updateBy" : "admin",
+  "paths" : [ ],
+  "options" : [ ]
+}

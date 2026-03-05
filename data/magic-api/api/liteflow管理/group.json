@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "dc4936b5a9a2456282ab5c4aaa046625",
+  "name" : "liteflow管理",
+  "type" : "api",
+  "parentId" : "0",
+  "path" : "liteflow",
+  "createTime" : 1772679529231,
+  "updateTime" : null,
+  "createBy" : "admin",
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

@@ -10,9 +10,15 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.ssssssss.magicapi.core.config.MagicPluginConfiguration;
 import org.ssssssss.magicapi.core.model.Plugin;
 import org.ssssssss.magicapi.core.web.MagicControllerRegister;
-import org.ssssssss.magicapi.job.service.JobInfoMagicResourceStorage;
-import org.ssssssss.magicapi.job.service.JobMagicDynamicRegistry;
+import org.ssssssss.magicapi.job.repository.JobLogRepository;
+import org.ssssssss.magicapi.job.service.*;
+import org.ssssssss.magicapi.job.web.ExtendedMagicJobController;
 import org.ssssssss.magicapi.job.web.MagicJobController;
+
+import org.quartz.Scheduler;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import javax.sql.DataSource;
 
 @Configuration
 @EnableConfigurationProperties(MagicJobConfig.class)
@@ -20,6 +26,9 @@ import org.ssssssss.magicapi.job.web.MagicJobController;
 public class MagicAPIJobConfiguration implements MagicPluginConfiguration {
 
 	private final MagicJobConfig config;
+	
+	@Autowired
+    private Scheduler scheduler;
 
 	public MagicAPIJobConfiguration(MagicJobConfig config) {
 		this.config = config;
@@ -33,20 +42,13 @@ public class MagicAPIJobConfiguration implements MagicPluginConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean
-	public JobMagicDynamicRegistry jobMagicDynamicRegistry(JobInfoMagicResourceStorage jobInfoMagicResourceStorage) {
-		MagicJobConfig.Shutdown shutdown = config.getShutdown();
-		ThreadPoolTaskScheduler poolTaskScheduler = null;
-		if(config.isEnable()){
-			poolTaskScheduler = new ThreadPoolTaskScheduler();
-			poolTaskScheduler.setPoolSize(config.getPool().getSize());
-			poolTaskScheduler.setWaitForTasksToCompleteOnShutdown(shutdown.isAwaitTermination());
-			if(shutdown.getAwaitTerminationPeriod() != null){
-				poolTaskScheduler.setAwaitTerminationSeconds((int) shutdown.getAwaitTerminationPeriod().getSeconds());
-			}
-			poolTaskScheduler.setThreadNamePrefix(config.getThreadNamePrefix());
-			poolTaskScheduler.initialize();
+	public JobMagicDynamicRegistryForQuartz jobMagicDynamicRegistry(JobInfoMagicResourceStorage jobInfoMagicResourceStorage) {
+		if (config.isEnable()) {
+			return new JobMagicDynamicRegistryForQuartz(jobInfoMagicResourceStorage, scheduler, config.isLog());
+		} else {
+			// 如果禁止 job 功能，返回一个空实现的调度器
+			return new JobMagicDynamicRegistryForQuartz(jobInfoMagicResourceStorage, null, config.isLog());
 		}
-		return new JobMagicDynamicRegistry(jobInfoMagicResourceStorage, poolTaskScheduler, config.isLog());
 	}
 
 	@Override
@@ -56,6 +58,29 @@ public class MagicAPIJobConfiguration implements MagicPluginConfiguration {
 
 	@Override
 	public MagicControllerRegister controllerRegister() {
-		return (mapping, configuration) -> mapping.registerController(new MagicJobController(configuration));
+		return (mapping, configuration) -> {
+			mapping.registerController(new MagicJobController(configuration));
+		};
 	}
+
+
+	@Bean
+    public ExtendedMagicJobController extendedMagicJobController(
+            JobMagicDynamicRegistryForQuartz registry,
+            JobLogService jobLogService,
+            Scheduler scheduler) {
+        return new ExtendedMagicJobController(registry, jobLogService, scheduler);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public JobLogRepository jobLogRepository(DataSource dataSource) {
+        return new JobLogRepository(dataSource);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public JobLogService jobLogService(JobLogRepository jobLogRepository, Scheduler scheduler) {
+        return new JobLogService(jobLogRepository, scheduler);
+    }
 }

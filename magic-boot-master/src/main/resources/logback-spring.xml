@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="false">
+    <!--定义日志文件的存储地址 -->
+    <property name="LOG_HOME" value="./logs"/>
+    <property name="APP_NAME" value="magic-boot"/>
+    <property name="MAX_HISTORY" value="14"/>
+    <property name="MAX_FILE_SIZE" value="100MB"/>
+    <property name="CLEAN_HISTORY_ON_START" value="true"/>
+    <property name="TOTAL_SIZE_CAP" value="2GB"/>
+
+    <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter"/>
+    <conversionRule conversionWord="wex"
+                    converterClass="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter"/>
+    <conversionRule conversionWord="wEx"
+                    converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter"/>
+
+    <!--
+        控制台日志格式（开发环境）：
+        - 时间精简到秒级，毫秒数只保留2位
+        - ReqId: X-Request-Id（业务请求ID）
+        - TraceId/SpanId: 链路追踪ID
+        - 线程名：[%15.15t]（保留后缀，防止切断线程索引）
+        - Logger压缩到40字符
+    -->
+    <property name="CONSOLE_LOG_PATTERN"
+              value="%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%-5level){bold} %clr([ReqId:%X{x-request-id}]){yellow} %clr([%X{traceId:-}/%X{spanId:-}]){magenta} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"/>
+
+    <!--
+        文件日志格式（生产环境）：
+        - 时间完整：yyyy-MM-dd HH:mm:ss.SSS
+        - 单行格式，字段用 | 分隔，便于 grep/awk/ELK 解析
+        - 包含完整的 ReqId、TraceId、SpanId、PID、线程、Logger
+    -->
+    <property name="FILE_LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS}|%-5level|ReqId:%X{x-request-id}|Trace:%X{traceId:-}/%X{spanId:-}|PID:${PID:- }|[%15.15t]|%-40.40logger{39}|%m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <!--格式化输出：%d表示日期，%thread表示线程名，%-5level：级别从左显示5个字符宽度%msg：日志消息，%n是换行符
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50}:%L - %msg%n</pattern>-->
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 按照每天生成日志文件 -->
+    <appender name="ALL_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_HOME}/all.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!--日志文件输出的文件名 -->
+            <fileNamePattern>${LOG_HOME}/${APP_NAME}-%d{yyyyMMdd}.log</fileNamePattern>
+            <!-- 日志文件的保留天数 -->
+            <maxHistory>${MAX_HISTORY:-30}</maxHistory>
+            <!-- 日志文件的总大小，0 表示不限制 -->
+            <totalSizeCap>${TOTAL_SIZE_CAP:-0}</totalSizeCap>
+            <!-- 启动服务时，是否清理历史日志，一般不建议清理 -->
+            <cleanHistoryOnStart>${CLEAN_HISTORY_ON_START:-false}</cleanHistoryOnStart>
+        </rollingPolicy>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <!--格式化输出：%d表示日期，%thread表示线程名，%-5level：级别从左显示5个字符宽度%msg：日志消息，%n是换行符 -->
+<!--            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50}:%L - %msg%n</pattern>-->
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <!-- 敏感信息过滤 -->
+        </encoder>
+    </appender>
+
+    <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_HOME}/error.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_HOME}/archived/error.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+            <maxHistory>${MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${TOTAL_SIZE_CAP}</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>WARN</level>
+        </filter>
+    </appender>
+
+    <!-- 异步写入日志，提升性能 -->
+    <appender name="ASYNC_ALL" class="ch.qos.logback.classic.AsyncAppender">
+        <!-- 不丢失日志。默认的，如果队列的 80% 已满,则会丢弃 TRACT、DEBUG、INFO 级别的日志 -->
+        <discardingThreshold>0</discardingThreshold>
+        <!-- 更改默认的队列的深度，该值会影响性能。默认值为 256 -->
+        <queueSize>1024</queueSize>
+        <includeCallerData>false</includeCallerData>
+        <appender-ref ref="ALL_FILE"/>
+    </appender>
+
+    <appender name="ASYNC_ERROR" class="ch.qos.logback.classic.AsyncAppender">
+        <discardingThreshold>0</discardingThreshold> <!-- ERROR 永不丢弃 -->
+        <queueSize>1024</queueSize>
+        <includeCallerData>false</includeCallerData>
+        <appender-ref ref="ERROR_FILE"/>
+    </appender>
+
+    <!-- 邮件报警（ERROR级别触发） -->
+<!--    <appender name="EMAIL" class="ch.qos.logback.classic.net.SMTPAppender">-->
+<!--        <smtpHost>smtp.example.com</smtpHost>-->
+<!--        <to>alerts@example.com</to>-->
+<!--        <from>noreply@example.com</from>-->
+<!--        <subject>【${APP_NAME}】系统异常：%logger{20} - %m</subject>-->
+<!--        <layout class="ch.qos.logback.classic.PatternLayout">-->
+<!--            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %logger - %msg%n%ex</pattern>-->
+<!--        </layout>-->
+<!--    </appender>-->
+
+    <!-- 第三方库降噪 -->
+    <logger name="com.alibaba.nacos" level="WARN"/>
+    <logger name="org.springframework.amqp.rabbit" level="WARN"/>
+    <logger name="io.lettuce" level="WARN"/>
+    <logger name="io.netty" level="WARN"/>
+    <logger name="org.apache.catalina.connector.CoyoteAdapter" level="WARN"/>
+    <logger name="org.springframework.cache" level="off"/>
+    <logger name="org.springframework.jdbc.datasource.DataSourceTransactionManager" level="debug"/>
+    <logger name="org.springframework.context.support.PostProcessorRegistrationDelegate" level="error"/>
+
+    <root level="INFO">
+        <springProfile name="dev">
+            <appender-ref ref="CONSOLE" />
+        </springProfile>
+        <springProfile name="prod">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="ASYNC_ALL" />
+            <appender-ref ref="ASYNC_ERROR"/>
+        </springProfile>
+    </root>
+
+</configuration>

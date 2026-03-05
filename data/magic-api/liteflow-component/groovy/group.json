@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "14a38d7ee90341f39be1ff09dd2bff0f",
+  "name" : "groovy",
+  "type" : "liteflow-component",
+  "parentId" : "0",
+  "path" : "/groovy",
+  "createTime" : 1772628265098,
+  "updateTime" : 1772673354034,
+  "createBy" : "admin",
+  "updateBy" : "admin",
+  "paths" : [ ],
+  "options" : [ ]
+}

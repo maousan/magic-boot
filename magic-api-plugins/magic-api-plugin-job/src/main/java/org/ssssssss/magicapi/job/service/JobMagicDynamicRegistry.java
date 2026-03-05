@@ -12,6 +12,7 @@ import org.ssssssss.magicapi.core.event.GroupEvent;
 import org.ssssssss.magicapi.core.service.AbstractMagicDynamicRegistry;
 import org.ssssssss.magicapi.core.service.MagicResourceStorage;
 import org.ssssssss.magicapi.job.model.JobInfo;
+import org.ssssssss.magicapi.utils.JsonUtils;
 import org.ssssssss.magicapi.utils.ScriptManager;
 import org.ssssssss.script.MagicScriptContext;
 
@@ -33,6 +34,7 @@ public class JobMagicDynamicRegistry extends AbstractMagicDynamicRegistry<JobInf
 
 	@EventListener(condition = "#event.type == 'job'")
 	public void onFileEvent(FileEvent event) {
+		logger.info("文件事件: {}", JsonUtils.toJsonString(event));
 		processEvent(event);
 	}
 

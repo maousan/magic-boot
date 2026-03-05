@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "1828eba93a114c2f9f957e9cfc77258b",
+  "name" : "任务管理",
+  "type" : "api",
+  "parentId" : "acff5ad7aae64de2acb03e1d16a58ce2",
+  "path" : "/job",
+  "createTime" : null,
+  "updateTime" : 1772682317644,
+  "createBy" : null,
+  "updateBy" : "admin",
+  "paths" : [ ],
+  "options" : [ ]
+}

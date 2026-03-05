@@ -1,0 +1,11 @@
+Task: Maven 模块化验证
+
+Build module: magic-api-plugin-liteflow
+Command: mvn clean package -Pdev -DskipTests -f magic-api-plugins/magic-api-plugin-liteflow/pom.xml
+
+Result: SUCCESS
+- Jar generated at: target/magic-api-plugin-liteflow-2.2.2.jar
+- Frontend dist copied to: target/classes/magic-editor/plugins
+- Source changed: 4 files in LiteFlow plugin module were compiled during build
+
+Evidence: patch-run

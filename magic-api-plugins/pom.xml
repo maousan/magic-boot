@@ -18,6 +18,7 @@
     <modules>
         <module>magic-api-plugin-redis</module>
         <module>magic-api-plugin-job</module>
+        <module>magic-api-plugin-liteflow</module>
         <module>magic-api-plugin-mqtt</module>
         <module>magic-editor</module>
     </modules>
