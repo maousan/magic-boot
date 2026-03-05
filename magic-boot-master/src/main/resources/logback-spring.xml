@@ -2,7 +2,7 @@
 <configuration debug="false">
     <!--定义日志文件的存储地址 -->
     <property name="LOG_HOME" value="./logs"/>
-    <property name="APP_NAME" value="magic-boot"/>
+    <property name="APP_NAME" value="all"/>
     <property name="MAX_HISTORY" value="14"/>
     <property name="MAX_FILE_SIZE" value="100MB"/>
     <property name="CLEAN_HISTORY_ON_START" value="true"/>
@@ -121,6 +121,8 @@
     <root level="INFO">
         <springProfile name="dev">
             <appender-ref ref="CONSOLE" />
+            <appender-ref ref="ASYNC_ALL" />
+            <appender-ref ref="ASYNC_ERROR"/>
         </springProfile>
         <springProfile name="prod">
             <appender-ref ref="CONSOLE"/>

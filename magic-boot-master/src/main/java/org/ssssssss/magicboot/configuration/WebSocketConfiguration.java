@@ -1,13 +1,12 @@
 package org.ssssssss.magicboot.configuration;
 
+import org.ssssssss.magicboot.websocket.handler.LogWebSocketHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
-import org.springframework.web.socket.handler.TextWebSocketHandler;
-import org.springframework.web.socket.WebSocketHandler;
 
 /**
  * WebSocket配置类
@@ -17,24 +16,16 @@ import org.springframework.web.socket.WebSocketHandler;
 @EnableWebSocket
 public class WebSocketConfiguration implements WebSocketConfigurer {
 
+    // 自动注入LogWebSocketHandler
     @Autowired
-    private TokenHandshakeInterceptor tokenHandshakeInterceptor;
+    private LogWebSocketHandler logWebSocketHandler;
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         // 注册WebSocket处理器，路径为/ws/logs
-        registry.addHandler(logWebSocketHandler(), "/ws/logs")
-                .addInterceptors(tokenHandshakeInterceptor)
+        registry.addHandler(logWebSocketHandler, "/ws/logs")
+                .addInterceptors(tokenHandshakeInterceptor())
                 .setAllowedOrigins("*"); // 允许跨域访问
-    }
-
-    /**
-     * WebSocket处理器Bean
-     * 用于处理日志WebSocket连接
-     */
-    @Bean
-    public WebSocketHandler logWebSocketHandler() {
-        return new TextWebSocketHandler();
     }
 
     /**
