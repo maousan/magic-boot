@@ -1,0 +1,8 @@
+{
+  "name": "magic-api-plugin-liteflow-console",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "powershell -Command \"New-Item -ItemType Directory -Force -Path dist; Set-Content -Path dist/index.html -Value '<html><body><h1>LiteFlow Console</h1></body></html>'\""
+  }
+}
