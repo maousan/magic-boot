@@ -4,9 +4,39 @@ server:
     enabled: true
     min-response-size: 128
 
+# 扩展配置
+extend:
+  redis:
+    enabled: false  # Redis开关，false则不加载Redis
+
+management:
+  health:
+    redis:
+      enabled: ${extend.redis.enabled}  # 禁用 Redis 健康检查
+
 spring:
   profiles:
     active: dev
+  # Redis 配置（仅在 extend.redis.enabled=true 时生效）
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: zintis
+      database: 0
+      timeout: 5000
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 5
+          min-idle: 2
+          max-wait: 5000
+  # 排除 Redis 自动配置（当 extend.redis.enabled=false 时）
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      - cn.dev33.satoken.dao.SaTokenDaoForRedisTemplate  # 排除 Sa-Token Redis 自动配置
   servlet:
     multipart:
       max-file-size: 200MB
@@ -121,7 +151,7 @@ sa-token:
   # 在多人登录同一账号时，是否共用一个token (为true时所有登录共用一个token, 为false时每次登录新建一个token)
   is-share: false
   # token风格
-  token-style: uuid
+  token-style: tik
   # 是否输出操作日志
   is-log: false
 
