@@ -87,13 +87,7 @@ public class OpenApiProvider {
 			operation.setSummary(info.getName());
 			operation.setDescription(StringUtils.defaultIfBlank(info.getDescription(), info.getName()));
 			// 设置 operationId，如果为空则根据 path 和 method 生成驼峰格式
-			String operationId = info.getId();
-			if (operationId == null || operationId.trim().isEmpty()) {
-				// 生成驼峰格式: {method}{CamelCasePath}
-				// 例如: GET /api/user/list -> getApiUserList
-				//      POST /api/user/{id} -> postApiUserById
-				operationId = generateCamelCaseOperationId(info.getMethod(), requestPath);
-			}
+			String operationId = operationId = generateCamelCaseOperationId(info.getMethod(), requestPath);
 			operation.setOperationId(operationId);
 
 			try {
