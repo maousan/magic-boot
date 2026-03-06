@@ -1,0 +1,24 @@
+package org.ssssssss.magicapi.job.config;
+
+import org.quartz.spi.TriggerFiredBundle;
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.quartz.SpringBeanJobFactory;
+
+@Configuration
+public class AutowiringSpringBeanJobFactory extends SpringBeanJobFactory {
+
+    private transient AutowireCapableBeanFactory beanFactory;
+
+    public void setApplicationContext(final ApplicationContext context) {
+        beanFactory = context.getAutowireCapableBeanFactory();
+    }
+
+    @Override
+    protected Object createJobInstance(final TriggerFiredBundle bundle) throws Exception {
+        final Object job = super.createJobInstance(bundle);
+        beanFactory.autowireBean(job);
+        return job;
+    }
+}
