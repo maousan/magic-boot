@@ -86,13 +86,13 @@ public class OpenApiProvider {
 			operation.addTag(groupName);
 			operation.setSummary(info.getName());
 			operation.setDescription(StringUtils.defaultIfBlank(info.getDescription(), info.getName()));
-			// 设置 operationId，如果为空则根据 path 和 method 生成
+			// 设置 operationId，如果为空则根据 path 和 method 生成驼峰格式
 			String operationId = info.getId();
 			if (operationId == null || operationId.trim().isEmpty()) {
-				// 生成格式: {method}_{normalizedPath}
-				// 例如: GET /api/user/list -> get_api_user_list
-				String normalizedPath = requestPath.replaceAll("[{}:/]", "_");
-				operationId = info.getMethod().toLowerCase() + "_" + normalizedPath;
+				// 生成驼峰格式: {method}{CamelCasePath}
+				// 例如: GET /api/user/list -> getApiUserList
+				//      POST /api/user/{id} -> postApiUserById
+				operationId = generateCamelCaseOperationId(info.getMethod(), requestPath);
 			}
 			operation.setOperationId(operationId);
 
@@ -347,5 +347,40 @@ public class OpenApiProvider {
 			result.put("example", target.getValue());
 		}
 		return result;
+	}
+
+	/**
+	 * 生成驼峰格式的 operationId
+	 * 例如: GET /api/user/list -> getApiUserList
+	 *      POST /api/user/{id} -> postApiUserById
+	 *      DELETE /api/user/{id} -> deleteApiUserById
+	 *
+	 * @param method HTTP 方法
+	 * @param path 请求路径
+	 * @return 驼峰格式的 operationId
+	 */
+	private String generateCamelCaseOperationId(String method, String path) {
+		// 移除路径中的路径参数标记 {}, 保留参数名
+		String normalizedPath = path.replaceAll("[{}]", "");
+
+		// 按分隔符分割路径
+		String[] parts = normalizedPath.split("[/:_]");
+
+		// 构建 operationId
+		StringBuilder operationId = new StringBuilder();
+		operationId.append(method.toLowerCase());
+
+		// 处理路径各部分，转换为驼峰格式
+		for (String part : parts) {
+			if (part != null && !part.isEmpty()) {
+				// 首字母大写，其余小写
+				operationId.append(Character.toUpperCase(part.charAt(0)));
+				if (part.length() > 1) {
+					operationId.append(part.substring(1).toLowerCase());
+				}
+			}
+		}
+
+		return operationId.toString();
 	}
 }
