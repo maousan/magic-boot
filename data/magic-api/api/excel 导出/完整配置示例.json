@@ -1,0 +1,13 @@
+{
+    "_metadata": {
+        "title": "Excel 导出 - 完整配置示例",
+        "description": "演示如何使用完整配置导出 Excel",
+        "tags": ["excel", "导出"],
+        "version": "1.0.0"
+    },
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/excel/export/config",
+    "responseType": "byte[]",
+    "script": "// Excel 导出 - 完整配置示例\n// 查询数据\nvar data = db.select(\"select id, username, email, phone, create_time from sys_user where is_del = 0 limit 10\")\n\n// 创建导出配置\nvar config = excel.createConfig(\"用户导出_\" + excel.generateFileName(\"\"))\n\n// 设置表头\nconfig.setHeaderMap({\n    \"username\": \"用户名\",\n    \"email\": \"邮箱\",\n    \"phone\": \"手机号\",\n    \"create_time\": \"创建时间\"\n})\n\n// 设置列顺序\nconfig.setColumnOrder([\"username\", \"email\", \"phone\", \"create_time\"])\n\n// 设置 Sheet 名称\nconfig.setSheetName(\"用户列表\")\n\n// 设置自动列宽\nconfig.setAutoWidth(true)\n\n// 使用配置导出\nexcel.download(data, config)\n"
+}

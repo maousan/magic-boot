@@ -1,0 +1,13 @@
+{
+    "_metadata": {
+        "title": "Excel 导出 - 二维数组表头",
+        "description": "演示如何使用二维数组方式配置表头",
+        "tags": ["excel", "导出"],
+        "version": "1.0.0"
+    },
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/excel/export/array-header",
+    "responseType": "byte[]",
+    "script": "// Excel 导出 - 二维数组表头示例\n// 查询数据\nvar data = db.select(\"select id, username, email, create_time from sys_user where is_del = 0 limit 10\")\n\n// 二维数组表头：[[字段名，列名], ...]\nvar headers = [\n    [\"id\", \"ID\"],\n    [\"username\", \"用户名\"],\n    [\"email\": \"邮箱\"],\n    [\"create_time\", \"创建时间\"]\n]\n\n// 导出 Excel（二维数组方式）\nvar excelBytes = excel.write(data, headers)\n\n// 设置响应头下载\nresponse.setHeader(\"Content-Type\", \"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\")\nresponse.setHeader(\"Content-Disposition\", \"attachment;filename=\" + URLEncoder.encode(\"用户导出.xlsx\", \"UTF-8\"))\nresponse.write(excelBytes)\n"
+}

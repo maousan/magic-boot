@@ -96,7 +96,7 @@ public class ExcelModule {
             EasyExcel.write(out)
                     .head(head)
                     .sheet(0, sheetName)
-                    .registerWriteHandler(new CustomColumnWidthStyleStrategy())
+                    .registerWriteHandler(createColumnWidthStrategy(config))
                     .doWrite(dataToWrite);
 
             logger.info("Excel 导出完成，数据条数：{}", dataToWrite.size());
@@ -134,7 +134,7 @@ public class ExcelModule {
 
             EasyExcel.write(out, data.get(0).getClass())
                     .sheet(0, sheetName)
-                    .registerWriteHandler(new CustomColumnWidthStyleStrategy())
+                    .registerWriteHandler(createColumnWidthStrategy(config))
                     .doWrite(data);
 
             return out.toByteArray();
@@ -438,6 +438,16 @@ public class ExcelModule {
         } catch (Exception e) {
             response.setHeader("Content-disposition", "attachment;filename=" + fileName + ".xlsx");
         }
+    }
+
+    /**
+     * 创建列宽策略
+     */
+    private CustomColumnWidthStyleStrategy createColumnWidthStrategy(ExcelExportConfig config) {
+        if (config == null) {
+            return new CustomColumnWidthStyleStrategy();
+        }
+        return new CustomColumnWidthStyleStrategy(config.getMinWidth(), config.getMaxWidth());
     }
 
     /**

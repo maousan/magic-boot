@@ -61,6 +61,16 @@ public class ExcelExportConfig {
      */
     private int maxRowsPerSheet = 10000;
 
+    /**
+     * 自动列宽时的最小列宽（字符数）
+     */
+    private int minWidth = 15;
+
+    /**
+     * 自动列宽时的最大列宽（字符数）
+     */
+    private int maxWidth = 50;
+
     public ExcelExportConfig() {
         this.headerMap = new LinkedHashMap<>();
         this.columnWidths = new LinkedHashMap<>();
@@ -157,5 +167,21 @@ public class ExcelExportConfig {
 
     public void setMaxRowsPerSheet(int maxRowsPerSheet) {
         this.maxRowsPerSheet = maxRowsPerSheet;
+    }
+
+    public int getMinWidth() {
+        return minWidth;
+    }
+
+    public void setMinWidth(int minWidth) {
+        this.minWidth = minWidth;
+    }
+
+    public int getMaxWidth() {
+        return maxWidth;
+    }
+
+    public void setMaxWidth(int maxWidth) {
+        this.maxWidth = maxWidth;
     }
 }

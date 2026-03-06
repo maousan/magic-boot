@@ -116,6 +116,69 @@ config.setSheetName("用户列表")
 excel.download(data, config)
 ```
 
+### 7. 自动列宽配置
+
+插件默认启用自动列宽功能，能够智能计算每列的宽度，并正确处理中文字符。
+
+#### 自动宽度（默认）
+
+```javascript
+var data = db.select("select id, username, email, real_name as '真实姓名' from sys_user")
+
+var headers = {
+    "id": "ID",
+    "username": "用户名",
+    "email": "邮箱地址",
+    "真实姓名": "真实姓名"
+}
+
+// 使用默认的自动宽度（最小15，最大50字符）
+excel.download(data, "用户导出", headers)
+```
+
+#### 自定义宽度范围
+
+```javascript
+var config = excel.createConfig("用户导出")
+config.setHeaderMap(headers)
+
+// 自定义最小和最大宽度
+config.setMinWidth(20)  // 最小列宽 20 字符
+config.setMaxWidth(60)  // 最大列宽 60 字符
+
+excel.download(data, config)
+```
+
+#### 固定列宽
+
+如果需要为每列指定固定宽度，可以禁用自动宽度：
+
+```javascript
+var config = excel.createConfig("用户导出")
+config.setHeaderMap(headers)
+
+// 设置固定列宽（字符数）
+config.setColumnWidths({
+    "id": 10,
+    "username": 15,
+    "email": 30,
+    "真实姓名": 20
+})
+
+// 关闭自动宽度
+config.setAutoWidth(false)
+
+excel.download(data, config)
+```
+
+#### 宽度计算说明
+
+- **中文字符**：按 2 个宽度单位计算
+- **ASCII 字符**：按 1 个宽度单位计算
+- **全角字符**：按 2 个宽度单位计算（包括全角标点、全角字母数字等）
+- **默认范围**：最小 15 字符，最大 50 字符
+- **可自定义**：通过 `setMinWidth()` 和 `setMaxWidth()` 设置
+
 ## API 参考
 
 ### excel.write(data, headers)
@@ -241,8 +304,10 @@ excel.download(data, config)
 | fileName | String | 文件名 | - |
 | headerMap | Map<String, String> | 表头映射 | - |
 | columnOrder | List<String> | 列顺序 | - |
-| columnWidths | Map<String, Integer> | 列宽配置 | - |
+| columnWidths | Map<String, Integer> | 列宽配置（固定宽度） | - |
 | autoWidth | boolean | 自动列宽 | true |
+| minWidth | int | 自动列宽最小宽度（字符数） | 15 |
+| maxWidth | int | 自动列宽最大宽度（字符数） | 50 |
 | defaultStyle | boolean | 默认样式 | true |
 | templatePath | String | 模板路径 | - |
 | useTemplate | boolean | 使用模板 | false |

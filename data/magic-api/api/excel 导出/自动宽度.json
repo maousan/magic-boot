@@ -1,0 +1,13 @@
+{
+    "_metadata": {
+        "title": "Excel 导出 - 自动宽度配置",
+        "description": "演示如何使用自动列宽功能，包括自定义最小和最大宽度",
+        "tags": ["excel", "导出", "自动宽度"],
+        "version": "1.0.0"
+    },
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/excel/export/auto-width",
+    "responseType": "byte[]",
+    "script": "// Excel 导出 - 自动宽度配置示例\n// 查询数据\nvar data = db.select(\"select id, username, email, real_name as '真实姓名', create_time as '创建时间' from sys_user where is_del = 0 limit 10\")\n\n// 定义表头映射\nvar headers = {\n    \"id\": \"ID\",\n    \"username\": \"用户名\",\n    \"email\": \"邮箱地址\",\n    \"真实姓名\": \"真实姓名\",\n    \"创建时间\": \"创建时间\"\n}\n\n// 创建配置对象，自定义宽度范围\nvar config = excel.createConfig(\"自动宽度导出\")\nconfig.setHeaderMap(headers)\nconfig.setMinWidth(20)  // 最小列宽 20 字符\nconfig.setMaxWidth(60)  // 最大列宽 60 字符\n\n// 导出为 Excel 并下载\nexcel.download(data, config)\n"
+}

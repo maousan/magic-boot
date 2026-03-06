@@ -1,0 +1,13 @@
+{
+    "_metadata": {
+        "title": "Excel 导出 - 对象列表导出",
+        "description": "演示如何将 Java 实体对象列表导出为 Excel",
+        "tags": ["excel", "导出"],
+        "version": "1.0.0"
+    },
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/excel/export/entities",
+    "responseType": "byte[]",
+    "script": "// Excel 导出 - 对象列表导出示例\n// 方式 1：直接查询实体列表（如果有实体类映射）\n// var data = db.selectEntities(\"select * from sys_user where is_del = 0\", SysUser.class)\n\n// 方式 2：使用现有的 Map 数据（模拟对象列表）\nvar data = db.select(\"select id, username, email, create_time from sys_user where is_del = 0 limit 10\")\n\n// 定义表头\nvar headers = {\n    \"id\": \"ID\",\n    \"username\": \"用户名\",\n    \"email\": \"邮箱\",\n    \"create_time\": \"创建时间\"\n}\n\n// 使用对象导出方法\nexcel.downloadEntities(data, \"用户导出_\" + System.currentTimeMillis(), headers)\n"
+}

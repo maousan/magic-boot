@@ -1,0 +1,13 @@
+{
+    "_metadata": {
+        "title": "Excel 导出 - 单个对象导出",
+        "description": "演示如何将单个对象导出为 Excel（单行数据）",
+        "tags": ["excel", "导出"],
+        "version": "1.0.0"
+    },
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/excel/export/single",
+    "responseType": "byte[]",
+    "script": "// Excel 导出 - 单个对象导出示例\n// 查询单个用户\nvar user = db.selectOne(\"select id, username, email, create_time from sys_user where id = 1\")\n\n// 定义表头\nvar headers = {\n    \"id\": \"ID\",\n    \"username\": \"用户名\",\n    \"email\": \"邮箱\",\n    \"create_time\": \"创建时间\"\n}\n\n// 导出单个对象为 Excel（单行）\nvar excelBytes = excel.writeObject(user, headers)\n\n// 设置响应头下载\nresponse.setHeader(\"Content-Type\", \"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\")\nresponse.setHeader(\"Content-Disposition\", \"attachment;filename=\" + URLEncoder.encode(\"用户详情.xlsx\", \"UTF-8\"))\nresponse.write(excelBytes)\n"
+}

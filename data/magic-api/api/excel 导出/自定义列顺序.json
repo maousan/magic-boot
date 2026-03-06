@@ -1,0 +1,13 @@
+{
+    "_metadata": {
+        "title": "Excel 导出 - 自定义列顺序",
+        "description": "演示如何按指定列顺序导出 Excel",
+        "tags": ["excel", "导出"],
+        "version": "1.0.0"
+    },
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/excel/export/order",
+    "responseType": "byte[]",
+    "script": "// Excel 导出 - 自定义列顺序示例\n// 查询数据\nvar data = db.select(\"select id, username, email, phone, create_time from sys_user where is_del = 0 limit 10\")\n\n// 定义列顺序（按这个顺序输出）\nvar columnOrder = [\"username\", \"email\", \"phone\", \"create_time\"]\n\n// 定义表头映射\nvar headers = {\n    \"username\": \"用户名\",\n    \"email\": \"邮箱\",\n    \"phone\": \"手机号\",\n    \"create_time\": \"创建时间\"\n}\n\n// 导出 Excel\nvar excelBytes = excel.write(data, columnOrder, headers)\n\n// 设置响应头\nresponse.setHeader(\"Content-Type\", \"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\")\nresponse.setHeader(\"Content-Disposition\", \"attachment;filename=\" + URLEncoder.encode(\"用户导出_\" + System.currentTimeMillis() + \".xlsx\", \"UTF-8\"))\nresponse.write(excelBytes)\n"
+}

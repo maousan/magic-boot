@@ -1,0 +1,13 @@
+{
+    "_metadata": {
+        "title": "Excel 导出 - 固定列宽",
+        "description": "演示如何为每列指定固定宽度",
+        "tags": ["excel", "导出", "固定宽度"],
+        "version": "1.0.0"
+    },
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/excel/export/fixed-width",
+    "responseType": "byte[]",
+    "script": "// Excel 导出 - 固定列宽示例\n// 查询数据\nvar data = db.select(\"select id, username, email, real_name as '真实姓名', create_time as '创建时间' from sys_user where is_del = 0 limit 10\")\n\n// 定义表头映射\nvar headers = {\n    \"id\": \"ID\",\n    \"username\": \"用户名\",\n    \"email\": \"邮箱地址\",\n    \"真实姓名\": \"真实姓名\",\n    \"创建时间\": \"创建时间\"\n}\n\n// 定义固定列宽（字符数）\nvar columnWidths = {\n    \"id\": 10,\n    \"username\": 15,\n    \"email\": 30,\n    \"真实姓名\": 20,\n    \"创建时间\": 20\n}\n\n// 创建配置对象\nvar config = excel.createConfig(\"固定宽度导出\")\nconfig.setHeaderMap(headers)\nconfig.setColumnWidths(columnWidths)\nconfig.setAutoWidth(false)  // 关闭自动宽度\n\n// 导出为 Excel 并下载\nexcel.download(data, config)\n"
+}
