@@ -5,10 +5,10 @@
   "groupId" : "67b2ce258e24491194b74992958c74aa",
   "name" : "根据角色获取菜单",
   "createTime" : null,
-  "updateTime" : 1646552458043,
+  "updateTime" : 1772780584016,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/by/role",
   "method" : "GET",
   "parameters" : [ {
@@ -29,7 +29,7 @@
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": [\"b1851d1b13594e71840103c11a37a669\", \"39be13ef6f0745568c80bf35202ddb2b\", \"414e5d31-fe05-4e69-9983-217c10b9740a\", \"d7e5280a2a8f4fb3b9e2f4a3e3093a38\", \"833b204d5f2c402190bfca677421cfeb\"],\n    \"timestamp\": 1642080903333,\n    \"executeTime\": 4\n}",
-  "description" : null,
+  "description" : "",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : {
     "name" : "",

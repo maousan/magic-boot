@@ -5,11 +5,11 @@
   "groupId" : "67b2ce258e24491194b74992958c74aa",
   "name" : "删除",
   "createTime" : null,
-  "updateTime" : 1712806455648,
+  "updateTime" : 1773302372650,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
-  "path" : "/delete",
+  "updateBy" : "admin",
+  "path" : "/delete/{id}",
   "method" : "DELETE",
   "parameters" : [ {
     "name" : "id",
@@ -39,9 +39,21 @@
   } ],
   "requestBody" : "{\n\n}",
   "headers" : [ ],
-  "paths" : [ ],
+  "paths" : [ {
+    "name" : "id",
+    "value" : null,
+    "description" : null,
+    "required" : true,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  } ],
   "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": null,\n    \"timestamp\": 1641201245421,\n    \"executeTime\": 7\n}",
-  "description" : null,
+  "description" : "",
   "requestBodyDefinition" : {
     "name" : "",
     "value" : "",
@@ -131,6 +143,22 @@
 }
 ================================
 import org.ssssssss.magicapi.modules.db.cache.SqlCache
+
+var pCount = db.selectInt("select count(1) from sys_menu where is_del = 0 and pid = #{id} and type != 'button'")
+if(pCount > 0){
+    exit 500,'存在子菜单,不允许删除'
+}
+
+const menu = db.table('sys_menu').where().eq("id", id).selectOne()
+
+if (!menu) {
+    exit 0, '菜单不存在'
+}
+
+if (menu.readonly) {
+    exit 0, '只读菜单，不允许删除'
+}
+
 var userIds = db.select("""
     select user_id from sys_user_role where role_id in (
         select role_id from sys_role_menu where menu_id = #{id}
@@ -141,17 +169,25 @@ for(item in userIds){
 }
 SqlCache.delete('permissions:1')
 
-let recursionDelete = (list) => {
-    list.forEach(it => {
-        db.table('sys_role_menu').where().eq("menu_id",it.id).delete();
-        db.table("sys_menu").logic().where().eq("id",it.id).delete()
-        let children = db.select("select id from sys_menu where is_del = 0 and pid = #{it.id}")
-        if(children && children.size() > 0){
-            recursionDelete(children)
-        }
-    })
-}
-recursionDelete(db.select("select id from sys_menu where is_del = 0 and pid = #{id}"))
+// let recursionDelete = (list) => {
+//     list.forEach(it => {
+//         db.table('sys_role_menu').where().eq("menu_id",it.id).delete();
+//         db.table("sys_menu").logic().where().eq("id",it.id).delete()
+//         let children = db.select("select id from sys_menu where is_del = 0 and pid = #{it.id}")
+//         if(children && children.size() > 0){
+//             recursionDelete(children)
+//         }
+//     })
+// }
+// recursionDelete(db.select("select id from sys_menu where is_del = 0 and pid = #{id}"))
 
-db.table('sys_role_menu').where().eq("menu_id",id).delete();
-return db.table("sys_menu").logic().where().eq("id",id).delete();
+// db.table('sys_role_menu').where().eq("menu_id",id).delete();
+const state = anyline.beginTrans()
+try {
+    anyline.deletes('sys_role_menu', 'menu_id', id)
+    anyline.deletes('sys_menu', 'id', id)
+    anyline.commitTrans(state)
+} catch {
+    anyline.rollbackTrans(state)
+}
+// return db.table("sys_menu").logic().where().eq("id",id).delete();

@@ -5,10 +5,10 @@
   "groupId" : "1952f25c81084e24b55b11385767dc38",
   "name" : "验证token",
   "createTime" : null,
-  "updateTime" : 1646544867872,
+  "updateTime" : 1772782751316,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/validateToken",
   "method" : "GET",
   "parameters" : [ ],
@@ -28,8 +28,8 @@
   "requestBody" : "",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 500,\n    \"message\": \"系统内部出现错误\",\n    \"data\": null,\n    \"timestamp\": 1634047764762,\n    \"executeTime\": 8\n}",
-  "description" : null,
+  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": true,\n    \"timestamp\": 1772782747593,\n    \"executeTime\": 3\n}",
+  "description" : "",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : {
     "name" : "",
@@ -106,5 +106,5 @@
   }
 }
 ================================
-import 'cn.dev33.satoken.stp.StpUtil';
+import cn.dev33.satoken.stp.StpUtil;
 return StpUtil.isLogin();

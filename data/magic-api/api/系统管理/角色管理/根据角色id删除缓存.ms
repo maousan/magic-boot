@@ -5,10 +5,10 @@
   "groupId" : "89130d496f6f467c88b22ae4a7f688eb",
   "name" : "根据角色id删除缓存",
   "createTime" : null,
-  "updateTime" : 1646493560974,
+  "updateTime" : 1772782690953,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/cache/delete",
   "method" : "GET",
   "parameters" : [ ],
@@ -17,7 +17,7 @@
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : null,
-  "description" : null,
+  "description" : "",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
 }

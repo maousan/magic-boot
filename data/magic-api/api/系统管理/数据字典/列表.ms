@@ -5,12 +5,12 @@
   "groupId" : "c7ce65f5b3cf4aaa913f6fec7d35d176",
   "name" : "列表",
   "createTime" : null,
-  "updateTime" : 1649169225411,
+  "updateTime" : 1772977884757,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/list",
-  "method" : "POST",
+  "method" : "GET",
   "parameters" : [ ],
   "options" : [ {
     "name" : "permission",
@@ -29,7 +29,7 @@
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : "{\n    \"code\": 402,\n    \"message\": \"凭证已过期\",\n    \"data\": null,\n    \"timestamp\": 1634734488837,\n    \"executeTime\": null\n}",
-  "description" : null,
+  "description" : "",
   "requestBodyDefinition" : {
     "name" : "",
     "value" : "",
@@ -118,10 +118,27 @@
   }
 }
 ================================
-return db.page("""
-    select id,dict_type,desc_ribe,type,remarks,create_date from sys_dict
-    where is_del = 0
-    ?{type, and type like concat('%',#{type},'%')}
-    ?{dictType, and dict_type = #{dictType}}
+let sql = """
+    select
+        id,
+        dict_type,
+        type,
+        remark,
+        create_date
+    from sys_dict
+
+    <where>
+        is_del = 0
+
+        <if test="type != null and type != ''">
+            and type like concat('%', #{type}, '%')
+        </if>
+
+        <if test="dictType != null and dictType != ''">
+            and dict_type = #{dictType}
+        </if>
+    </where>
+
     order by create_date desc
-""")
+"""
+return db.page(sql)

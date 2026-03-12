@@ -5,11 +5,11 @@
   "groupId" : "0295f2b4af9145f5a0ea29fa4b797214",
   "name" : "删除",
   "createTime" : null,
-  "updateTime" : 1653129244605,
+  "updateTime" : 1772968394030,
   "lock" : null,
   "createBy" : null,
-  "updateBy" : null,
-  "path" : "/delete",
+  "updateBy" : "admin",
+  "path" : "/delete/{id}",
   "method" : "DELETE",
   "parameters" : [ ],
   "options" : [ {
@@ -27,11 +27,23 @@
   } ],
   "requestBody" : "",
   "headers" : [ ],
-  "paths" : [ ],
+  "paths" : [ {
+    "name" : "id",
+    "value" : null,
+    "description" : null,
+    "required" : true,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  } ],
   "responseBody" : null,
-  "description" : null,
+  "description" : "",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
 }
 ================================
-return db.table('sys_configure').logic().where().eq('id', id).delete()
+return anyline.deletes("sys_configure", 'id', id)

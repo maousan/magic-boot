@@ -4,7 +4,11 @@
   "name" : "组织机构",
   "type" : "api",
   "parentId" : "acff5ad7aae64de2acb03e1d16a58ce2",
-  "path" : "/office",
+  "path" : "/dept",
+  "createTime" : null,
+  "updateTime" : 1772785714589,
+  "createBy" : null,
+  "updateBy" : "admin",
   "paths" : [ ],
   "options" : [ ]
 }

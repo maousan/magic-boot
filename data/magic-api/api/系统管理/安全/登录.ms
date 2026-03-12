@@ -5,40 +5,16 @@
   "groupId" : "1952f25c81084e24b55b11385767dc38",
   "name" : "登录",
   "createTime" : null,
-  "updateTime" : 1688041637780,
+  "updateTime" : 1772791398609,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/login",
   "method" : "POST",
   "parameters" : [ {
-    "name" : "username",
-    "value" : null,
-    "description" : null,
-    "required" : false,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  }, {
-    "name" : "password",
-    "value" : null,
-    "description" : null,
-    "required" : false,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  }, {
     "name" : "code",
     "value" : null,
-    "description" : null,
+    "description" : "验证码",
     "required" : false,
     "dataType" : "String",
     "type" : null,
@@ -64,8 +40,8 @@
   "requestBody" : "{\r\n    \"username\": \"admin\",\r\n    \"password\": \"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92\"\r\n}",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 0,\n    \"message\": \"用户名或密码错误\",\n    \"data\": null,\n    \"timestamp\": 1656424276533,\n    \"executeTime\": 11\n}",
-  "description" : null,
+  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": \"eP_NoBxo1vKwIPjq9_xSWtabSSvErS7crV__\",\n    \"timestamp\": 1772791257559,\n    \"executeTime\": 500\n}",
+  "description" : "",
   "requestBodyDefinition" : {
     "name" : "root",
     "value" : "",
@@ -116,7 +92,7 @@
     "expression" : "",
     "children" : [ {
       "name" : "code",
-      "value" : "0",
+      "value" : "200",
       "description" : "",
       "required" : false,
       "dataType" : "Integer",
@@ -128,7 +104,7 @@
       "children" : [ ]
     }, {
       "name" : "message",
-      "value" : "用户名或密码错误",
+      "value" : "success",
       "description" : "",
       "required" : false,
       "dataType" : "String",
@@ -140,10 +116,10 @@
       "children" : [ ]
     }, {
       "name" : "data",
-      "value" : "null",
+      "value" : "Nu_O14uuLNICZl6sA_MYS7ETac0w2mafpt__",
       "description" : "",
       "required" : false,
-      "dataType" : "Object",
+      "dataType" : "String",
       "type" : null,
       "defaultValue" : null,
       "validateType" : "",
@@ -152,7 +128,7 @@
       "children" : [ ]
     }, {
       "name" : "timestamp",
-      "value" : "1656424276533",
+      "value" : "1772782605175",
       "description" : "",
       "required" : false,
       "dataType" : "Long",
@@ -164,7 +140,7 @@
       "children" : [ ]
     }, {
       "name" : "executeTime",
-      "value" : "11",
+      "value" : "185",
       "description" : "",
       "required" : false,
       "dataType" : "Integer",
@@ -180,7 +156,7 @@
 ================================
 import org.ssssssss.magicboot.utils.AddressUtil
 import log
-import 'cn.dev33.satoken.stp.StpUtil';
+import cn.dev33.satoken.stp.StpUtil;
 import '@/configure/getBykey' as configure;
 import request;
 import org.ssssssss.magicboot.model.CodeCacheMap

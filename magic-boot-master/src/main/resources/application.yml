@@ -7,7 +7,7 @@ server:
 # 扩展配置
 extend:
   redis:
-    enabled: false  # Redis开关，false则不加载Redis
+    enabled: true  # Redis开关，false则不加载Redis
 
 management:
   health:
@@ -23,7 +23,7 @@ spring:
       host: 127.0.0.1
       port: 6379
       password: zintis
-      database: 0
+      database: 3
       timeout: 5000
       lettuce:
         pool:
@@ -32,11 +32,11 @@ spring:
           min-idle: 2
           max-wait: 5000
   # 排除 Redis 自动配置（当 extend.redis.enabled=false 时）
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
-      - cn.dev33.satoken.dao.SaTokenDaoForRedisTemplate  # 排除 Sa-Token Redis 自动配置
+#  autoconfigure:
+#    exclude:
+#      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+#      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+#      - cn.dev33.satoken.dao.SaTokenDaoForRedisTemplate  # 排除 Sa-Token Redis 自动配置
   servlet:
     multipart:
       max-file-size: 200MB
@@ -103,8 +103,10 @@ magic-api:
     max-history: -1 #备份保留天数，-1为永久保留
     table-name: magic_backup_record_v2 #使用数据库存储备份时的表名
   page:
-    page: current
-    size: size
+    page: pageNo
+    size: pageSize
+    default-page: 1
+    default-page-size: 20
   cache:
     enable: true  #开启缓存，默认是不开启的
     ttl: 3600000 #有效期1小时，默认-1 即永不过期
@@ -127,21 +129,47 @@ magic-api:
   springdoc:
     version: 1.0
     description: MagicAPI 接口信息
-    title: MagicAPI Swagger Docs
+    title: MagicAPI OpenAPI Docs
     name: MagicAPI 接口
-    location: /v2/api-docs/magic-api/swagger2.json
+    location: /v3/api-docs/magic-api/openapi.json
     groupName: magic-api
+    external-docs:
+      description: Find out more about Swagger  # Redis 配置（仅在 extend.redis.enabled=true 时生效）
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: zintis
+      database: 3
+      timeout: 5000
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 5
+          min-idle: 2
+          max-wait: 5000
+      url: https://swagger.io
+    # 联系人配置（可选）
+    contact:
+      name: MagicAPI Support
+      email: support@example.com
+    # 许可证配置（可选）
+    license:
+      name: MIT
+      url: https://opensource.org/licenses/MIT
   date-pattern:
     - yyyy-MM-dd
     - yyyy-MM-dd HH:mm:ss
-  editor-config:
-    theme: gray-new
+  editor-config: classpath:./magic-editor-config.js
+  auto-import-module: db, anyline, trans
 
 
 # Sa-Token配置
 sa-token:
   # token名称 (同时也是cookie名称)
-  token-name: token
+  token-name: Authorization
+  # token前缀
+  token-prefix: Bearer
   # token有效期，单位s 默认30天, -1代表永不过期
   timeout: 2592000
   # token临时有效期 (指定时间内无操作就视为token过期) 单位: 秒

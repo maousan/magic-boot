@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "51e64213e7fe4441b0713dbf0794ee14",
+  "name" : "数据库",
+  "type" : "api",
+  "parentId" : "acff5ad7aae64de2acb03e1d16a58ce2",
+  "path" : "database",
+  "createTime" : null,
+  "updateTime" : 1773053399722,
+  "createBy" : null,
+  "updateBy" : "admin",
+  "paths" : [ ],
+  "options" : [ ]
+}

@@ -1,5 +1,6 @@
 package org.ssssssss.magicapi.job.web;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.ssssssss.magicapi.core.config.MagicConfiguration;
@@ -35,6 +36,9 @@ public class MagicJobController extends MagicController implements MagicExceptio
 			WebSocketSessionManager.addMagicScriptContext(sessionAndScriptId, magicScriptContext);
 			magicScriptContext.setScriptName(MagicConfiguration.getMagicResourceService().getScriptName(entity));
 			return new JsonBean<>(ScriptManager.executeScript(script, magicScriptContext));
+		} catch(Exception e) {
+			logger.error("执行脚本出错: {}", ExceptionUtils.getStackTrace(e));
+			return new JsonBean<>(0, "执行脚本出错: " + e.getMessage());
 		} finally {
 			WebSocketSessionManager.removeMagicScriptContext(sessionAndScriptId);
 			MagicLoggerContext.SESSION.remove();

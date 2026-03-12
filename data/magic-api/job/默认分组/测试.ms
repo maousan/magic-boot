@@ -5,7 +5,7 @@
   "groupId" : "4a3c0ad862bb4b5fb16c4c673b5a75a3",
   "name" : "测试",
   "createTime" : 1772601698095,
-  "updateTime" : 1772648975333,
+  "updateTime" : 1773216379438,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -29,10 +29,10 @@ log.info(student)
 
 // redis.local.putString("magic-api", { "result": 1 })
 // redis.local.remove("magic-api")
-redis.local.putObject('magic-api', { "version": "1.0.0" })
+redis.1.putObject('magic-api', { "version": "1.0.0" })
 
 
-var object = redis.local.getObject("magic-api", Map.class)
+var object = redis.default.getObject("magic-api", Map.class)
 log.info("magic-api: {}", object["version"])
 
 

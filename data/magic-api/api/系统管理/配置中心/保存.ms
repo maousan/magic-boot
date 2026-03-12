@@ -5,97 +5,13 @@
   "groupId" : "0295f2b4af9145f5a0ea29fa4b797214",
   "name" : "保存",
   "createTime" : null,
-  "updateTime" : 1679725946724,
+  "updateTime" : 1772968443899,
   "lock" : null,
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/save",
   "method" : "POST",
-  "parameters" : [ {
-    "name" : "configureType",
-    "value" : "1",
-    "description" : null,
-    "required" : false,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  }, {
-    "name" : "configureName",
-    "value" : "2",
-    "description" : null,
-    "required" : false,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  }, {
-    "name" : "configureValue",
-    "value" : "3",
-    "description" : null,
-    "required" : false,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  }, {
-    "name" : "configureCondition",
-    "value" : "2",
-    "description" : null,
-    "required" : false,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  }, {
-    "name" : "configureDescRibe",
-    "value" : "24",
-    "description" : null,
-    "required" : false,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  }, {
-    "name" : "remarks",
-    "value" : "12",
-    "description" : null,
-    "required" : false,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  }, {
-    "name" : "configureKey",
-    "value" : "32323",
-    "description" : null,
-    "required" : false,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  } ],
+  "parameters" : [ ],
   "options" : [ {
     "name" : "permission",
     "value" : "configure:save",
@@ -122,22 +38,10 @@
     "children" : null
   } ],
   "requestBody" : "",
-  "headers" : [ {
-    "name" : "token",
-    "value" : "75812f57-129d-4714-a615-571142631484",
-    "description" : null,
-    "required" : true,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  } ],
+  "headers" : [ ],
   "paths" : [ ],
   "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": \"a500d23dd1274b4086d55a01a768caec\",\n    \"timestamp\": 1653119020859,\n    \"executeTime\": 1729\n}",
-  "description" : null,
+  "description" : "",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : {
     "name" : "",
@@ -216,6 +120,12 @@
 ================================
 import org.ssssssss.magicapi.modules.db.cache.SqlCache
 
-SqlCache.delete(`configure:${configureKey}${configureCondition}`)
-SqlCache.delete(`configure:${configureKey}`)
-return db.table('sys_configure').primary('id').withBlank().saveOrUpdate(data)
+SqlCache.delete(`configure:${body.configureKey}${body.configureCondition}`)
+SqlCache.delete(`configure:${body.configureKey}`)
+
+if (body.id) {
+    anyline.update("sys_configure", body)
+} else {
+    body.createDate = now()
+    anyline.insert("sys_configure", body, true)
+}

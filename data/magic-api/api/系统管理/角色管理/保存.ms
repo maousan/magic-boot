@@ -5,10 +5,10 @@
   "groupId" : "89130d496f6f467c88b22ae4a7f688eb",
   "name" : "保存",
   "createTime" : null,
-  "updateTime" : 1665500810912,
+  "updateTime" : 1772965237159,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : "guyi",
+  "updateBy" : "admin",
   "path" : "/save",
   "method" : "POST",
   "parameters" : [ ],
@@ -29,7 +29,7 @@
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : null,
-  "description" : null,
+  "description" : "",
   "requestBodyDefinition" : {
     "name" : "",
     "value" : "",
@@ -48,35 +48,48 @@
 ================================
 import '@get:/system/role/cache/delete' as cacheDelete
 
-var codeCount = db.selectInt("select count(1) from sys_role where is_del = 0 and code = #{code} ?{id, and id != #{id}}")
-if(codeCount > 0){
-    exit 0,'角色编码已存在'
-}
+var role = body
 
-var role = {
-    code,
-    permission,
-    descRibe,
-    type,
-    name,
-    sort,
-    id
-}
-if(id){
-    db.table("sys_role_menu").where().eq("role_id",id).delete()
-}
-id = db.table("sys_role").primary("id").saveOrUpdate(role);
-for(menuId in menus.split(',')){
-    db.table("sys_role_menu").column("menu_id",menuId).column("role_id", id).insert();
-}
-db.table("sys_role_office").where().eq("role_id",id).delete()
-if(offices && permission == 1){
-    for(officeId in offices.split(',')){
-        db.table("sys_role_office").column("office_id",officeId).column("role_id", id).insert();
+const menus = role.menus
+
+const offices = role.offices
+
+role.put("menus", null)
+role.put("offices", null)
+
+let roleId = role.id
+
+const state = anyline.beginTrans()
+
+try {
+    if(roleId){
+        //删除角色菜单
+        anyline.deletes("sys_role_menu", "role_id", roleId)
+        //更新角色信息
+        anyline.update("sys_role", role);
+    } else {
+        const dataRow = anyline.insert("sys_role", role, true);
+        roleId = dataRow.getString("id")
     }
-}
-if(id){
-    // 先删除数据库 后删除缓存 不然拦截器会请求查询数据库 查到的还是老数据
-    var roleId = id
-    cacheDelete()
+    if (menus) {
+        for(menuId in menus.split(',')){
+            //插入角色菜单关系
+            anyline.insert("sys_role_menu", { menuId, roleId })
+        }   
+    }
+
+    //
+    anyline.deletes("sys_role_office", "role_id", roleId)
+    if(offices && permission == 1){
+        for(officeId in offices.split(',')){
+            anyline.insert("sys_role_office", {officeId, roleId})
+        }
+    }
+    if(id){
+        // 先删除数据库 后删除缓存 不然拦截器会请求查询数据库 查到的还是老数据
+        cacheDelete()
+    }
+    anyline.commitTrans(state)
+} catch(err) {
+    anyline.rollbackTrans(state)
 }

@@ -5,19 +5,43 @@
   "groupId" : "9ec6f9ec92d24a369952bb13eddc134f",
   "name" : "登录日志",
   "createTime" : null,
-  "updateTime" : 1646552463034,
+  "updateTime" : 1772977839770,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/login/list",
-  "method" : "POST",
-  "parameters" : [ ],
+  "method" : "GET",
+  "parameters" : [ {
+    "name" : "username",
+    "value" : null,
+    "description" : null,
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  }, {
+    "name" : "createTime",
+    "value" : null,
+    "description" : null,
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  } ],
   "options" : [ ],
   "requestBody" : "",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": {\n        \"total\": 86,\n        \"list\": [{\n            \"id\": 7947,\n            \"apiName\": \"后台-安全-登录\",\n            \"apiPath\": \"/security/login\",\n            \"apiMethod\": \"POST\",\n            \"costTime\": 301,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:22:24\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }, {\n            \"id\": 7948,\n            \"apiName\": \"后台-用户管理-获取用户信息\",\n            \"apiPath\": \"/user/info\",\n            \"apiMethod\": \"GET\",\n            \"costTime\": 41,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:22:24\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }, {\n            \"id\": 7949,\n            \"apiName\": \"后台-数据字典-字典项-获取所有字典项\",\n            \"apiPath\": \"/dict/items/all\",\n            \"apiMethod\": \"GET\",\n            \"costTime\": 19,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:22:24\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }, {\n            \"id\": 7950,\n            \"apiName\": \"后台-配置-获取所有配置\",\n            \"apiPath\": \"/config/list\",\n            \"apiMethod\": \"GET\",\n            \"costTime\": 5,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:22:24\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }, {\n            \"id\": 7951,\n            \"apiName\": \"后台-菜单管理-当前用户菜单\",\n            \"apiPath\": \"/menu/current/menus\",\n            \"apiMethod\": \"POST\",\n            \"costTime\": 19,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:22:24\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }, {\n            \"id\": 7952,\n            \"apiName\": \"后台-菜单管理-获取菜单tree\",\n            \"apiPath\": \"/menu/tree\",\n            \"apiMethod\": \"GET\",\n            \"costTime\": 34,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:22:27\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }, {\n            \"id\": 7953,\n            \"apiName\": \"后台-组织机构-列表\",\n            \"apiPath\": \"/office/tree\",\n            \"apiMethod\": \"GET\",\n            \"costTime\": 10,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:22:28\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }, {\n            \"id\": 7954,\n            \"apiName\": \"后台-角色管理-列表\",\n            \"apiPath\": \"/role/list\",\n            \"apiMethod\": \"GET\",\n            \"costTime\": 18,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:22:29\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }, {\n            \"id\": 7955,\n            \"apiName\": \"后台-菜单管理-获取排序号\",\n            \"apiPath\": \"/menu/sort\",\n            \"apiMethod\": \"GET\",\n            \"costTime\": 5,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:23:42\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }, {\n            \"id\": 7956,\n            \"apiName\": \"后台-组件-选择组件\",\n            \"apiPath\": \"/component/select\",\n            \"apiMethod\": \"GET\",\n            \"costTime\": 4,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:23:43\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }]\n    },\n    \"timestamp\": 1646472930242,\n    \"executeTime\": 19\n}",
-  "description" : null,
+  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": {\n        \"total\": 91,\n        \"list\": [\n            {\n                \"id\": 669,\n                \"username\": \"admin\",\n                \"failPassword\": null,\n                \"type\": \"成功\",\n                \"browser\": \"Chrome\",\n                \"os\": \"Windows 10 or Windows Server 2016\",\n                \"address\": \"内网IP\",\n                \"ip\": \"0:0:0:0:0:0:0:1\",\n                \"token\": \"9U_okbRJ23ogSduFD_4SJ7grCQgpTH5fjo__\",\n                \"createDate\": \"2026-03-07 17:08:13\"\n            },\n            {\n                \"id\": 668,\n                \"username\": \"admin\",\n                \"failPassword\": null,\n                \"type\": \"成功\",\n                \"browser\": \"Chrome\",\n                \"os\": \"Windows 10 or Windows Server 2016\",\n                \"address\": \"内网IP\",\n                \"ip\": \"0:0:0:0:0:0:0:1\",\n                \"token\": \"aX_3k25653ydNh0M6_bdzIJp7wk4vV2Onp__\",\n                \"createDate\": \"2026-03-07 02:21:39\"\n            },\n            {\n                \"id\": 667,\n                \"username\": \"admin\",\n                \"failPassword\": null,\n                \"type\": \"成功\",\n                \"browser\": \"Chrome\",\n                \"os\": \"Windows 10 or Windows Server 2016\",\n                \"address\": \"内网IP\",\n                \"ip\": \"0:0:0:0:0:0:0:1\",\n                \"token\": \"Kn_UXyMtK6sE9fsA6_SUjMUzbfRwLifL38__\",\n                \"createDate\": \"2026-03-07 02:17:48\"\n            },\n            {\n                \"id\": 666,\n                \"username\": \"admin\",\n                \"failPassword\": null,\n                \"type\": \"成功\",\n                \"browser\": \"Chrome\",\n                \"os\": \"Windows 10 or Windows Server 2016\",\n                \"address\": \"内网IP\",\n                \"ip\": \"0:0:0:0:0:0:0:1\",\n                \"token\": \"o5_W44ql7skTjZv5a_z3xTA75SnKD0EDdZ__\",\n                \"createDate\": \"2026-03-07 02:12:34\"\n            },\n            {\n                \"id\": 665,\n                \"username\": \"admin\",\n                \"failPassword\": null,\n                \"type\": \"成功\",\n                \"browser\": \"Chrome\",\n                \"os\": \"Windows 10 or Windows Server 2016\",\n                \"address\": \"内网IP\",\n                \"ip\": \"0:0:0:0:0:0:0:1\",\n                \"token\": \"jz_JnGdg60Pz4TWF5_V6xzpKxvEVxaGQss__\",\n                \"createDate\": \"2026-03-07 01:35:36\"\n            },\n            {\n                \"id\": 664,\n                \"username\": \"admin\",\n                \"failPassword\": \"240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9\",\n                \"type\": \"失败\",\n                \"browser\": \"Chrome\",\n                \"os\": \"Windows 10 or Windows Server 2016\",\n                \"address\": \"内网IP\",\n                \"ip\": \"0:0:0:0:0:0:0:1\",\n                \"token\": null,\n                \"createDate\": \"2026-03-07 01:35:31\"\n            },\n            {\n                \"id\": 663,\n                \"username\": \"admin\",\n                \"failPassword\": null,\n                \"type\": \"成功\",\n                \"browser\": \"Chrome\",\n                \"os\": \"Windows 10 or Windows Server 2016\",\n                \"address\": \"内网IP\",\n                \"ip\": \"0:0:0:0:0:0:0:1\",\n                \"token\": \"Bl_jCTgfSC0yiXYjt_hIyX8rzmGuSjkOdy__\",\n                \"createDate\": \"2026-03-07 01:31:48\"\n            },\n            {\n                \"id\": 662,\n                \"username\": \"admin\",\n                \"failPassword\": null,\n                \"type\": \"成功\",\n                \"browser\": \"Chrome\",\n                \"os\": \"Windows 10 or Windows Server 2016\",\n                \"address\": \"内网IP\",\n                \"ip\": \"0:0:0:0:0:0:0:1\",\n                \"token\": \"oW_W7PQd9jDHVaWCW_Tm1gLZl4P2LCRzNB__\",\n                \"createDate\": \"2026-03-06 21:47:59\"\n            },\n            {\n                \"id\": 661,\n                \"username\": \"admin\",\n                \"failPassword\": null,\n                \"type\": \"成功\",\n                \"browser\": \"Chrome\",\n                \"os\": \"Windows 10 or Windows Server 2016\",\n                \"address\": \"内网IP\",\n                \"ip\": \"0:0:0:0:0:0:0:1\",\n                \"token\": \"Rb_3DIziMeTVdH2Jw_LsvVM1Xpti9I3m0l__\",\n                \"createDate\": \"2026-03-06 21:47:44\"\n            },\n            {\n                \"id\": 660,\n                \"username\": \"admin\",\n                \"failPassword\": null,\n                \"type\": \"成功\",\n                \"browser\": \"Chrome\",\n                \"os\": \"Windows 10 or Windows Server 2016\",\n                \"address\": \"内网IP\",\n                \"ip\": \"0:0:0:0:0:0:0:1\",\n                \"token\": \"Ud_jX2Ytnyi6bdcGS_yJ2FniCxe0jBTan0__\",\n                \"createDate\": \"2026-03-06 21:47:37\"\n            }\n        ]\n    },\n    \"timestamp\": 1772880075856,\n    \"executeTime\": 26\n}",
+  "description" : "",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : {
     "name" : "",
@@ -251,8 +275,24 @@
 }
 ================================
 return db.page("""
-    select * from sys_login_log where 1=1
-    ?{createDate && createDate.split(',')[0], and create_date >= #{createDate.split(',')[0]}}
-    ?{createDate && createDate.split(',')[1], and create_date <= #{createDate.split(',')[1]}}
+    select *
+    from sys_login_log
+
+    <where>
+
+        <if test="username != null and username != ''">
+            and username = #{username}
+        </if>
+
+        <if test="startTime != null">
+            and create_date >= #{startTime}
+        </if>
+
+        <if test="endTime != null">
+            and create_date &lt;= #{endTime}
+        </if>
+
+    </where>
+
     order by create_date desc
 """)

@@ -5,11 +5,11 @@
   "groupId" : "4f0230049d7e4f39b1e0897cc0f46f9a",
   "name" : "删除",
   "createTime" : null,
-  "updateTime" : 1655304921225,
+  "updateTime" : 1772966434844,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
-  "path" : "/delete",
+  "updateBy" : "admin",
+  "path" : "/delete/{id}",
   "method" : "DELETE",
   "parameters" : [ ],
   "options" : [ {
@@ -27,9 +27,21 @@
   } ],
   "requestBody" : "{\n\n}",
   "headers" : [ ],
-  "paths" : [ ],
+  "paths" : [ {
+    "name" : "id",
+    "value" : null,
+    "description" : null,
+    "required" : true,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  } ],
   "responseBody" : null,
-  "description" : null,
+  "description" : "",
   "requestBodyDefinition" : {
     "name" : "",
     "value" : "",
@@ -54,9 +66,10 @@ if(Arrays.asList(id.split(',')).contains('1')){
 
 for(userId in id.split(',')){
     SqlCache.delete(`permissions:${userId}`)
-    db.table("sys_user").logic().where().eq("id",userId).delete();
-    db.update("""
-        delete from sys_user_role where user_id = #{userId}
-    """)
+    anyline.deletes("sys_user", "id", userId)
+    anyline.deletes("sys_user_role", "user_id", userId)
+    // db.update("""
+        // delete from sys_user_role where user_id = #{userId}
+    // """)
 }
 return true

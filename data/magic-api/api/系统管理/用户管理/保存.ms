@@ -5,10 +5,10 @@
   "groupId" : "4f0230049d7e4f39b1e0897cc0f46f9a",
   "name" : "保存",
   "createTime" : null,
-  "updateTime" : 1646493559668,
+  "updateTime" : 1772967494763,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/save",
   "method" : "POST",
   "parameters" : [ ],
@@ -29,7 +29,7 @@
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : null,
-  "description" : null,
+  "description" : "",
   "requestBodyDefinition" : {
     "name" : "",
     "value" : "",
@@ -49,28 +49,26 @@
 import cn.dev33.satoken.secure.SaSecureUtil;
 import org.ssssssss.magicapi.modules.db.cache.SqlCache
 
-var usernameCount = db.selectInt("select count(1) from sys_user where is_del = 0 and username = #{username} ?{id, and id != #{id}}")
-if(usernameCount > 0){
-    exit 0,'登录名称已存在'
-}
+var user = body
 
-password = password ? SaSecureUtil.sha256(password) : ''
-var user = {
-    id,
-    name,
-    username,
-    password: password,
-    phone,
-    isLogin,
-    officeId
-}
-if(id){
+let userId = user.id
+
+if(userId){
     SqlCache.delete(`permissions:${id}`)
-    db.update("""
-        delete from sys_user_role where user_id = #{id}
-    """)
+    // db.update("""
+    //     delete from sys_user_role where user_id = #{id}
+    // """)
+    anyline.deletes("sys_user_role", "user_id", userId)
+    anyline.update("sys_user", user)
+} else {
+    user.password = user.password ? SaSecureUtil.sha256(user.password) : ''
+    const dataRow = anyline.insert("sys_user", user, true)
+
+    userId = dataRow.getString("id")
 }
-id = db.table("sys_user").primary("id").saveOrUpdate(user)
-for(roleId in roles.split(',')){
-    db.table("sys_user_role").column('user_id', id).column("role_id", roleId).insert()
+if (user.roles) {
+    for(roleId in user.roles.split(',')){
+        anyline.insert("sys_user_role", {userId, roleId})
+        // db.table("sys_user_role").column('user_id', id).column("role_id", roleId).insert()
+    }
 }

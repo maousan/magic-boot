@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * WebSocket会话管理器
@@ -39,6 +40,21 @@ public class SessionManager {
     private final ConcurrentHashMap<String, WebSocketSession> sessionMap = new ConcurrentHashMap<>();
 
     /**
+     * 会话发送锁（防止并发写入）
+     */
+    private final ConcurrentHashMap<String, ReentrantLock> sessionLocks = new ConcurrentHashMap<>();
+
+    /**
+     * 默认发送超时时间：10秒
+     */
+    private static final int DEFAULT_SEND_TIMEOUT_MS = 10000;
+
+    /**
+     * 默认缓冲区大小限制：512KB
+     */
+    private static final int DEFAULT_BUFFER_SIZE_LIMIT = 512 * 1024;
+
+    /**
      * 添加会话
      * @param session WebSocket会话
      * @param userId 用户ID
@@ -52,8 +68,18 @@ public class SessionManager {
         String sessionId = session.getId();
         logger.info("Adding session {} for user {}", sessionId, userId);
 
-        // 存储会话
-        sessionMap.put(sessionId, session);
+        // 使用线程安全的装饰器包装session
+        WebSocketSession safeSession = new ConcurrentWebSocketSessionDecorator(
+            session,
+            DEFAULT_SEND_TIMEOUT_MS,
+            DEFAULT_BUFFER_SIZE_LIMIT
+        );
+
+        // 存储会话（使用线程安全的包装器）
+        sessionMap.put(sessionId, safeSession);
+
+        // 创建会话锁
+        sessionLocks.put(sessionId, new ReentrantLock());
 
         // 存储会话-用户关联
         sessionUserMap.put(sessionId, userId);
@@ -75,6 +101,20 @@ public class SessionManager {
         }
 
         logger.info("Removing session {}", sessionId);
+
+        // 移除会话锁
+        ReentrantLock lock = sessionLocks.remove(sessionId);
+        if (lock != null) {
+            // 尝试获取锁以确保没有正在进行的发送操作
+            try {
+                if (lock.tryLock(1, java.util.concurrent.TimeUnit.SECONDS)) {
+                    lock.unlock();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.warn("Interrupted while waiting for session lock: {}", sessionId);
+            }
+        }
 
         // 获取用户ID
         String userId = sessionUserMap.remove(sessionId);
@@ -151,6 +191,7 @@ public class SessionManager {
 
     /**
      * 向指定会话发送消息（线程安全）
+     * 使用锁机制防止并发写入导致的 IllegalStateException
      * @param sessionId 会话ID
      * @param message 消息内容
      */
@@ -161,16 +202,44 @@ public class SessionManager {
         }
 
         WebSocketSession session = sessionMap.get(sessionId);
-        if (session != null && session.isOpen()) {
-            try {
-                // 使用线程安全的会话装饰器发送消息
+        if (session == null) {
+            logger.warn("Session {} not found in session map", sessionId);
+            return;
+        }
+
+        if (!session.isOpen()) {
+            logger.warn("Session {} is not open, removing from map", sessionId);
+            removeSession(sessionId);
+            return;
+        }
+
+        // 获取会话锁
+        ReentrantLock lock = sessionLocks.get(sessionId);
+        if (lock == null) {
+            logger.warn("Lock not found for session {}, removing session", sessionId);
+            removeSession(sessionId);
+            return;
+        }
+
+        // 使用锁保护发送操作，防止并发写入
+        lock.lock();
+        try {
+            // 再次检查session状态（在锁内）
+            if (session.isOpen()) {
                 session.sendMessage(new TextMessage(message));
-            } catch (IOException e) {
-                logger.error("Error sending message to session {}", sessionId, e);
-                removeSession(sessionId);
+                logger.trace("Message sent successfully to session {}", sessionId);
+            } else {
+                logger.warn("Session {} closed while waiting for lock", sessionId);
             }
-        } else {
-            logger.warn("Session {} is not available", sessionId);
+        } catch (IOException e) {
+            logger.error("IOException when sending message to session {}: {}", sessionId, e.getMessage(), e);
+            // 在锁外移除session以避免死锁
+            removeSession(sessionId);
+        } catch (Exception e) {
+            logger.error("Unexpected error sending message to session {}: {}", sessionId, e.getMessage(), e);
+            removeSession(sessionId);
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -248,6 +317,7 @@ public class SessionManager {
         sessionMap.clear();
         sessionUserMap.clear();
         userSessionMap.clear();
+        sessionLocks.clear();
 
         logger.info("All sessions closed successfully");
     }

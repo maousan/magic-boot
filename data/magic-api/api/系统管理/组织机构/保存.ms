@@ -5,10 +5,10 @@
   "groupId" : "8295fc13678d4144bf7363c465247a50",
   "name" : "保存",
   "createTime" : null,
-  "updateTime" : 1647615397163,
+  "updateTime" : 1773054567842,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/save",
   "method" : "POST",
   "parameters" : [ ],
@@ -40,8 +40,8 @@
   "requestBody" : "{}",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : null,
-  "description" : null,
+  "responseBody" : "{\n    \"code\": 402,\n    \"message\": \"凭证已过期\",\n    \"data\": null,\n    \"timestamp\": 1772884876861,\n    \"executeTime\": null\n}",
+  "description" : "",
   "requestBodyDefinition" : {
     "name" : "",
     "value" : "",
@@ -58,8 +58,24 @@
   "responseBodyDefinition" : null
 }
 ================================
-var codeCount = db.selectInt("select count(1) from sys_office where is_del = 0 and code = #{code} ?{id, and id != #{id}}")
-if(codeCount > 0){
-    exit 0,'机构编码已存在'
+import cn.hutool.extra.spring.SpringUtil
+import org.anyline.entity.DataRow
+
+if (body.id !== null and body.id !== '') {
+    if (body.id === body.pid) {
+        exit 0, '不能设置上级部门为自己'
+    }
+    const dataRow = anyline.query("sys_office", `id:${body.id}`)
+    dataRow.putAll(body)
+    dataRow.put("update_date", now())
+    return anyline.update("sys_office", dataRow, "pid", "type", "status", "name", "remark")
+} else {
+    if (body.pid === null || body.pid === '') {
+        body.pid = '0'    
+    }
+    const dataRow = new DataRow()
+    dataRow.putAll(body)
+    dataRow.put("create_date", now())
+    
+    return anyline.insert("sys_office", dataRow, true)
 }
-return db.table("sys_office").primary("id").saveOrUpdate(data);

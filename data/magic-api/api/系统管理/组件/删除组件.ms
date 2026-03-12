@@ -5,10 +5,10 @@
   "groupId" : "6f106ebdee21489db34b956f7770ff03",
   "name" : "删除组件",
   "createTime" : null,
-  "updateTime" : 1710082768049,
+  "updateTime" : 1773115430829,
   "lock" : null,
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/delete",
   "method" : "DELETE",
   "parameters" : [ ],
@@ -29,7 +29,7 @@
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : null,
-  "description" : null,
+  "description" : "",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
 }

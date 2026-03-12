@@ -70,6 +70,12 @@ public class SpringDocConfig {
 	private OAuth2 oauth2;
 
 	/**
+	 * 标签配置（用于自定义分组描述）
+	 */
+	@NestedConfigurationProperty
+	private Map<String, TagConfig> tags = new HashMap<>();
+
+	/**
 	 * 文档版本
 	 */
 	private String version = "1.0";
@@ -160,6 +166,72 @@ public class SpringDocConfig {
 
 	public void setOauth2(OAuth2 oauth2) {
 		this.oauth2 = oauth2;
+	}
+
+	public Map<String, TagConfig> getTags() {
+		return tags;
+	}
+
+	public void setTags(Map<String, TagConfig> tags) {
+		this.tags = tags;
+	}
+
+	/**
+	 * 标签配置
+	 */
+	public static class TagConfig {
+
+		/**
+		 * 标签描述
+		 */
+		private String description;
+
+		/**
+		 * 外部文档
+		 */
+		private ExternalDoc externalDocs;
+
+		public String getDescription() {
+			return description;
+		}
+
+		public void setDescription(String description) {
+			this.description = description;
+		}
+
+		public ExternalDoc getExternalDocs() {
+			return externalDocs;
+		}
+
+		public void setExternalDocs(ExternalDoc externalDocs) {
+			this.externalDocs = externalDocs;
+		}
+	}
+
+	/**
+	 * 外部文档配置
+	 */
+	public static class ExternalDoc {
+
+		private String description;
+
+		private String url;
+
+		public String getDescription() {
+			return description;
+		}
+
+		public void setDescription(String description) {
+			this.description = description;
+		}
+
+		public String getUrl() {
+			return url;
+		}
+
+		public void setUrl(String url) {
+			this.url = url;
+		}
 	}
 
 	/**
@@ -348,4 +420,5 @@ public class SpringDocConfig {
 			}
 		}
 	}
+
 }

@@ -146,12 +146,27 @@ public class LogTailer {
             return List.of();
         }
 
-        try (ReversedLinesFileReader reader = new ReversedLinesFileReader(logFile, StandardCharsets.UTF_8)) {
-            List<String> lines = reader.readLines(n);
-            logger.debug("Retrieved last {} lines from file: {}", lines.size(), logFile.getAbsolutePath());
-            return lines;
+        if (!logFile.canRead()) {
+            logger.error("Log file is not readable: {}", logFile.getAbsolutePath());
+            return List.of();
+        }
+
+        try {
+            logger.info("Reading last {} lines from file: {} (size: {} bytes)",
+                       n, logFile.getAbsolutePath(), logFile.length());
+
+            try (ReversedLinesFileReader reader = new ReversedLinesFileReader(logFile, StandardCharsets.UTF_8)) {
+                List<String> lines = reader.readLines(n);
+                logger.info("Successfully retrieved {} lines from file: {}", lines.size(), logFile.getAbsolutePath());
+                return lines;
+            }
         } catch (IOException e) {
-            logger.error("Failed to read last {} lines from file: {}", n, logFile.getAbsolutePath(), e);
+            logger.error("Failed to read last {} lines from file: {}. Error: {}",
+                        n, logFile.getAbsolutePath(), e.getMessage(), e);
+            return List.of();
+        } catch (Exception e) {
+            logger.error("Unexpected error reading last {} lines from file: {}. Error: {}",
+                        n, logFile.getAbsolutePath(), e.getMessage(), e);
             return List.of();
         }
     }

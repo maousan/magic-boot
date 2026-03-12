@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "48261ceac8854872a3b2e3ff932b34d3",
+  "name" : "历史管理",
+  "type" : "api",
+  "parentId" : "f286ed8673e845139b01876d08e32e58",
+  "path" : "history",
+  "createTime" : 1773294488594,
+  "updateTime" : null,
+  "createBy" : "admin",
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

@@ -5,11 +5,11 @@
   "groupId" : "8295fc13678d4144bf7363c465247a50",
   "name" : "删除",
   "createTime" : null,
-  "updateTime" : 1679552802807,
+  "updateTime" : 1772911268635,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
-  "path" : "/delete",
+  "updateBy" : "admin",
+  "path" : "/delete/{id}",
   "method" : "DELETE",
   "parameters" : [ ],
   "options" : [ {
@@ -27,9 +27,21 @@
   } ],
   "requestBody" : "{\n\n}",
   "headers" : [ ],
-  "paths" : [ ],
+  "paths" : [ {
+    "name" : "id",
+    "value" : null,
+    "description" : null,
+    "required" : true,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  } ],
   "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": null,\n    \"timestamp\": 1641201245421,\n    \"executeTime\": 7\n}",
-  "description" : null,
+  "description" : "",
   "requestBodyDefinition" : {
     "name" : "",
     "value" : "",
@@ -131,4 +143,4 @@ if(userCount > 0){
 //     exit 500, '不能删除根节点'
 // }
 // db.table('sys_user_office').where().eq("office_id",id).delete();
-return db.table("sys_office").logic().where().eq("id",id).delete();
+return db.table("sys_office").where().eq("id",id).delete();

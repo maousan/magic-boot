@@ -5,10 +5,10 @@
   "groupId" : "4f0230049d7e4f39b1e0897cc0f46f9a",
   "name" : "获取用户信息",
   "createTime" : null,
-  "updateTime" : 1648431786861,
+  "updateTime" : 1772790206496,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/info",
   "method" : "GET",
   "parameters" : [ ],
@@ -16,8 +16,8 @@
   "requestBody" : "{}",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 402,\n    \"message\": \"凭证已过期\",\n    \"data\": null,\n    \"timestamp\": 1643710751531,\n    \"executeTime\": null\n}",
-  "description" : null,
+  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": {\n        \"id\": \"1\",\n        \"username\": \"admin\",\n        \"name\": \"管理员\",\n        \"password\": \"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92\",\n        \"status\": \"1\",\n        \"phone\": \"13888888888\",\n        \"headPortrait\": \"userfiles/2023-04-01/1d8cd6ccc18746419b97bbd74702d38c/图片的副本2.png,userfiles/2023-04-15/5e4e53ef95884413b09509b8558393d8/iShot_2023-04-15_09.36.22.png,userfiles/2023-04-01/1d8cd6ccc18746419b97bbd74702d38c/图片的副本2.png,userfiles/2023-04-15/5e4e53ef95884413b09509b8558393d8/iShot_2023-04-15_09.36.22.png,userfiles/2023-04-01/1d8cd6ccc18746419b97bbd74702d38c/图片的副本2.png,userfiles/2023-04-15/5e4e53ef95884413b09509b8558393d8/iShot_2023-04-15_09.36.22.png,userfiles/2023-04-01/1d8cd6ccc18746419b97bbd74702d38c/图片的副本2.png,userfiles/2023-04-15/5e4e53ef95884413b09509b8558393d8/iShot_2023-04-15_09.36.22.png,userfiles/2023-04-01/1d8cd6ccc18746419b97bbd74702d38c/图片的副本2.png,userfiles/2023-04-15/5e4e53ef95884413b09509b8558393d8/iShot_2023-04-15_09.36.22.png\",\n        \"isLogin\": 0,\n        \"sort\": null,\n        \"officeId\": \"31b365008f994e93850186126fce87cb\",\n        \"isDel\": 0,\n        \"createBy\": null,\n        \"createDate\": \"2020-05-15 22:25:20\",\n        \"updateBy\": \"1\",\n        \"updateDate\": \"2026-03-04 11:17:10\",\n        \"authorities\": [\n            \"code:gen:delete\",\n            \"data:test:view\",\n            \"code:gen:execute\",\n            \"component:history:list\",\n            \"dict:items:delete\",\n            \"dict:items:view\",\n            \"component:delete\",\n            \"dict:items:sort:down\",\n            \"code:gen\",\n            \"data:test:save\",\n            \"data:test:delete\",\n            \"code:gen:save\",\n            \"user:change:login:status\",\n            \"menu:view\",\n            \"component:save:tree\",\n            \"office:save\",\n            \"dict:items:sort:up\",\n            \"component:history:detail\",\n            \"menu:sort:up\",\n            \"online:logout\",\n            \"dict:delete\",\n            \"component:get:last:code\",\n            \"component:get:code\",\n            \"office:delete\",\n            \"role:delete\",\n            \"dict:view\",\n            \"user:view\",\n            \"office:sort:up\",\n            \"user:import:preview\",\n            \"user:import\",\n            \"menu:delete\",\n            \"menu:sort:down\",\n            \"role:save\",\n            \"menu:change\",\n            \"online:view\",\n            \"configure:delete\",\n            \"system:role:view\",\n            \"role:view\",\n            \"configure:save\",\n            \"dict:save\",\n            \"office:user:list\",\n            \"user:save\",\n            \"role:permission\",\n            \"code:gen:view\",\n            \"user:delete\",\n            \"component:save:code\",\n            \"office:sort:down\",\n            \"menu:save\",\n            \"office:view\",\n            \"dict:items:save\",\n            \"system:role:save\",\n            \"configure:view\",\n            \"component:tree\",\n            \"system:role:delete\",\n            \"role:user:list\"\n        ]\n    },\n    \"timestamp\": 1772790200331,\n    \"executeTime\": 64\n}",
+  "description" : "",
   "requestBodyDefinition" : {
     "name" : "",
     "value" : "",
@@ -44,7 +44,7 @@
     "expression" : "",
     "children" : [ {
       "name" : "code",
-      "value" : "402",
+      "value" : "200",
       "description" : "",
       "required" : false,
       "dataType" : "Integer",
@@ -56,7 +56,7 @@
       "children" : [ ]
     }, {
       "name" : "message",
-      "value" : "凭证已过期",
+      "value" : "success",
       "description" : "",
       "required" : false,
       "dataType" : "String",
@@ -68,7 +68,7 @@
       "children" : [ ]
     }, {
       "name" : "data",
-      "value" : "null",
+      "value" : "",
       "description" : "",
       "required" : false,
       "dataType" : "Object",
@@ -77,10 +77,214 @@
       "validateType" : "",
       "error" : "",
       "expression" : "",
-      "children" : [ ]
+      "children" : [ {
+        "name" : "id",
+        "value" : "1",
+        "description" : "",
+        "required" : false,
+        "dataType" : "String",
+        "type" : null,
+        "defaultValue" : null,
+        "validateType" : "",
+        "error" : "",
+        "expression" : "",
+        "children" : [ ]
+      }, {
+        "name" : "username",
+        "value" : "admin",
+        "description" : "",
+        "required" : false,
+        "dataType" : "String",
+        "type" : null,
+        "defaultValue" : null,
+        "validateType" : "",
+        "error" : "",
+        "expression" : "",
+        "children" : [ ]
+      }, {
+        "name" : "name",
+        "value" : "管理员",
+        "description" : "",
+        "required" : false,
+        "dataType" : "String",
+        "type" : null,
+        "defaultValue" : null,
+        "validateType" : "",
+        "error" : "",
+        "expression" : "",
+        "children" : [ ]
+      }, {
+        "name" : "password",
+        "value" : "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "description" : "",
+        "required" : false,
+        "dataType" : "String",
+        "type" : null,
+        "defaultValue" : null,
+        "validateType" : "",
+        "error" : "",
+        "expression" : "",
+        "children" : [ ]
+      }, {
+        "name" : "status",
+        "value" : "1",
+        "description" : "",
+        "required" : false,
+        "dataType" : "String",
+        "type" : null,
+        "defaultValue" : null,
+        "validateType" : "",
+        "error" : "",
+        "expression" : "",
+        "children" : [ ]
+      }, {
+        "name" : "phone",
+        "value" : "13888888888",
+        "description" : "",
+        "required" : false,
+        "dataType" : "String",
+        "type" : null,
+        "defaultValue" : null,
+        "validateType" : "",
+        "error" : "",
+        "expression" : "",
+        "children" : [ ]
+      }, {
+        "name" : "headPortrait",
+        "value" : "userfiles/2023-04-01/1d8cd6ccc18746419b97bbd74702d38c/图片的副本2.png,userfiles/2023-04-15/5e4e53ef95884413b09509b8558393d8/iShot_2023-04-15_09.36.22.png,userfiles/2023-04-01/1d8cd6ccc18746419b97bbd74702d38c/图片的副本2.png,userfiles/2023-04-15/5e4e53ef95884413b09509b8558393d8/iShot_2023-04-15_09.36.22.png,userfiles/2023-04-01/1d8cd6ccc18746419b97bbd74702d38c/图片的副本2.png,userfiles/2023-04-15/5e4e53ef95884413b09509b8558393d8/iShot_2023-04-15_09.36.22.png,userfiles/2023-04-01/1d8cd6ccc18746419b97bbd74702d38c/图片的副本2.png,userfiles/2023-04-15/5e4e53ef95884413b09509b8558393d8/iShot_2023-04-15_09.36.22.png,userfiles/2023-04-01/1d8cd6ccc18746419b97bbd74702d38c/图片的副本2.png,userfiles/2023-04-15/5e4e53ef95884413b09509b8558393d8/iShot_2023-04-15_09.36.22.png",
+        "description" : "",
+        "required" : false,
+        "dataType" : "String",
+        "type" : null,
+        "defaultValue" : null,
+        "validateType" : "",
+        "error" : "",
+        "expression" : "",
+        "children" : [ ]
+      }, {
+        "name" : "isLogin",
+        "value" : "0",
+        "description" : "",
+        "required" : false,
+        "dataType" : "Integer",
+        "type" : null,
+        "defaultValue" : null,
+        "validateType" : "",
+        "error" : "",
+        "expression" : "",
+        "children" : [ ]
+      }, {
+        "name" : "sort",
+        "value" : "null",
+        "description" : "",
+        "required" : false,
+        "dataType" : "Object",
+        "type" : null,
+        "defaultValue" : null,
+        "validateType" : "",
+        "error" : "",
+        "expression" : "",
+        "children" : [ ]
+      }, {
+        "name" : "officeId",
+        "value" : "31b365008f994e93850186126fce87cb",
+        "description" : "",
+        "required" : false,
+        "dataType" : "String",
+        "type" : null,
+        "defaultValue" : null,
+        "validateType" : "",
+        "error" : "",
+        "expression" : "",
+        "children" : [ ]
+      }, {
+        "name" : "isDel",
+        "value" : "0",
+        "description" : "",
+        "required" : false,
+        "dataType" : "Integer",
+        "type" : null,
+        "defaultValue" : null,
+        "validateType" : "",
+        "error" : "",
+        "expression" : "",
+        "children" : [ ]
+      }, {
+        "name" : "createBy",
+        "value" : "null",
+        "description" : "",
+        "required" : false,
+        "dataType" : "Object",
+        "type" : null,
+        "defaultValue" : null,
+        "validateType" : "",
+        "error" : "",
+        "expression" : "",
+        "children" : [ ]
+      }, {
+        "name" : "createDate",
+        "value" : "2020-05-15 22:25:20",
+        "description" : "",
+        "required" : false,
+        "dataType" : "String",
+        "type" : null,
+        "defaultValue" : null,
+        "validateType" : "",
+        "error" : "",
+        "expression" : "",
+        "children" : [ ]
+      }, {
+        "name" : "updateBy",
+        "value" : "1",
+        "description" : "",
+        "required" : false,
+        "dataType" : "String",
+        "type" : null,
+        "defaultValue" : null,
+        "validateType" : "",
+        "error" : "",
+        "expression" : "",
+        "children" : [ ]
+      }, {
+        "name" : "updateDate",
+        "value" : "2026-03-04 11:17:10",
+        "description" : "",
+        "required" : false,
+        "dataType" : "String",
+        "type" : null,
+        "defaultValue" : null,
+        "validateType" : "",
+        "error" : "",
+        "expression" : "",
+        "children" : [ ]
+      }, {
+        "name" : "authorities",
+        "value" : "",
+        "description" : "",
+        "required" : false,
+        "dataType" : "Array",
+        "type" : null,
+        "defaultValue" : null,
+        "validateType" : "",
+        "error" : "",
+        "expression" : "",
+        "children" : [ {
+          "name" : "",
+          "value" : "code:gen:delete",
+          "description" : "",
+          "required" : false,
+          "dataType" : "String",
+          "type" : null,
+          "defaultValue" : null,
+          "validateType" : "",
+          "error" : "",
+          "expression" : "",
+          "children" : [ ]
+        } ]
+      } ]
     }, {
       "name" : "timestamp",
-      "value" : "1643710751531",
+      "value" : "1772782890842",
       "description" : "",
       "required" : false,
       "dataType" : "Long",
@@ -92,10 +296,10 @@
       "children" : [ ]
     }, {
       "name" : "executeTime",
-      "value" : "null",
+      "value" : "8",
       "description" : "",
       "required" : false,
-      "dataType" : "Object",
+      "dataType" : "Integer",
       "type" : null,
       "defaultValue" : null,
       "validateType" : "",
@@ -106,7 +310,7 @@
   }
 }
 ================================
-import 'cn.dev33.satoken.stp.StpUtil';
+import cn.dev33.satoken.stp.StpUtil;
 import "@post:/system/security/permissions" as authoritiesList; 
 
 var user = db.table("sys_user").where().eq("id",StpUtil.getLoginId()).selectOne()

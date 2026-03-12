@@ -5,19 +5,19 @@
   "groupId" : "9ec6f9ec92d24a369952bb13eddc134f",
   "name" : "操作日志",
   "createTime" : null,
-  "updateTime" : 1713861312162,
+  "updateTime" : 1772911736255,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/oper/list",
-  "method" : "POST",
+  "method" : "GET",
   "parameters" : [ ],
   "options" : [ ],
   "requestBody" : "",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": {\n        \"total\": 86,\n        \"list\": [{\n            \"id\": 7947,\n            \"apiName\": \"后台-安全-登录\",\n            \"apiPath\": \"/security/login\",\n            \"apiMethod\": \"POST\",\n            \"costTime\": 301,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:22:24\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }, {\n            \"id\": 7948,\n            \"apiName\": \"后台-用户管理-获取用户信息\",\n            \"apiPath\": \"/user/info\",\n            \"apiMethod\": \"GET\",\n            \"costTime\": 41,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:22:24\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }, {\n            \"id\": 7949,\n            \"apiName\": \"后台-数据字典-字典项-获取所有字典项\",\n            \"apiPath\": \"/dict/items/all\",\n            \"apiMethod\": \"GET\",\n            \"costTime\": 19,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:22:24\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }, {\n            \"id\": 7950,\n            \"apiName\": \"后台-配置-获取所有配置\",\n            \"apiPath\": \"/config/list\",\n            \"apiMethod\": \"GET\",\n            \"costTime\": 5,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:22:24\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }, {\n            \"id\": 7951,\n            \"apiName\": \"后台-菜单管理-当前用户菜单\",\n            \"apiPath\": \"/menu/current/menus\",\n            \"apiMethod\": \"POST\",\n            \"costTime\": 19,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:22:24\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }, {\n            \"id\": 7952,\n            \"apiName\": \"后台-菜单管理-获取菜单tree\",\n            \"apiPath\": \"/menu/tree\",\n            \"apiMethod\": \"GET\",\n            \"costTime\": 34,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:22:27\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }, {\n            \"id\": 7953,\n            \"apiName\": \"后台-组织机构-列表\",\n            \"apiPath\": \"/office/tree\",\n            \"apiMethod\": \"GET\",\n            \"costTime\": 10,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:22:28\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }, {\n            \"id\": 7954,\n            \"apiName\": \"后台-角色管理-列表\",\n            \"apiPath\": \"/role/list\",\n            \"apiMethod\": \"GET\",\n            \"costTime\": 18,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:22:29\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }, {\n            \"id\": 7955,\n            \"apiName\": \"后台-菜单管理-获取排序号\",\n            \"apiPath\": \"/menu/sort\",\n            \"apiMethod\": \"GET\",\n            \"costTime\": 5,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:23:42\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }, {\n            \"id\": 7956,\n            \"apiName\": \"后台-组件-选择组件\",\n            \"apiPath\": \"/component/select\",\n            \"apiMethod\": \"GET\",\n            \"costTime\": 4,\n            \"createBy\": \"1\",\n            \"createDate\": \"2022-03-05 12:23:43\",\n            \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36\",\n            \"userIp\": \"0:0:0:0:0:0:0:1\",\n            \"username\": \"admin\"\n        }]\n    },\n    \"timestamp\": 1646472930242,\n    \"executeTime\": 19\n}",
-  "description" : null,
+  "responseBody" : "{\n    \"code\": 402,\n    \"message\": \"凭证已过期\",\n    \"data\": null,\n    \"timestamp\": 1772911698453,\n    \"executeTime\": null\n}",
+  "description" : "",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : {
     "name" : "",
@@ -67,7 +67,7 @@
       "expression" : "",
       "children" : [ {
         "name" : "total",
-        "value" : "86",
+        "value" : "722",
         "description" : "",
         "required" : false,
         "dataType" : "Integer",
@@ -101,7 +101,7 @@
           "expression" : "",
           "children" : [ {
             "name" : "id",
-            "value" : "7947",
+            "value" : "98990",
             "description" : "",
             "required" : false,
             "dataType" : "Integer",
@@ -113,7 +113,7 @@
             "children" : [ ]
           }, {
             "name" : "apiName",
-            "value" : "后台-安全-登录",
+            "value" : "/系统管理/安全/登录",
             "description" : "",
             "required" : false,
             "dataType" : "String",
@@ -125,7 +125,7 @@
             "children" : [ ]
           }, {
             "name" : "apiPath",
-            "value" : "/security/login",
+            "value" : "/system/security/login",
             "description" : "",
             "required" : false,
             "dataType" : "String",
@@ -149,7 +149,7 @@
             "children" : [ ]
           }, {
             "name" : "costTime",
-            "value" : "301",
+            "value" : "174",
             "description" : "",
             "required" : false,
             "dataType" : "Integer",
@@ -173,7 +173,7 @@
             "children" : [ ]
           }, {
             "name" : "createDate",
-            "value" : "2022-03-05 12:22:24",
+            "value" : "2026-03-06 15:36:45",
             "description" : "",
             "required" : false,
             "dataType" : "String",
@@ -185,7 +185,7 @@
             "children" : [ ]
           }, {
             "name" : "userAgent",
-            "value" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36",
+            "value" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
             "description" : "",
             "required" : false,
             "dataType" : "String",
@@ -224,7 +224,7 @@
       } ]
     }, {
       "name" : "timestamp",
-      "value" : "1646472930242",
+      "value" : "1772782621072",
       "description" : "",
       "required" : false,
       "dataType" : "Long",
@@ -236,10 +236,10 @@
       "children" : [ ]
     }, {
       "name" : "executeTime",
-      "value" : "19",
+      "value" : "58",
       "description" : "",
       "required" : false,
-      "dataType" : "Object",
+      "dataType" : "Integer",
       "type" : null,
       "defaultValue" : null,
       "validateType" : "",
@@ -250,15 +250,50 @@
   }
 }
 ================================
-return db.page("""
-    select sol.*,su.username from sys_oper_log sol left join sys_user su on sol.create_by = su.id where 1=1
-    ?{userIp, and sol.user_ip like concat('%', #{userIp}, '%')}
-    ?{username, and su.username like concat('%', #{username}, '%')}
-    ?{apiName, and sol.api_name like concat('%', #{apiName}, '%')}
-    ?{apiPath, and sol.api_path like concat('%', #{apiPath}, '%')}
-    ?{createDate && createDate.split(',')[0], and sol.create_date >= #{createDate.split(',')[0]}}
-    ?{createDate && createDate.split(',')[1], and sol.create_date <= #{createDate.split(',')[1]}}
-    ?{costTime && costTime.split(',')[0], and sol.cost_time >= #{costTime.split(',')[0]}}
-    ?{costTime && costTime.split(',')[1], and sol.cost_time <= #{costTime.split(',')[1]}}
+let sql = """
+
+    select sol.*, su.username
+    from sys_oper_log sol
+    left join sys_user su on sol.create_by = su.id
+
+    <where>
+
+        <if test="userIp != null and userIp != ''">
+            and sol.user_ip like concat('%', #{userIp}, '%')
+        </if>
+
+        <if test="username != null and username != ''">
+            and su.username like concat('%', #{username}, '%')
+        </if>
+
+        <if test="apiName != null and apiName != ''">
+            and sol.api_name like concat('%', #{apiName}, '%')
+        </if>
+
+        <if test="apiPath != null and apiPath != ''">
+            and sol.api_path like concat('%', #{apiPath}, '%')
+        </if>
+
+        <if test="createDate != null and createDate.split(',').length > 0 and createDate.split(',')[0] != ''">
+            and sol.create_date >= #{createDate.split(',')[0]}
+        </if>
+
+        <if test="createDate != null and createDate.split(',').length > 1 and createDate.split(',')[1] != ''">
+            and sol.create_date <= #{createDate.split(',')[1]}
+        </if>
+
+        <if test="costTime != null and costTime.split(',').length > 0 and costTime.split(',')[0] != ''">
+            and sol.cost_time >= #{costTime.split(',')[0]}
+        </if>
+
+        <if test="costTime != null and costTime.split(',').length > 1 and costTime.split(',')[1] != ''">
+            and sol.cost_time <= #{costTime.split(',')[1]}
+        </if>
+
+    </where>
+
     order by sol.create_date desc
-""")
+
+"""
+
+return db.page(sql)

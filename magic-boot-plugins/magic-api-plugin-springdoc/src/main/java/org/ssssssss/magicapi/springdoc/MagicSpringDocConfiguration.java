@@ -9,6 +9,7 @@ import org.springdoc.core.properties.SwaggerUiConfigParameters;
 import org.springdoc.core.properties.SwaggerUiConfigProperties;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -39,7 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 		name = {"springdoc.api-docs.enabled"},
 		matchIfMissing = true
 )
-public class MagicSpringDocConfiguration implements MagicPluginConfiguration {
+public class MagicSpringDocConfiguration implements MagicPluginConfiguration, CommandLineRunner {
 
 	private final MagicAPIProperties properties;
 	private final SpringDocConfig springDocConfig;
@@ -68,6 +69,19 @@ public class MagicSpringDocConfiguration implements MagicPluginConfiguration {
 	@Override
 	public Plugin plugin() {
 		return new Plugin("SpringDoc");
+	}
+
+	@Override
+	public void run(String... args) {
+		// 应用启动时自动注册 OpenAPI 端点
+		if (createdMapping.compareAndSet(false, true)) {
+			try {
+				createOpenApiProvider();
+				logger.info("MagicAPI SpringDoc 接口已注册: {}", springDocConfig.getLocation());
+			} catch (Exception e) {
+				logger.error("注册 SpringDoc 接口失败", e);
+			}
+		}
 	}
 
 	@Bean
@@ -236,7 +250,8 @@ public class MagicSpringDocConfiguration implements MagicPluginConfiguration {
 				properties.isPersistenceResponseBody(),
 				properties.getPrefix(),
 				securitySchemesMap,
-				new java.util.ArrayList<>(securityNames)
+				new java.util.ArrayList<>(securityNames),
+				springDocConfig
 		);
 
 		// 注册 OpenAPI JSON 端点

@@ -5,12 +5,12 @@
   "groupId" : "d95a58e77d314370862ffc4cdfdb8283",
   "name" : "踢人",
   "createTime" : null,
-  "updateTime" : 1680332529466,
+  "updateTime" : 1772976506399,
   "lock" : null,
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/logout",
-  "method" : "GET",
+  "method" : "POST",
   "parameters" : [ ],
   "options" : [ {
     "name" : "permission",
@@ -25,16 +25,18 @@
     "expression" : null,
     "children" : null
   } ],
-  "requestBody" : "",
+  "requestBody" : "{\r\n    \"id\": \"\",\r\n    \"time\": 0\r\n}",
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : null,
-  "description" : null,
+  "description" : "",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
 }
 ================================
 import cn.dev33.satoken.stp.StpUtil
+
+const { id, time } = body
 // 先踢下线
 StpUtil.logoutByTokenValue(StpUtil.getTokenValueByLoginId(id)) 
-return StpUtil.disable(id, time.asLong());
+return StpUtil.disable(id, time ? time : 0);

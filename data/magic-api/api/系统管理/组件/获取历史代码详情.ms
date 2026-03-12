@@ -5,10 +5,10 @@
   "groupId" : "6f106ebdee21489db34b956f7770ff03",
   "name" : "获取历史代码详情",
   "createTime" : null,
-  "updateTime" : 1710083294611,
+  "updateTime" : 1773115487859,
   "lock" : null,
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/history/detail",
   "method" : "GET",
   "parameters" : [ ],
@@ -29,11 +29,13 @@
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : null,
-  "description" : null,
+  "description" : "",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
 }
 ================================
-return db.selectValue("""
+let sql = """
     select source_code from sys_dynamic_component_history where id = #{id} and is_del = 0
-""")
+"""
+
+return db.selectValue(sql)

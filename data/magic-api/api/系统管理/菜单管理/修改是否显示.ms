@@ -5,10 +5,10 @@
   "groupId" : "67b2ce258e24491194b74992958c74aa",
   "name" : "修改是否显示",
   "createTime" : null,
-  "updateTime" : 1651931012437,
+  "updateTime" : 1772782726021,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/change",
   "method" : "GET",
   "parameters" : [ ],
@@ -41,7 +41,7 @@
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : null,
-  "description" : null,
+  "description" : "",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
 }

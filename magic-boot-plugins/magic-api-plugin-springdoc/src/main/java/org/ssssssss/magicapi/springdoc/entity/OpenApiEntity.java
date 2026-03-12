@@ -1,5 +1,7 @@
 package org.ssssssss.magicapi.springdoc.entity;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.util.*;
 
 /**
@@ -7,6 +9,7 @@ import java.util.*;
  *
  * @author mxd
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class OpenApiEntity {
 
 	private String openapi = "3.0.3";
@@ -26,6 +29,88 @@ public class OpenApiEntity {
 	private final Map<String, Object> securitySchemes = new HashMap<>();
 
 	private final List<Map<String, List<String>>> security = new ArrayList<>();
+
+	/**
+	 * 标签列表（根级别）
+	 */
+	private List<Tag> tags = new ArrayList<>();
+
+	/**
+	 * 标签定义
+	 */
+	public static class Tag {
+		private String name;
+		private String description;
+		private ExternalDocs externalDocs;
+
+		public Tag(String name, String description) {
+			this.name = name;
+			this.description = description;
+		}
+
+		public Tag(String name, String description, ExternalDocs externalDocs) {
+			this.name = name;
+			this.description = description;
+			this.externalDocs = externalDocs;
+		}
+
+		public String getName() {
+			return name;
+		}
+
+		public void setName(String name) {
+			this.name = name;
+		}
+
+		public String getDescription() {
+			return description;
+		}
+
+		public void setDescription(String description) {
+			this.description = description;
+		}
+
+		public ExternalDocs getExternalDocs() {
+			return externalDocs;
+		}
+
+		public void setExternalDocs(ExternalDocs externalDocs) {
+			this.externalDocs = externalDocs;
+		}
+	}
+
+	/**
+	 * 外部文档
+	 */
+	public static class ExternalDocs {
+		private String description;
+		private String url;
+
+		public ExternalDocs(String url) {
+			this.url = url;
+		}
+
+		public ExternalDocs(String description, String url) {
+			this.description = description;
+			this.url = url;
+		}
+
+		public String getDescription() {
+			return description;
+		}
+
+		public void setDescription(String description) {
+			this.description = description;
+		}
+
+		public String getUrl() {
+			return url;
+		}
+
+		public void setUrl(String url) {
+			this.url = url;
+		}
+	}
 
 	/**
 	 * 添加服务器
@@ -50,16 +135,32 @@ public class OpenApiEntity {
 	}
 
 	/**
-	 * 添加标签
+	 * 添加标签（根级别）
 	 */
 	public void addTag(String name, String description) {
-		if (info.getTags() == null) {
-			info.setTags(new ArrayList<>());
+		// 检查是否已存在同名标签
+		boolean exists = tags.stream().anyMatch(t -> t.getName().equals(name));
+		if (!exists) {
+			tags.add(new Tag(name, description));
 		}
-		Map<String, String> tag = new HashMap<>(2);
-		tag.put("name", name);
-		tag.put("description", description);
-		info.getTags().add(tag);
+	}
+
+	/**
+	 * 添加标签（带外部文档）
+	 */
+	public void addTag(String name, String description, ExternalDocs externalDocs) {
+		boolean exists = tags.stream().anyMatch(t -> t.getName().equals(name));
+		if (!exists) {
+			tags.add(new Tag(name, description, externalDocs));
+		}
+	}
+
+	public List<Tag> getTags() {
+		return tags;
+	}
+
+	public void setTags(List<Tag> tags) {
+		this.tags = tags;
 	}
 
 	/**
@@ -160,8 +261,6 @@ public class OpenApiEntity {
 
 		private License license;
 
-		private List<Map<String, String>> tags;
-
 		public Info(String title, String description, String version) {
 			this.title = title;
 			this.description = description;
@@ -206,14 +305,6 @@ public class OpenApiEntity {
 
 		public void setLicense(License license) {
 			this.license = license;
-		}
-
-		public List<Map<String, String>> getTags() {
-			return tags;
-		}
-
-		public void setTags(List<Map<String, String>> tags) {
-			this.tags = tags;
 		}
 	}
 
@@ -287,6 +378,7 @@ public class OpenApiEntity {
 	/**
 	 * 路径项
 	 */
+	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public static class PathItem {
 
 		private String summary;

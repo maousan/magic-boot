@@ -5,10 +5,10 @@
   "groupId" : "67b2ce258e24491194b74992958c74aa",
   "name" : "保存",
   "createTime" : null,
-  "updateTime" : 1665500740432,
+  "updateTime" : 1773320609424,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : "guyi",
+  "updateBy" : "admin",
   "path" : "/save",
   "method" : "POST",
   "parameters" : [ ],
@@ -41,7 +41,7 @@
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : null,
-  "description" : null,
+  "description" : "",
   "requestBodyDefinition" : {
     "name" : "",
     "value" : "",
@@ -58,27 +58,53 @@
   "responseBodyDefinition" : null
 }
 ================================
+import org.ssssssss.magicapi.utils.JsonUtils
 import org.ssssssss.magicapi.modules.db.cache.SqlCache;
 import '@get:/system/menu/cache/delete' as cacheDelete;
+import log
 
-if(data.url){
-    var urlCount = db.selectInt("select count(1) from sys_menu where is_del = 0 and url = #{data.url} ?{data.id, and id != #{data.id}}")
-    if(urlCount > 0){
-        exit 0,'菜单链接已存在'
+const menu = body
+
+let menuId = menu.id
+
+if (menu.meta) {
+    menu.meta['title'] = menu.title
+} else {
+    menu.meta = {
+        title: menu.title
     }
 }
-if(data.permission){
-    var permissionCount = db.selectInt("select count(1) from sys_menu where is_del = 0 and permission = #{data.permission} ?{data.id, and id != #{data.id}}")
+
+if (menu.type === 'embedded') {
+    menu.component = 'IFrameView'
+}
+
+// 判断是否为动态组件
+if (menu.componentId) {
+    if (!menu.component) {
+        menu.component = '/lowcode/page'
+    }
+    menu.meta.query = {
+        id: menu.componentId
+    }
+}
+
+if(body.permission){
+    var permissionCount = db.selectInt("select count(1) from sys_menu where is_del = 0 and permission = #{body.permission} ?{body.id, and id != #{body.id}}")
     if(permissionCount > 0){
         exit 0,'权限标识已存在'
     }
 }
+// 转成json字符串
+menu.meta = JsonUtils.toJsonString(menu.meta)
 
-var result = db.table("sys_menu").primary("id").withBlank().saveOrUpdate(data);
-
-SqlCache.delete('permissions:1')
-if(data.id){
-    var menuId = data.id
+if (menuId) {
+    anyline.update("sys_menu", menu)
+    SqlCache.delete('permissions:1')
     cacheDelete();
+} else {
+    const dataRow = anyline.insert("sys_menu", menu, true)
+    menuId = dataRow.getString("id")
 }
+
 return result

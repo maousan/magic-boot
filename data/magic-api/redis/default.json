@@ -5,21 +5,21 @@
     "password" : "zintis",
     "database" : "3",
     "pool" : {
-      "max-active" : "100",
-      "max-idle" : "100",
-      "min-idle" : "100",
-      "max-wait" : "1000"
+      "max-active" : "8",
+      "max-idle" : "5",
+      "min-idle" : "2",
+      "max-wait" : "5000"
     }
   },
   "id" : "a12f66e26a4c47b5998fe61f834280e5",
   "script" : null,
   "groupId" : "redis:0",
-  "name" : "local",
+  "name" : "default",
   "createTime" : 1772600888470,
-  "updateTime" : 1772612776958,
+  "updateTime" : 1772704667416,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
-  "key" : "local",
+  "key" : "default",
   "type" : "single"
 }

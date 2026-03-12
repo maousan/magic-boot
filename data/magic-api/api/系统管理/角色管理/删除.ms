@@ -5,11 +5,11 @@
   "groupId" : "89130d496f6f467c88b22ae4a7f688eb",
   "name" : "删除",
   "createTime" : null,
-  "updateTime" : 1665500606275,
+  "updateTime" : 1772963664994,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : "guyi",
-  "path" : "/delete",
+  "updateBy" : "admin",
+  "path" : "/delete/{id}",
   "method" : "DELETE",
   "parameters" : [ ],
   "options" : [ {
@@ -27,9 +27,21 @@
   } ],
   "requestBody" : "{\n\n}",
   "headers" : [ ],
-  "paths" : [ ],
+  "paths" : [ {
+    "name" : "id",
+    "value" : null,
+    "description" : null,
+    "required" : true,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  } ],
   "responseBody" : null,
-  "description" : null,
+  "description" : "",
   "requestBodyDefinition" : {
     "name" : "",
     "value" : "",
@@ -54,7 +66,7 @@ if(userCount > 0){
 }
 
 db.table("sys_role_menu").where().eq("role_id",id).delete()
-var result = db.table("sys_role").logic().where().eq("id",id).delete();
+var result = db.table("sys_role").where().eq("id",id).delete();
 
 var roleId = id
 cacheDelete()

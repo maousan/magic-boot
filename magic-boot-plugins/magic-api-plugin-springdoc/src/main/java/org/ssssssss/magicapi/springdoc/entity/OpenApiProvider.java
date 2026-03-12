@@ -12,7 +12,10 @@ import org.ssssssss.magicapi.utils.PathUtils;
 import org.ssssssss.script.parsing.ast.literal.BooleanLiteral;
 
 import java.util.*;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.ssssssss.magicapi.springdoc.SpringDocConfig;
 
 import static org.ssssssss.magicapi.core.config.Constants.*;
 
@@ -42,10 +45,11 @@ public class OpenApiProvider {
 	private final String prefix;
 	private final Map<String, Object> securitySchemesMap;
 	private final List<String> securityNames;
+	private final SpringDocConfig springDocConfig;
 
 	public OpenApiProvider(RequestMagicDynamicRegistry requestMagicDynamicRegistry, MagicResourceService magicResourceService,
 						   String basePath, OpenApiEntity.Info info, boolean persistenceResponseBody, String prefix,
-						   Map<String, Object> securitySchemesMap, List<String> securityNames) {
+						   Map<String, Object> securitySchemesMap, List<String> securityNames, SpringDocConfig springDocConfig) {
 		this.requestMagicDynamicRegistry = requestMagicDynamicRegistry;
 		this.magicResourceService = magicResourceService;
 		this.basePath = basePath;
@@ -54,6 +58,7 @@ public class OpenApiProvider {
 		this.prefix = StringUtils.defaultIfBlank(prefix, "") + "/";
 		this.securitySchemesMap = securitySchemesMap;
 		this.securityNames = securityNames;
+		this.springDocConfig = springDocConfig;
 	}
 
 	@ResponseBody
@@ -62,6 +67,9 @@ public class OpenApiProvider {
 		List<ApiInfo> infos = requestMagicDynamicRegistry.mappings();
 		OpenApiEntity openApiEntity = new OpenApiEntity();
 		openApiEntity.setInfo(info);
+
+		// 收集 tagName -> groupName 的映射关系
+		Map<String, String> tagGroupMap = new LinkedHashMap<>();
 
 		// 添加服务器信息
 		if (StringUtils.isNotBlank(basePath)) {
@@ -78,20 +86,24 @@ public class OpenApiProvider {
 			openApiEntity.addSecurity(securityName);
 		}
 
-		for (ApiInfo info : infos) {
-			String groupName = getRootGroupName(info.getGroupId());
-			String requestPath = PathUtils.replaceSlash(this.prefix + magicResourceService.getGroupPath(info.getGroupId()) + "/" + info.getPath());
+		for (ApiInfo apiInfo : infos) {
+			String groupName = getRootGroupName(apiInfo.getGroupId());
+			String requestPath = PathUtils.replaceSlash(this.prefix + magicResourceService.getGroupPath(apiInfo.getGroupId()) + "/" + apiInfo.getPath());
+			// 使用 path 的驼峰格式作为 tag name
+			String tagName = generateTagFromPath(requestPath);
+			// 保存 tagName -> groupName 映射，用于生成描述
+			tagGroupMap.putIfAbsent(tagName, groupName);
 
 			OpenApiEntity.Operation operation = new OpenApiEntity.Operation();
-			operation.addTag(groupName);
-			operation.setSummary(info.getName());
-			operation.setDescription(StringUtils.defaultIfBlank(info.getDescription(), info.getName()));
+			operation.addTag(tagName);
+			operation.setSummary(apiInfo.getName());
+			operation.setDescription(StringUtils.defaultIfBlank(apiInfo.getDescription(), apiInfo.getName()));
 			// 设置 operationId，如果为空则根据 path 和 method 生成驼峰格式
-			String operationId = generateCamelCaseOperationId(info.getMethod(), requestPath);
+			String operationId = generateCamelCaseOperationId(apiInfo.getMethod(), requestPath);
 			operation.setOperationId(operationId);
 
 			try {
-				List<Map<String, Object>> parameters = parseParameters(info);
+				List<Map<String, Object>> parameters = parseParameters(apiInfo);
 				boolean hasBody = parameters.stream().anyMatch(it -> "requestBody".equals(it.get("in")));
 
 				// 添加查询参数和路径参数
@@ -100,18 +112,18 @@ public class OpenApiProvider {
 					.forEach(operation::addParameter);
 
 				// 处理请求体
-				BaseDefinition baseDefinition = info.getRequestBodyDefinition();
+				BaseDefinition baseDefinition = apiInfo.getRequestBodyDefinition();
 				if (hasBody && baseDefinition != null) {
 					OpenApiEntity.RequestBody requestBody = new OpenApiEntity.RequestBody();
 					requestBody.setRequired(baseDefinition.isRequired());
 					requestBody.setDescription(baseDefinition.getDescription());
 
 					OpenApiEntity.MediaType mediaType = new OpenApiEntity.MediaType();
-					String groupNameForSchema = magicResourceService.getGroupName(info.getGroupId()).replace("/", "-");
-					String voName = buildVoName(groupNameForSchema, info.getPath(), "request", baseDefinition);
+					String groupNameForSchema = magicResourceService.getGroupName(apiInfo.getGroupId()).replace("/", "-");
+					String voName = buildVoName(groupNameForSchema, apiInfo.getPath(), "request", baseDefinition);
 
 					if (!CollectionUtils.isEmpty(baseDefinition.getChildren())) {
-						doProcessDefinition(baseDefinition, info, groupNameForSchema, "root_", voName, 0);
+						doProcessDefinition(baseDefinition, apiInfo, groupNameForSchema, "root_", voName, 0);
 						mediaType.setSchema(OpenApiEntity.createRefSchema(voName));
 					} else {
 						mediaType.setSchema(buildSimpleSchema(baseDefinition));
@@ -122,15 +134,36 @@ public class OpenApiProvider {
 				}
 
 				// 处理响应
-				Map<String, OpenApiEntity.Response> responses = parseResponses(info, groupName);
+				Map<String, OpenApiEntity.Response> responses = parseResponses(apiInfo, tagName);
 				responses.forEach(operation::addResponse);
 
 			} catch (Exception e) {
 				// 记录异常但不影响其他接口处理
-				System.err.println("解析接口失败：" + info.getPath() + ", 错误：" + e.getMessage());
+				System.err.println("解析接口失败：" + apiInfo.getPath() + ", 错误：" + e.getMessage());
 			}
 
-			openApiEntity.addPath(requestPath, info.getMethod(), operation);
+			openApiEntity.addPath(requestPath, apiInfo.getMethod(), operation);
+		}
+
+		// 添加根级别的 tags（支持自定义配置）
+		for (Map.Entry<String, String> entry : tagGroupMap.entrySet()) {
+			String tagName = entry.getKey();
+			String groupName = entry.getValue();
+			SpringDocConfig.TagConfig tagConfig = springDocConfig.getTags().get(tagName);
+			if (tagConfig != null) {
+				OpenApiEntity.ExternalDocs externalDocs = null;
+				if (tagConfig.getExternalDocs() != null) {
+					externalDocs = new OpenApiEntity.ExternalDocs(
+						tagConfig.getExternalDocs().getDescription(),
+						tagConfig.getExternalDocs().getUrl()
+					);
+				}
+				openApiEntity.addTag(tagName,
+					tagConfig.getDescription() != null ? tagConfig.getDescription() : groupName + "接口",
+					externalDocs);
+			} else {
+				openApiEntity.addTag(tagName, groupName + "接口");
+			}
 		}
 
 		// 添加 Schema 定义
@@ -158,6 +191,44 @@ public class OpenApiProvider {
 			return getRootGroupName(group.getParentId());
 		}
 		return group.getName();
+	}
+
+	/**
+	 * 从 path 生成 tag 名称（驼峰格式）
+	 * 例如: /api/system/user/list -> systemUser
+	 *       /api/data/report/export -> dataReport
+	 *
+	 * @param path 请求路径
+	 * @return 驼峰格式的 tag 名称
+	 */
+	private String generateTagFromPath(String path) {
+		// 移除前缀斜杠，按 / 分割
+		String normalizedPath = path.replaceFirst("^/", "");
+		String[] parts = normalizedPath.split("/");
+
+		// 取前两级路径作为 tag（排除接口方法名）
+		StringBuilder tagBuilder = new StringBuilder();
+		int maxParts = Math.min(parts.length >= 3 ? 2 : parts.length, parts.length);
+
+		for (int i = 0; i < maxParts; i++) {
+			String part = parts[i];
+			if (part != null && !part.isEmpty()) {
+				// 第一个部分首字母小写，后续部分首字母大写
+				if (tagBuilder.length() == 0) {
+					tagBuilder.append(part.substring(0, 1).toLowerCase());
+					if (part.length() > 1) {
+						tagBuilder.append(part.substring(1));
+					}
+				} else {
+					tagBuilder.append(part.substring(0, 1).toUpperCase());
+					if (part.length() > 1) {
+						tagBuilder.append(part.substring(1));
+					}
+				}
+			}
+		}
+
+		return tagBuilder.length() > 0 ? tagBuilder.toString() : "default";
 	}
 
 	private List<Map<String, Object>> parseParameters(ApiInfo info) {
@@ -244,7 +315,11 @@ public class OpenApiProvider {
 		BaseDefinition baseDefinition = info.getResponseBodyDefinition();
 		if (baseDefinition != null && !CollectionUtils.isEmpty(baseDefinition.getChildren())) {
 			OpenApiEntity.MediaType mediaType = new OpenApiEntity.MediaType();
-			String voName = buildVoName(groupName.replace("/", "-"), info.getPath(), "response", baseDefinition);
+			String groupNameForSchema = groupName.replace("/", "-");
+			String voName = buildVoName(groupNameForSchema, info.getPath(), "response", baseDefinition);
+
+			// 生成 schema 定义
+			doProcessDefinition(baseDefinition, info, groupNameForSchema, "root_", voName, 0);
 			mediaType.setSchema(OpenApiEntity.createRefSchema(voName));
 			response.addMediaType("application/json", mediaType);
 		} else if (this.persistenceResponseBody && StringUtils.isNotBlank(info.getResponseBody())) {

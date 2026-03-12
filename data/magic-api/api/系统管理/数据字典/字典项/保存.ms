@@ -5,10 +5,10 @@
   "groupId" : "376f26eb43a44a3daeafd27020a96f48",
   "name" : "保存",
   "createTime" : 1646490239437,
-  "updateTime" : 1644121691372,
+  "updateTime" : 1773048760238,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/save",
   "method" : "POST",
   "parameters" : [ ],
@@ -40,14 +40,16 @@
   "requestBody" : "{\n\n}",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : null,
-  "description" : null,
+  "responseBody" : "{\n    \"code\": 402,\n    \"message\": \"凭证已过期\",\n    \"data\": null,\n    \"timestamp\": 1773048731742,\n    \"executeTime\": null\n}",
+  "description" : "",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
 }
 ================================
-var valueCount = db.selectInt("select count(1) from sys_dict_items where is_del = 0 and dict_id = #{data.dictId} and value = #{data.value} ?{id, and id != #{data.id}}")
-if(valueCount > 0){
-    exit 0,'值已存在'
+import log
+
+if (body.id) {
+    return anyline.update("sys_dict_items", body)
+} else {
+    return anyline.insert("sys_dict_items", body, true)
 }
-return db.table("sys_dict_items").primary("id").saveOrUpdate(data)

@@ -1,7 +1,8 @@
 {
-  "active_plan": "D:\\IdeaProjects\\magic-boot\\.sisyphus\\plans\\liteflow-plugin.md",
-  "started_at": "2026-03-04T00:00:00.000Z",
-  "session_ids": ["ses_initial_001"],
-  "plan_name": "liteflow-plugin",
-  "worktree_path": "D:\\IdeaProjects\\magic-boot"
+  "active_plan": "D:\\IdeaProjects\\magic-boot\\.sisyphus\\plans\\backend-realtime-log.md",
+  "started_at": "2026-03-05T04:13:40.772Z",
+  "ses_343e3a2d6ffepMaSN65sORAO6q", "ses_343cbe4c7ffeTsoGQBNFMZuInd", "ses_343cbb959ffe9OlLm6DgNXBv4z"
+  "plan_name": "backend-realtime-log",
+  "worktree_path": "D:/IdeaProjects/magic-boot",
+  "agent": "atlas"
 }

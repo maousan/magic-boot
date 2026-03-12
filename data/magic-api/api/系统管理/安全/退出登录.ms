@@ -5,10 +5,10 @@
   "groupId" : "1952f25c81084e24b55b11385767dc38",
   "name" : "退出登录",
   "createTime" : null,
-  "updateTime" : 1646544864959,
+  "updateTime" : 1772782741940,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/logout",
   "method" : "GET",
   "parameters" : [ ],
@@ -29,7 +29,7 @@
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : "{\n    \"code\": 500,\n    \"message\": \"系统内部出现错误\",\n    \"data\": null,\n    \"timestamp\": 1634046032107,\n    \"executeTime\": 8\n}",
-  "description" : null,
+  "description" : "",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : {
     "name" : "",
@@ -106,6 +106,6 @@
   }
 }
 ================================
-import 'cn.dev33.satoken.stp.StpUtil';
+import cn.dev33.satoken.stp.StpUtil;
 StpUtil.logout();
 exit 200
