@@ -23,6 +23,11 @@ public class JobInfo extends PathMagicEntity {
 	 */
 	private String description;
 
+	/**
+	 * 定时任务参数
+	 */
+	private String params;
+
     // 新增字段用于 Quartz 高级功能
     /**
      * 错过触发策略
@@ -49,7 +54,33 @@ public class JobInfo extends PathMagicEntity {
      */
     private long timeout = 0;
 
+	private String jobType;
 
+	private String clazz;
+
+	public String getClazz() {
+		return clazz;
+	}
+
+	public void setClazz(String clazz) {
+		this.clazz = clazz;
+	}
+
+	public String getParams() {
+		return params;
+	}
+
+	public void setParams(String params) {
+		this.params = params;
+	}
+
+	public String getJobType() {
+		return jobType;
+	}
+
+	public void setJobType(String jobType) {
+		this.jobType = jobType;
+	}
 
 	public String getCron() {
 		return cron;
@@ -91,9 +122,6 @@ public class JobInfo extends PathMagicEntity {
             return description;
         }
     }
-
-
-
 
     public MisfirePolicy getMisfirePolicy() {
         return misfirePolicy;
@@ -146,6 +174,9 @@ public class JobInfo extends PathMagicEntity {
 		info.setDependsOn(this.dependsOn);
 		info.setMaxRetry(this.maxRetry);
 		info.setTimeout(this.timeout);
+		info.setJobType(this.jobType);
+		info.setClazz(this.clazz);
+		info.setParams(this.getParams());
 		return info;
 	}
 

@@ -16,13 +16,6 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <maven.compiler.release>17</maven.compiler.release>
-        <magic-api.version>2.2.2</magic-api.version>
-        <druid.version>1.2.20</druid.version>
-        <hutool-all.version>5.8.15</hutool-all.version>
-        <sa-token.version>1.44.0</sa-token.version>
-        <poi.version>4.1.2</poi.version>
-        <mysql.connector.version>8.0.32</mysql.connector.version>
-        <aliyun-core.version>4.6.0</aliyun-core.version>
     </properties>
 
     <dependencies>
@@ -37,68 +30,55 @@
         <dependency>
             <groupId>org.ssssssss</groupId>
             <artifactId>magic-api-spring-boot-starter</artifactId>
-            <version>${magic-api.version}</version>
         </dependency>
         <dependency>
             <groupId>com.dtflys.forest</groupId>
             <artifactId>forest-spring-boot3-starter</artifactId>
-            <version>1.7.6</version>
         </dependency>
         <dependency>
             <groupId>com.dtflys.forest</groupId>
             <artifactId>forest-jakarta-xml</artifactId>
-            <version>1.7.6</version>
         </dependency>
         <dependency>
             <groupId>org.ssssssss</groupId>
             <artifactId>magic-api-plugin-springdoc</artifactId>
-            <version>${magic-api.version}</version>
         </dependency>
         <dependency>
             <groupId>org.ssssssss</groupId>
             <artifactId>magic-api-plugin-excel</artifactId>
-            <version>${magic-api.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>2.2.0</version>
         </dependency>
         <dependency>
             <groupId>org.ssssssss</groupId>
             <artifactId>magic-api-plugin-redis</artifactId>
-            <version>${magic-api.version}</version>
         </dependency>
         <dependency>
             <groupId>org.ssssssss</groupId>
             <artifactId>magic-api-plugin-liteflow</artifactId>
-            <version>${magic-api.version}</version>
         </dependency>
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
-            <version>${mysql.connector.version}</version>
         </dependency>
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>druid-spring-boot-3-starter</artifactId>
-            <version>${druid.version}</version>
         </dependency>
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
-            <version>${hutool-all.version}</version>
         </dependency>
         <dependency>
             <groupId>cn.dev33</groupId>
             <artifactId>sa-token-spring-boot3-starter</artifactId>
-            <version>${sa-token.version}</version>
         </dependency>
         <!-- Sa-Token 整合 RedisTemplate -->
         <dependency>
             <groupId>cn.dev33</groupId>
             <artifactId>sa-token-redis-template</artifactId>
-            <version>${sa-token.version}</version>
 <!--            <optional>true</optional>-->
         </dependency>
         <!-- 提供 Redis 连接池 -->
@@ -109,22 +89,18 @@
         <dependency>
             <groupId>org.ssssssss</groupId>
             <artifactId>magic-api-plugin-job</artifactId>
-            <version>${magic-api.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
-            <version>${poi.version}</version>
         </dependency>
         <dependency>
             <groupId>com.aliyun</groupId>
             <artifactId>aliyun-java-sdk-core</artifactId>
-            <version>${aliyun-core.version}</version>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.21.0</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -144,10 +120,15 @@
         </dependency>
         <!--end anyline -->
 
+        <!-- MyBatis Plus -->
         <dependency>
             <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-core</artifactId>
-            <version>3.5.15</version>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+        <!-- MyBatis Plus 分页插件 (3.5.4+ 需要单独引入) -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
         </dependency>
 
     </dependencies>
@@ -161,23 +142,6 @@
 <!--            </snapshots>-->
 <!--        </repository>-->
 <!--    </repositories>-->
-
-    <dependencyManagement>
-        <dependencies>
-            <!--
-                这里主要定义了一些版本号
-                实现项目中也是换成各自公司自己的
-                如果能配置私服的话可以用快照版本(8.7.2-SNAPSHOT)
-            -->
-            <dependency>
-                <groupId>org.anyline</groupId>
-                <artifactId>anyline-dependency</artifactId>
-                <version>8.7.3-jdk17-20260202</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 
     <build>
         <finalName>magic-boot</finalName>

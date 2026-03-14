@@ -22,12 +22,24 @@
         <module>magic-api-plugin-mqtt</module>
         <module>magic-api-plugin-springdoc</module>
         <module>magic-api-plugin-excel</module>
-        <module>magic-editor</module>
     </modules>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- 引入依赖版本管理 -->
+            <dependency>
+                <groupId>org.ssssssss</groupId>
+                <artifactId>magic-dependencies</artifactId>
+                <version>0.0.2</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>

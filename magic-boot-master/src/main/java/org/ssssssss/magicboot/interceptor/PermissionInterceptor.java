@@ -4,6 +4,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -19,6 +20,7 @@ import org.ssssssss.magicapi.utils.PathUtils;
 import org.ssssssss.magicboot.model.StatusCode;
 import org.ssssssss.script.MagicScriptContext;
 
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -37,11 +39,32 @@ public class PermissionInterceptor implements RequestInterceptor, HandlerInterce
     @Autowired
     private JdbcTemplate template;
 
+    @Autowired
+    private Environment environment;
+
+    private static Boolean isDev;
+
+    /**
+     * 判断当前是否为开发环境
+     */
+    private boolean isDevEnvironment() {
+        if (isDev == null) {
+            String[] activeProfiles = environment.getActiveProfiles();
+            isDev = Arrays.stream(activeProfiles)
+                    .anyMatch("dev"::equalsIgnoreCase);
+        }
+        return isDev;
+    }
+
     /*
      * 当返回对象时，直接将此对象返回到页面，返回null时，继续执行后续操作
      */
     @Override
     public Object preHandle(ApiInfo info, MagicScriptContext context, MagicHttpServletRequest request, MagicHttpServletResponse response) {
+        // dev 环境下跳过登录校验
+        if (isDevEnvironment()) {
+            return null;
+        }
         String requireLogin = Objects.toString(info.getOptionValue(Options.REQUIRE_LOGIN), "");
         if(requireLogin.equals("false")){
             return null;

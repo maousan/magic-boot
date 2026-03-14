@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.ssssssss</groupId>
+    <artifactId>magic-dependencies</artifactId>
+    <version>0.0.2</version>
+    <packaging>pom</packaging>
+    <name>magic-dependencies</name>
+    <description>Magic Boot 依赖版本管理</description>
+
+    <properties>
+        <!-- Java 版本 -->
+        <java.version>17</java.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.release>17</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- 框架版本 -->
+        <spring-boot.version>3.1.2</spring-boot.version>
+        <magic-api.version>2.2.2</magic-api.version>
+        <magic-script.version>1.9.0</magic-script.version>
+
+        <!-- 数据库相关 -->
+        <mysql.connector.version>8.0.32</mysql.connector.version>
+        <druid.version>1.2.20</druid.version>
+        <mybatis-plus.version>3.5.15</mybatis-plus.version>
+
+        <!-- 认证相关 -->
+        <sa-token.version>1.44.0</sa-token.version>
+
+        <!-- Redis 相关 -->
+        <redisson.version>3.16.6</redisson.version>
+
+        <!-- 工具类 -->
+        <hutool.version>5.8.35</hutool.version>
+        <commons-io.version>2.21.0</commons-io.version>
+        <commons-compress.version>1.21</commons-compress.version>
+        <commons-text.version>1.10.0</commons-text.version>
+        <commons-beanutils.version>1.9.4</commons-beanutils.version>
+        <fastjson.version>1.2.83</fastjson.version>
+
+        <!-- 文档相关 -->
+        <springdoc.version>2.3.0</springdoc.version>
+
+        <!-- HTTP 客户端 -->
+        <forest.version>1.7.6</forest.version>
+
+        <!-- 工作流引擎 -->
+        <liteflow.version>2.15.3</liteflow.version>
+
+        <!-- Excel 相关 -->
+        <poi.version>4.1.2</poi.version>
+        <easyexcel.version>3.3.2</easyexcel.version>
+
+        <!-- 云服务 -->
+        <aliyun-core.version>4.6.0</aliyun-core.version>
+
+        <!-- MQTT -->
+        <paho-mqtt.version>1.2.5</paho-mqtt.version>
+        <httpclient.version>4.5.13</httpclient.version>
+
+        <!-- Anyline ORM -->
+        <anyline.version>8.7.3-jdk17-20260202</anyline.version>
+
+        <!-- Maven 插件 -->
+        <exec-maven-plugin.version>1.6.0</exec-maven-plugin.version>
+        <maven-resources-plugin.version>3.2.0</maven-resources-plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Spring Boot BOM -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Magic API 相关 -->
+            <dependency>
+                <groupId>org.ssssssss</groupId>
+                <artifactId>magic-api</artifactId>
+                <version>${magic-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.ssssssss</groupId>
+                <artifactId>magic-script</artifactId>
+                <version>${magic-script.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.ssssssss</groupId>
+                <artifactId>magic-api-spring-boot-starter</artifactId>
+                <version>${magic-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.ssssssss</groupId>
+                <artifactId>magic-api-plugin-springdoc</artifactId>
+                <version>${magic-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.ssssssss</groupId>
+                <artifactId>magic-api-plugin-excel</artifactId>
+                <version>${magic-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.ssssssss</groupId>
+                <artifactId>magic-api-plugin-redis</artifactId>
+                <version>${magic-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.ssssssss</groupId>
+                <artifactId>magic-api-plugin-liteflow</artifactId>
+                <version>${magic-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.ssssssss</groupId>
+                <artifactId>magic-api-plugin-job</artifactId>
+                <version>${magic-api.version}</version>
+            </dependency>
+
+            <!-- 数据库驱动 -->
+            <dependency>
+                <groupId>mysql</groupId>
+                <artifactId>mysql-connector-java</artifactId>
+                <version>${mysql.connector.version}</version>
+            </dependency>
+
+            <!-- Druid 连接池 -->
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>druid-spring-boot-3-starter</artifactId>
+                <version>${druid.version}</version>
+            </dependency>
+
+            <!-- MyBatis Plus -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-core</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-annotation</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-jsqlparser</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+
+            <!-- Sa-Token 认证 -->
+            <dependency>
+                <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-spring-boot3-starter</artifactId>
+                <version>${sa-token.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-redis-template</artifactId>
+                <version>${sa-token.version}</version>
+            </dependency>
+
+            <!-- Redisson Redis 客户端 -->
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson-spring-boot-starter</artifactId>
+                <version>${redisson.version}</version>
+            </dependency>
+
+            <!-- Hutool 工具类 -->
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-all</artifactId>
+                <version>${hutool.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-core</artifactId>
+                <version>${hutool.version}</version>
+            </dependency>
+
+            <!-- Commons 工具类 -->
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>${commons-io.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>${commons-compress.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-text</artifactId>
+                <version>${commons-text.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-beanutils</groupId>
+                <artifactId>commons-beanutils</artifactId>
+                <version>${commons-beanutils.version}</version>
+            </dependency>
+
+            <!-- Fastjson -->
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>fastjson</artifactId>
+                <version>${fastjson.version}</version>
+            </dependency>
+
+            <!-- SpringDoc OpenAPI -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
+
+            <!-- Forest HTTP 客户端 -->
+            <dependency>
+                <groupId>com.dtflys.forest</groupId>
+                <artifactId>forest-spring-boot3-starter</artifactId>
+                <version>${forest.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.dtflys.forest</groupId>
+                <artifactId>forest-jakarta-xml</artifactId>
+                <version>${forest.version}</version>
+            </dependency>
+
+            <!-- LiteFlow 工作流引擎 -->
+            <dependency>
+                <groupId>com.yomahub</groupId>
+                <artifactId>liteflow-spring-boot-starter</artifactId>
+                <version>${liteflow.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yomahub</groupId>
+                <artifactId>liteflow-script-groovy</artifactId>
+                <version>${liteflow.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yomahub</groupId>
+                <artifactId>liteflow-script-graaljs</artifactId>
+                <version>${liteflow.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yomahub</groupId>
+                <artifactId>liteflow-script-qlexpress</artifactId>
+                <version>${liteflow.version}</version>
+            </dependency>
+
+            <!-- Apache POI Excel -->
+            <dependency>
+                <groupId>org.apache.poi</groupId>
+                <artifactId>poi-ooxml</artifactId>
+                <version>${poi.version}</version>
+            </dependency>
+
+            <!-- EasyExcel -->
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>easyexcel</artifactId>
+                <version>${easyexcel.version}</version>
+            </dependency>
+
+            <!-- 阿里云 SDK -->
+            <dependency>
+                <groupId>com.aliyun</groupId>
+                <artifactId>aliyun-java-sdk-core</artifactId>
+                <version>${aliyun-core.version}</version>
+            </dependency>
+
+            <!-- MQTT 客户端 -->
+            <dependency>
+                <groupId>org.eclipse.paho</groupId>
+                <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+                <version>${paho-mqtt.version}</version>
+            </dependency>
+
+            <!-- Apache HttpClient -->
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>${httpclient.version}</version>
+            </dependency>
+
+            <!-- Anyline ORM -->
+            <dependency>
+                <groupId>org.anyline</groupId>
+                <artifactId>anyline-dependency</artifactId>
+                <version>${anyline.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+</project>

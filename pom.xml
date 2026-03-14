@@ -18,8 +18,10 @@
     <description>magic-boot</description>
 
     <modules>
+        <module>magic-dependencies</module>
         <module>magic-api-parent</module>
         <module>magic-boot-plugins</module>
+        <module>magic-editor</module>
         <module>magic-boot-master</module>
     </modules>
 
@@ -28,20 +30,18 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <maven.compiler.release>17</maven.compiler.release>
-        <magic-api.version>2.2.2</magic-api.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <!-- 引入依赖版本管理 -->
             <dependency>
                 <groupId>org.ssssssss</groupId>
-                <artifactId>magic-api</artifactId>
-                <version>${magic-api.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.ssssssss</groupId>
-                <artifactId>magic-script</artifactId>
-                <version>1.9.0</version>
+                <artifactId>magic-dependencies</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

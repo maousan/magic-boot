@@ -84,6 +84,9 @@ public class JobMagicDynamicRegistryForQuartz extends AbstractMagicDynamicRegist
                     .usingJobData("script", entity.getScript())
                     .usingJobData("scriptName", MagicConfiguration.getMagicResourceService().getScriptName(entity))
                     .usingJobData("showLog", showLog)
+                    .usingJobData("jobType", entity.getJobType() != null ? entity.getJobType() : "script")
+                    .usingJobData("params", entity.getParams())
+                    .usingJobData("clazz", entity.getClazz())
                     .storeDurably()
                     .build();
 
