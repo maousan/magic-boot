@@ -20,10 +20,10 @@ spring:
   # Redis 配置（仅在 extend.redis.enabled=true 时生效）
   data:
     redis:
-      host: 127.0.0.1
-      port: 6379
-      password: zintis
-      database: 3
+      host: ${SPRING_DATA_REDIS_HOST:127.0.0.1}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:zintis}
+      database: ${SPRING_DATA_REDIS_DATABASE:3}
       timeout: 5000
       lettuce:
         pool:
@@ -47,9 +47,9 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     type: com.alibaba.druid.pool.DruidDataSource
-    url: jdbc:mysql://192.168.2.90/magic-boot?useSSL=false&zeroDateTimeBehavior=convertToNull&useUnicode=true&characterEncoding=UTF8&autoReconnect=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
-    username: magic
-    password: Magic@2026
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://192.168.2.90/magic-boot?useSSL=false&zeroDateTimeBehavior=convertToNull&useUnicode=true&characterEncoding=UTF8&autoReconnect=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai}
+    username: ${SPRING_DATASOURCE_USERNAME:magic}
+    password: ${SPRING_DATASOURCE_PASSWORD:Magic@2026}
     druid:
       # 下面为连接池的补充设置，应用到上面所有数据源中
       # 初始化大小，最小，最大
@@ -98,10 +98,11 @@ magic-api:
   sql-column-case: camel
   resource:
     location: data/magic-api
+    table-name: magic_api_file
   backup: #备份相关配置
     enable: true #是否启用
     max-history: -1 #备份保留天数，-1为永久保留
-    table-name: magic_backup_record_v2 #使用数据库存储备份时的表名
+    table-name: magic_backup_record #使用数据库存储备份时的表名
   page:
     page: pageNo
     size: pageSize
@@ -119,7 +120,7 @@ magic-api:
     logic-delete-value: 1 #逻辑删除值
   security:
     username: admin
-    password: admin123456
+    password: K7vQ9@xP4Lr2!mZ8
 #  swagger:
 #    version: 1.0
 #    description: MagicAPI 接口信息
@@ -271,4 +272,34 @@ liteflow:
     delay: 300000
     #监控日志打印每过多少时间执行一次，默认值为300000毫秒，也就是5分钟
     period: 300000
+
+# MyBatis Plus 配置
+mybatis-plus:
+  # Mapper XML 文件位置
+  mapper-locations: classpath*:mapper/**/*.xml
+  # 实体类扫描路径
+  type-aliases-package: org.ssssssss.magicboot.**.model
+  # 配置
+  configuration:
+    # 开启驼峰命名转换
+    map-underscore-to-camel-case: true
+    # 日志输出
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  # 全局配置
+  global-config:
+    # 数据库配置
+    db-config:
+      # 主键类型（AUTO 自增，ASSIGN_ID 雪花算法）
+      id-type: AUTO
+      # 逻辑删除字段名
+      logic-delete-field: isDel
+      # 逻辑删除值
+      logic-delete-value: 1
+      # 逻辑未删除值
+      logic-not-delete-value: 0
+      # 字段策略
+      insert-strategy: not_null
+      update-strategy: not_null
+    # 关闭 Banner
+    banner: false
 
