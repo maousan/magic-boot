@@ -33,6 +33,13 @@
     </dependencyManagement>
 
     <dependencies>
+        <!-- 插件扩展点 API -->
+        <dependency>
+            <groupId>org.ssssssss</groupId>
+            <artifactId>magic-plugin-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- PF4J 核心 -->
         <dependency>
             <groupId>org.pf4j</groupId>

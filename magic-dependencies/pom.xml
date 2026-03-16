@@ -329,6 +329,13 @@
                 <artifactId>pf4j-spring</artifactId>
                 <version>${pf4j-spring.version}</version>
             </dependency>
+
+            <!-- 插件扩展点 API -->
+            <dependency>
+                <groupId>org.ssssssss</groupId>
+                <artifactId>magic-plugin-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

@@ -132,6 +132,13 @@
             </exclusions>
         </dependency>
 
+        <!-- 插件扩展点 API -->
+        <dependency>
+            <groupId>org.ssssssss</groupId>
+            <artifactId>magic-plugin-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- 拼音工具 -->
         <dependency>
             <groupId>com.belerweb</groupId>

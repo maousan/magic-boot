@@ -25,6 +25,7 @@
         <module>magic-boot-master</module>
         <module>magic-plugins</module>
         <module>magic-plugins-demo</module>
+        <module>magic-plugin-api</module>
     </modules>
 
     <properties>
