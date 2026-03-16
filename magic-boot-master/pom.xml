@@ -119,6 +119,24 @@
             <artifactId>anyline-data-jdbc-mysql</artifactId>
         </dependency>
         <!--end anyline -->
+        <!-- PF4J 插件系统 -->
+        <dependency>
+            <groupId>org.ssssssss</groupId>
+            <artifactId>magic-plugins</artifactId>
+            <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-reload4j</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- 拼音工具 -->
+        <dependency>
+            <groupId>com.belerweb</groupId>
+            <artifactId>pinyin4j</artifactId>
+        </dependency>
 
         <!-- MyBatis Plus -->
         <dependency>
