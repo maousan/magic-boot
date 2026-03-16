@@ -5,7 +5,7 @@
   "groupId" : "48261ceac8854872a3b2e3ff932b34d3",
   "name" : "获取历史",
   "createTime" : 1773294758477,
-  "updateTime" : 1773321091546,
+  "updateTime" : 1773379849588,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -38,7 +38,11 @@ import org.ssssssss.magicapi.utils.JsonUtils
 
 const row = anyline.queryMap("sys_vtj_history", `++id='${id}'`)
 
-if (row && row.content) {
+if (!row) {
+    return
+}
+
+if (row.content) {
     row.content = JsonUtils.readValue(row.content, Map.class)
 }
 

@@ -4,6 +4,13 @@
       <form>
         <label style="width:auto">{{ $i('message.enable') }}</label>
         <magic-checkbox v-model:value="info.enabled" />
+        <label style="width:auto">{{ $i('job.form.jobType') }}</label>
+        <magic-select v-model:value="info.jobType" defaultValue="script" :options="jobTypeOptions"
+                      :placeholder="$i('job.form.jobType')" width="150px"/>
+        <div v-if="info.jobType === 'clazz'" >
+          <label>调用类</label>
+          <magic-input v-model:value="info.clazz" placeholder="请输入调用类" width="250px"/>
+        </div>
         <label>cron</label>
         <magic-input v-model:value="info.cron" :placeholder="$i('job.form.placeholder.cron')" width="250px"/>
         <label>{{ $i('job.form.name') }}</label>
@@ -25,10 +32,31 @@ const $i = inject('i18n.format')
 const info = inject('info')
 const editor = ref();
 
+const jobTypeOptions = ref([
+  {
+    value: 'clazz',
+    text: '调用类'
+  },
+  {
+    value: 'script',
+    text: '脚本类'
+  }
+])
+
+const handleExecute = () => {
+  alert('123')
+}
+
 const handleEditorContentChange = (e) => {
   const value = editor.value.getInstance().getValue()
   info.value.description = value
 }
+
+onMounted(() => {
+  if (!info.value.jobType) {
+    info.value.jobType = 'script'
+  }
+})
 
 </script>
 

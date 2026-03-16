@@ -9,15 +9,13 @@ import org.springframework.context.annotation.Configuration;
 import org.ssssssss.magicapi.core.config.MagicPluginConfiguration;
 import org.ssssssss.magicapi.core.model.Plugin;
 import org.ssssssss.magicapi.core.web.MagicControllerRegister;
-import org.ssssssss.magicapi.job.repository.JobLogRepository;
 import org.ssssssss.magicapi.job.service.*;
 import org.ssssssss.magicapi.job.web.ExtendedMagicJobController;
 import org.ssssssss.magicapi.job.web.MagicJobController;
+import org.ssssssss.magicapi.job.mapper.JobLogMapper;
 
 import org.quartz.Scheduler;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import javax.sql.DataSource;
 
 @Configuration
 @EnableConfigurationProperties(MagicJobConfig.class)
@@ -25,7 +23,7 @@ import javax.sql.DataSource;
 public class MagicAPIJobConfiguration implements MagicPluginConfiguration {
 
 	private final MagicJobConfig config;
-	
+
 	@Autowired
     private Scheduler scheduler;
 
@@ -73,13 +71,7 @@ public class MagicAPIJobConfiguration implements MagicPluginConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public JobLogRepository jobLogRepository(DataSource dataSource) {
-        return new JobLogRepository(dataSource);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public JobLogService jobLogService(JobLogRepository jobLogRepository, Scheduler scheduler) {
-        return new JobLogService(jobLogRepository, scheduler);
+    public JobLogService jobLogService(JobLogMapper jobLogMapper, Scheduler scheduler) {
+        return new JobLogService(jobLogMapper, scheduler);
     }
 }

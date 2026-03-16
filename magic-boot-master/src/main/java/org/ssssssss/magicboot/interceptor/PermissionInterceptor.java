@@ -43,6 +43,7 @@ public class PermissionInterceptor implements RequestInterceptor, HandlerInterce
     private Environment environment;
 
     private static Boolean isDev;
+    private static Boolean isDemo;
 
     /**
      * 判断当前是否为开发环境
@@ -56,6 +57,25 @@ public class PermissionInterceptor implements RequestInterceptor, HandlerInterce
         return isDev;
     }
 
+    /**
+     * 判断当前是否为演示环境
+     */
+    private boolean isDemoEnvironment() {
+        if (isDemo == null) {
+            String[] activeProfiles = environment.getActiveProfiles();
+            isDemo = Arrays.stream(activeProfiles)
+                    .anyMatch("demo"::equalsIgnoreCase);
+        }
+        return isDemo;
+    }
+
+    /**
+     * 检查是否为 GET 请求
+     */
+    private boolean isGetRequest(String method) {
+        return "GET".equalsIgnoreCase(method);
+    }
+
     /*
      * 当返回对象时，直接将此对象返回到页面，返回null时，继续执行后续操作
      */
@@ -65,6 +85,12 @@ public class PermissionInterceptor implements RequestInterceptor, HandlerInterce
         if (isDevEnvironment()) {
             return null;
         }
+
+        // demo 环境下只允许 GET 请求
+        if (isDemoEnvironment() && !isGetRequest(request.getMethod())) {
+            return StatusCode.DEMO_FORBIDDEN.json("演示环境禁止操作");
+        }
+
         String requireLogin = Objects.toString(info.getOptionValue(Options.REQUIRE_LOGIN), "");
         if(requireLogin.equals("false")){
             return null;

@@ -37,7 +37,7 @@ public class JdbcUrlBuilder {
             throw new IllegalArgumentException("dbType 不能为空");
         }
         String host = (String) BeanUtil.propertyNvl(config, new String[]{"host", "Host"});
-        String database = (String) BeanUtil.propertyNvl(config, new String[]{"db", "database", "databaseName"});
+        String database = (String) BeanUtil.propertyNvl(config, new String[]{"db", "database", "schema", "schemaName"});
 
         int port = (int) BeanUtil.propertyNvl(config, new String[]{"port"});
 

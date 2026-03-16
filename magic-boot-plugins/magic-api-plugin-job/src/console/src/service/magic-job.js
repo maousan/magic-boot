@@ -5,8 +5,7 @@ export default function (bus, constants, $i, Message, request) {
         // 任务名称
         name: $i('job.name'),
         // 脚本语言
-        language: 'groovy',
-        // language: 'magicscript',
+        language: 'magicscript',
         // 默认脚本
         defaultScript: `return 'Hello magic-api-job'`,
         // 执行测试的逻辑

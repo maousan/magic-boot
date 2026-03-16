@@ -8,7 +8,7 @@ CREATE TABLE `magic_api_file_v2` (
 ```
 ### 备份表建表语句
 ```sql
-CREATE TABLE `magic_backup_record_v2` (
+CREATE TABLE `magic_backup_record` (
   `id` varchar(32) NOT NULL COMMENT '原对象ID',
   `create_date` bigint(13) NOT NULL COMMENT '备份时间',
   `tag` varchar(32) DEFAULT NULL COMMENT '标签',

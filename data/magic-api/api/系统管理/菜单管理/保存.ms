@@ -5,7 +5,7 @@
   "groupId" : "67b2ce258e24491194b74992958c74aa",
   "name" : "保存",
   "createTime" : null,
-  "updateTime" : 1773320609424,
+  "updateTime" : 1773564952867,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -40,7 +40,7 @@
   "requestBody" : "{}",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : null,
+  "responseBody" : "{\n    \"code\": 500,\n    \"message\": \"系统内部出现错误\",\n    \"data\": null,\n    \"timestamp\": 1773494064352,\n    \"executeTime\": 21\n}",
   "description" : "",
   "requestBodyDefinition" : {
     "name" : "",
@@ -58,6 +58,7 @@
   "responseBodyDefinition" : null
 }
 ================================
+import cn.hutool.extra.pinyin.PinyinUtil
 import org.ssssssss.magicapi.utils.JsonUtils
 import org.ssssssss.magicapi.modules.db.cache.SqlCache;
 import '@get:/system/menu/cache/delete' as cacheDelete;
@@ -75,6 +76,10 @@ if (menu.meta) {
     }
 }
 
+if (!menu.meta.order) {
+    menu.meta.order = menu.sort || 1
+}
+
 if (menu.type === 'embedded') {
     menu.component = 'IFrameView'
 }
@@ -87,6 +92,13 @@ if (menu.componentId) {
     menu.meta.query = {
         id: menu.componentId
     }
+}
+
+if (!menu.name) {
+    menu.name = PinyinUtil.getPinyin(menu.title).replaceAll(" ", "")
+}
+if (!menu.path) {
+    menu.path = `/${menu.name}`
 }
 
 if(body.permission){

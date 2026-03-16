@@ -21,13 +21,14 @@ var MAGIC_EDITOR_CONFIG = {
         repo: false,
         qqGroup: false
     },
-    // getMagicTokenValue: function(){
-    //     // 自行获取magic-api需要的token
-    //     return token;
-    // },
+    getMagicTokenValue: function(){
+        // 自行获取magic-api需要的token
+        return localStorage.getItem('ACCESS_TOKEN');
+    },
     request: {
         beforeSend: function (config) {
             console.log('请求设置', config);
+            config.headers.Authorization = `Bearer ${localStorage.getItem('ACCESS_TOKEN')}`
             return config;
         },
         onError: function (err) {

@@ -32,13 +32,11 @@
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>easyexcel</artifactId>
-            <version>3.3.2</version>
         </dependency>
         <!-- Hutool 用于工具类支持 -->
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-core</artifactId>
-            <version>5.8.15</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

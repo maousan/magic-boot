@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "ba5ca17f802b4860999fd18363034a6b",
+  "name" : "测试用例",
+  "type" : "api",
+  "parentId" : "0",
+  "path" : "/test",
+  "createTime" : 1772760719312,
+  "updateTime" : 1773412055589,
+  "createBy" : "admin",
+  "updateBy" : "admin",
+  "paths" : [ ],
+  "options" : [ ]
+}

@@ -5,7 +5,7 @@
   "groupId" : "8295fc13678d4144bf7363c465247a50",
   "name" : "列表",
   "createTime" : 1646490239494,
-  "updateTime" : 1772968755679,
+  "updateTime" : 1773384826055,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -106,7 +106,6 @@
   }
 }
 ================================
-import org.ssssssss.magicboot.utils.MapTranslateUtil
 let sql = """
     select id,name,pid,type,status,sort,code,remark,create_date from sys_office 
     <where>

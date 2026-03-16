@@ -20,8 +20,8 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------
 -- Table structure for magic_backup_record_v2
 -- ----------------------------
-DROP TABLE IF EXISTS `magic_backup_record_v2`;
-CREATE TABLE `magic_backup_record_v2`  (
+DROP TABLE IF EXISTS `magic_backup_record`;
+CREATE TABLE `magic_backup_record`  (
   `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '原对象ID',
   `create_date` bigint(13) NOT NULL COMMENT '备份时间',
   `tag` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '标签',

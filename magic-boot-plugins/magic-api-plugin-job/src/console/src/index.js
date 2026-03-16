@@ -2,9 +2,8 @@ import MagicJob from './service/magic-job.js'
 import localZhCN from './i18n/zh-cn.js'
 import localEn from './i18n/en.js'
 import MagicJobInfo from './components/magic-job-info.vue'
-import 'vite-plugin-svg-icons/register'
-
 import EnhancedJobInfo from './components/enhanced-job-info.vue'
+import 'vite-plugin-svg-icons/register'
 
 export default (opt) => {
     const i18n = opt.i18n
@@ -25,6 +24,11 @@ export default (opt) => {
         }],
         // 底部工具条
         toolbars: [{
+            type: 'job',
+            title: 'job.enhanced',
+            icon: 'parameter',
+            component: EnhancedJobInfo
+        }, {
             // 当打开的资源类型为 job 时显示
             type: 'job',
             // 工具条展示的标题

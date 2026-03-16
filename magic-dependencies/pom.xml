@@ -37,11 +37,13 @@
 
         <!-- 工具类 -->
         <hutool.version>5.8.35</hutool.version>
+        <pinyin4j.version>2.5.1</pinyin4j.version>
         <commons-io.version>2.21.0</commons-io.version>
         <commons-compress.version>1.21</commons-compress.version>
         <commons-text.version>1.10.0</commons-text.version>
         <commons-beanutils.version>1.9.4</commons-beanutils.version>
         <fastjson.version>1.2.83</fastjson.version>
+        <pinyin4j.version>2.5.1</pinyin4j.version>
 
         <!-- 文档相关 -->
         <springdoc.version>2.3.0</springdoc.version>
@@ -69,6 +71,10 @@
         <!-- Maven 插件 -->
         <exec-maven-plugin.version>1.6.0</exec-maven-plugin.version>
         <maven-resources-plugin.version>3.2.0</maven-resources-plugin.version>
+
+        <!-- PF4J 插件框架 -->
+        <pf4j.version>3.13.0</pf4j.version>
+        <pf4j-spring.version>0.10.0</pf4j-spring.version>
     </properties>
 
     <dependencyManagement>
@@ -191,6 +197,13 @@
                 <version>${hutool.version}</version>
             </dependency>
 
+            <!-- 拼音工具 -->
+            <dependency>
+                <groupId>com.belerweb</groupId>
+                <artifactId>pinyin4j</artifactId>
+                <version>${pinyin4j.version}</version>
+            </dependency>
+
             <!-- Commons 工具类 -->
             <dependency>
                 <groupId>commons-io</groupId>
@@ -303,6 +316,18 @@
                 <version>${anyline.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+
+            <!-- PF4J 插件框架 -->
+            <dependency>
+                <groupId>org.pf4j</groupId>
+                <artifactId>pf4j</artifactId>
+                <version>${pf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.pf4j</groupId>
+                <artifactId>pf4j-spring</artifactId>
+                <version>${pf4j-spring.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

@@ -1,10 +1,14 @@
 package org.ssssssss.magicboot.modules;
 
 import cn.hutool.core.util.ReflectUtil;
+import com.alibaba.druid.pool.DruidDataSource;
+import com.zaxxer.hikari.HikariDataSource;
 import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.anyline.data.datasource.DataSourceHolder;
 import org.anyline.data.jdbc.util.DataSourceUtil;
 import org.anyline.data.param.ConfigStore;
+import org.anyline.data.param.init.DefaultConfigStore;
 import org.anyline.data.runtime.DataRuntime;
 import org.anyline.data.transaction.TransactionState;
 import org.anyline.entity.DataRow;
@@ -16,28 +20,33 @@ import org.anyline.proxy.ServiceProxy;
 import org.anyline.service.AnylineService;
 import org.anyline.util.ConfigTable;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.ApplicationEvent;
+import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 import org.ssssssss.magicapi.core.annotation.MagicModule;
+import org.ssssssss.magicapi.datasource.model.MagicDynamicDataSource;
 import org.ssssssss.magicboot.utils.JdbcUrlBuilder;
 import org.ssssssss.magicboot.utils.SnowflakeIdGenerator;
 import org.ssssssss.script.annotation.Comment;
 
 import javax.sql.DataSource;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component  //注入到Spring容器中
 @MagicModule("anyline")    // 模块名称
-public class AnylineModule {
+@Slf4j
+public class AnylineModule implements ApplicationListener<ApplicationReadyEvent> {
 
     @Autowired
     private AnylineService service;
 
-    @PostConstruct
-    public void init() {
-        ConfigTable.IS_UPDATE_EMPTY_COLUMN = true;
-        ConfigTable.IS_INSERT_EMPTY_COLUMN = true;
-    }
+    @Autowired
+    private MagicDynamicDataSource dynamicDataSource;
+
 
     @Comment("获取实例")
     public AnylineService instance() {
@@ -55,20 +64,49 @@ public class AnylineModule {
     }
 
     @Comment("获取数据库的所有表")
-    public LinkedHashMap<String, Table> tables(@Comment("数据源名称") String dataSource) {
+    public LinkedHashMap<String, Table> tableMap(@Comment("数据源名称") String dataSource) {
         if (null != dataSource && !dataSource.isEmpty()) {
             return instance(dataSource).metadata().tables();
         }
         return service.metadata().tables();
     }
 
-    @Comment("获取表的列结构")
-    public List<Column> columns(@Comment("数据源名称") String dataSource,
-                                @Comment("表名称") String tableName) {
+    @Comment("获取数据库的所有表")
+    public Collection<Table> tableList(@Comment("数据源名称") String dataSource) {
+        Collection<Table> tables = null;
         if (null != dataSource && !dataSource.isEmpty()) {
-            return instance(dataSource).metadata().table(tableName).columns();
+            return instance(dataSource).metadata().tables().values();
         }
-        return service.metadata().table(tableName).columns();
+        return service.metadata().tables().values();
+    }
+
+    @Comment("获取表的列结构")
+    public List<Map<String, Object>> columns(@Comment("数据源名称") String dataSource,
+                                @Comment("表名称") String tableName) {
+        List<Column> columns = null;
+        if (null != dataSource && !dataSource.isEmpty()) {
+            AnylineService anyline = instance(dataSource);
+            if (anyline != null) {
+                columns = Optional.ofNullable(anyline.metadata().table(tableName))
+                        .map(table -> table.columns())
+                        .orElse(new ArrayList<>());
+            }
+        }
+        columns = service.metadata().table(tableName).columns();
+        return columns.stream().map(column -> {
+            Map<String, Object> columnMap = new HashMap<>();
+            columnMap.put("name", column.getName());
+            columnMap.put("className", column.getClassName());
+            columnMap.put("jdbcType", column.getJdbcType());
+            columnMap.put("originType", column.getOriginType());
+            columnMap.put("defaultValue", column.getDefaultValue());
+            columnMap.put("length", column.getLength());
+            columnMap.put("position", column.getPosition());
+            columnMap.put("primaryKey", column.getPrimaryKey());
+            columnMap.put("nullable", column.getNullable());
+            columnMap.put("comment", column.getComment());
+            return columnMap;
+        }).collect(Collectors.toList());
     }
 
     @Comment("测试连接")
@@ -296,6 +334,12 @@ public class AnylineModule {
         return service.maps(dest, config, obj, conditions);
     }
 
+    @Comment("执行sql")
+    public long execute(@Comment("SQL语句") String dest,
+                        @Comment("参数") String... conditions) {
+        return service.execute(dest, conditions);
+    }
+
     @Comment("删除数据")
     public long deletes(@Comment("查询或操作的目标(表｜视图｜函数｜自定义SQL | SELECT语句)") String dest,
                         @Comment("key") String key,
@@ -314,6 +358,12 @@ public class AnylineModule {
         return service.deletes(dest, key, values);
     }
 
+    @Comment("删除数据")
+    public long delete(@Comment("查询或操作的目标(表｜视图｜函数｜自定义SQL | SELECT语句)") String dest,
+                       @Comment("复炸查询") DefaultConfigStore config) {
+        return service.delete(dest, config);
+    }
+
     @Comment("开始事务")
     public TransactionState beginTrans() throws Exception {
         return service.start();
@@ -327,5 +377,23 @@ public class AnylineModule {
     @Comment("回滚事务")
     public void rollbackTrans(@Comment("事务状态") TransactionState state) throws Exception {
         service.rollback(state);
+    }
+
+    @Override
+    public void onApplicationEvent(ApplicationReadyEvent event) {
+        ConfigTable.IS_UPDATE_EMPTY_COLUMN = true;
+        ConfigTable.IS_INSERT_EMPTY_COLUMN = true;
+
+        //注释magic-api数据源
+        Collection<MagicDynamicDataSource.DataSourceNode> dataSources = dynamicDataSource.datasourceNodes();
+        dataSources.forEach(dataSource -> {
+            if (StringUtils.isEmpty(dataSource.getKey()))
+                return;
+            try {
+                DataSourceHolder.reg(dataSource.getKey(), dataSource.getDataSource());
+            } catch (Exception e) {
+                log.error(ExceptionUtils.getStackTrace(e));
+            }
+        });
     }
 }

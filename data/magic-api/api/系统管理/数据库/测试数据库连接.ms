@@ -5,19 +5,19 @@
   "groupId" : "51e64213e7fe4441b0713dbf0794ee14",
   "name" : "测试数据库连接",
   "createTime" : 1773054859761,
-  "updateTime" : 1773078445687,
+  "updateTime" : 1773482192920,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
-  "path" : "/test/{id}",
+  "path" : "/test/{name}",
   "method" : "POST",
   "parameters" : [ ],
   "options" : [ ],
   "requestBody" : "",
   "headers" : [ ],
   "paths" : [ {
-    "name" : "id",
-    "value" : "1",
+    "name" : "name",
+    "value" : "bamboo",
     "description" : null,
     "required" : true,
     "dataType" : "String",
@@ -35,9 +35,12 @@
 }
 ================================
 
-const row = anyline.query("select * from sys_database", `++id=${id}`)
+const row = anyline.query("select * from sys_database", `name:custom_${name}`)
 
 try {
+    if (!row) {
+        return anyline.test(name)
+    }
     return anyline.test(row)
 } catch(err) {
     exit 0, err

@@ -23,6 +23,8 @@
         <module>magic-boot-plugins</module>
         <module>magic-editor</module>
         <module>magic-boot-master</module>
+        <module>magic-plugins</module>
+        <module>magic-plugins-demo</module>
     </modules>
 
     <properties>

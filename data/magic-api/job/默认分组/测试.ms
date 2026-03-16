@@ -5,7 +5,7 @@
   "groupId" : "4a3c0ad862bb4b5fb16c4c673b5a75a3",
   "name" : "测试",
   "createTime" : 1772601698095,
-  "updateTime" : 1773216379438,
+  "updateTime" : 1773637690217,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -13,27 +13,14 @@
   "cron" : "0 * * * * ?",
   "enabled" : false,
   "description" : "这是一个测试任务1",
-  "misfirePolicy" : "SMART",
+  "params" : "{\r\n    \"s\":1\r\n}",
+  "misfirePolicy" : "IGNORE",
   "concurrent" : false,
   "dependsOn" : null,
   "maxRetry" : 0,
-  "timeout" : 0
+  "timeout" : 1,
+  "jobType" : "clazz",
+  "clazz" : "org.ssssssss.magicapi.job.quartz.TestJob"
 }
 ================================
-import log
-import redis
-
-log.info("hello world")
-
-log.info(student)
-
-// redis.local.putString("magic-api", { "result": 1 })
-// redis.local.remove("magic-api")
-redis.1.putObject('magic-api', { "version": "1.0.0" })
-
-
-var object = redis.default.getObject("magic-api", Map.class)
-log.info("magic-api: {}", object["version"])
-
-
-return 'Hello magic-api-job'
+return ""

@@ -5,7 +5,7 @@
   "groupId" : "c7ce65f5b3cf4aaa913f6fec7d35d176",
   "name" : "列表",
   "createTime" : null,
-  "updateTime" : 1772977884757,
+  "updateTime" : 1773568222800,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -121,6 +121,7 @@
 let sql = """
     select
         id,
+        name,
         dict_type,
         type,
         remark,
