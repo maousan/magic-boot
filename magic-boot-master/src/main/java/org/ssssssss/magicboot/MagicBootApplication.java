@@ -1,8 +1,5 @@
 package org.ssssssss.magicboot;
 
-import org.anyline.entity.DataRow;
-import org.anyline.service.AnylineService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;

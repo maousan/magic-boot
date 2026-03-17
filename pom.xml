@@ -12,7 +12,7 @@
 
     <groupId>org.ssssssss</groupId>
     <artifactId>magic-boot</artifactId>
-    <version>0.0.2</version>
+    <version>${revision}</version>
     <packaging>pom</packaging>
     <name>magic-boot</name>
     <description>magic-boot</description>
@@ -23,12 +23,15 @@
         <module>magic-boot-plugins</module>
         <module>magic-editor</module>
         <module>magic-boot-master</module>
-        <module>magic-plugins</module>
-        <module>magic-plugins-demo</module>
+        <module>magic-plugin</module>
+        <module>magic-plugin-demo</module>
         <module>magic-plugin-api</module>
     </modules>
 
     <properties>
+        <!-- 统一版本管理 (CI-Friendly) -->
+        <revision>0.0.2</revision>
+
         <java.version>17</java.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
@@ -42,11 +45,42 @@
             <dependency>
                 <groupId>org.ssssssss</groupId>
                 <artifactId>magic-dependencies</artifactId>
-                <version>${project.version}</version>
+                <version>${revision}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <build>
+        <plugins>
+            <!-- Flatten plugin: 处理 CI-friendly 版本占位符 -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

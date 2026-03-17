@@ -18,6 +18,8 @@ import org.ssssssss.magicapi.core.servlet.MagicHttpServletRequest;
 import org.ssssssss.magicapi.core.servlet.MagicHttpServletResponse;
 import org.ssssssss.magicapi.utils.PathUtils;
 import org.ssssssss.magicboot.model.StatusCode;
+import org.ssssssss.magicboot.pf4j.extension.ApiInterceptorExtensionProcessor;
+import org.ssssssss.magicboot.plugin.api.interceptor.ApiInterceptorContext;
 import org.ssssssss.script.MagicScriptContext;
 
 import java.util.Arrays;
@@ -41,6 +43,9 @@ public class PermissionInterceptor implements RequestInterceptor, HandlerInterce
 
     @Autowired
     private Environment environment;
+
+    @Autowired(required = false)
+    private ApiInterceptorExtensionProcessor extensionProcessor;
 
     private static Boolean isDev;
     private static Boolean isDemo;
@@ -105,14 +110,41 @@ public class PermissionInterceptor implements RequestInterceptor, HandlerInterce
                 return StatusCode.FORBIDDEN.json();
             }
         }
+
+        // 执行扩展点前置拦截
+        if (extensionProcessor != null) {
+            ApiInterceptorContext ctx = new ApiInterceptorContext();
+            ctx.setApiPath(request.getRequestURI());
+            ctx.setHttpMethod(request.getMethod());
+            ctx.setRequest(request.getRequest());
+            ctx.setResponse(response.getResponse());
+            ctx.setRequestTime(System.currentTimeMillis());
+            Object result = extensionProcessor.processPreHandle(ctx);
+            if (result != null) {
+                return result;
+            }
+        }
+
         return null;
     }
 
     @Override
     public Object postHandle(RequestEntity requestEntity, Object returnValue) throws Exception {
+        MagicHttpServletRequest request = requestEntity.getRequest();
+
+        // 执行扩展点后置拦截
+        if (extensionProcessor != null) {
+            ApiInterceptorContext ctx = new ApiInterceptorContext();
+            ctx.setApiPath(request.getRequestURI());
+            ctx.setHttpMethod(request.getMethod());
+            ctx.setRequest(request.getRequest());
+            ctx.setRequestTime(requestEntity.getRequestTime());
+            extensionProcessor.processPostHandle(ctx, returnValue);
+        }
+
+        // 记录操作日志
         if(StpUtil.isLogin()){
             try {
-                MagicHttpServletRequest request = requestEntity.getRequest();
                 ApiInfo info = requestEntity.getApiInfo();
                 template.update("insert into sys_oper_log(api_name, api_path, api_method, cost_time, create_by, create_date, user_agent, user_ip) values(?,?,?,?,?,?,?,?)",
 //                    PathUtils.replaceSlash(groupServiceProvider.getFullName(info.getGroupId()) + "/" + info.getName()).replace("/","-"),

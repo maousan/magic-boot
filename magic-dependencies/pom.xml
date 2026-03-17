@@ -6,12 +6,14 @@
 
     <groupId>org.ssssssss</groupId>
     <artifactId>magic-dependencies</artifactId>
-    <version>0.0.2</version>
+    <version>${revision}</version>
     <packaging>pom</packaging>
     <name>magic-dependencies</name>
     <description>Magic Boot 依赖版本管理</description>
 
     <properties>
+        <!-- 统一版本管理 (CI-Friendly) -->
+        <revision>0.0.2</revision>
         <!-- Java 版本 -->
         <java.version>17</java.version>
         <maven.compiler.source>17</maven.compiler.source>
@@ -334,7 +336,7 @@
             <dependency>
                 <groupId>org.ssssssss</groupId>
                 <artifactId>magic-plugin-api</artifactId>
-                <version>${project.version}</version>
+                <version>${revision}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

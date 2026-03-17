@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.ssssssss</groupId>
         <artifactId>magic-boot</artifactId>
-        <version>0.0.2</version>
+        <version>${revision}</version>
     </parent>
     <artifactId>magic-editor</artifactId>
     <packaging>jar</packaging>

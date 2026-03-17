@@ -48,3 +48,6 @@ logs/
 *.njsproj
 *.sln
 nul
+plugins/
+upload/
+.flattened-pom.xml

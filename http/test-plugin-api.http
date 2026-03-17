@@ -1,0 +1,91 @@
+### PF4J 插件系统测试脚本
+### 使用 IDEA HTTP Client 执行测试
+
+### 变量配置
+@baseUrl = http://localhost:8081
+
+### ================================
+### 模块 1: 插件生命周期 API 测试
+### ================================
+
+### TC-1.1 扫描插件目录
+# @name 扫描插件
+POST {{baseUrl}}/plugin/admin/rescan
+
+###
+
+### TC-1.2 获取插件列表
+# @name 获取插件列表
+GET {{baseUrl}}/plugin/admin/list
+
+###
+
+### TC-1.4 获取插件详情
+# @name 获取插件详情
+GET {{baseUrl}}/plugin/admin/info/demo-plugin
+
+###
+
+### TC-1.5 停止插件
+# @name 停止插件
+POST {{baseUrl}}/plugin/admin/stop/demo-plugin
+
+###
+
+### TC-1.6 启动插件
+# @name 启动插件
+POST {{baseUrl}}/plugin/admin/start/demo-plugin
+
+###
+
+### TC-1.7 重载插件（热更新）
+# @name 重载插件
+POST {{baseUrl}}/plugin/admin/reload/demo-plugin
+
+###
+
+### TC-1.8 卸载插件
+# @name 卸载插件
+POST {{baseUrl}}/plugin/admin/uninstall/demo-plugin
+
+###
+
+
+### ================================
+### 模块 2: Demo 插件功能测试
+### ================================
+
+### TC-2.1 Hello API 测试
+# @name 测试 Hello API
+GET {{baseUrl}}/demo/hello?name=Claude
+
+###
+
+### TC-2.2 Hello API 默认参数
+# @name 测试 Hello API 默认参数
+GET {{baseUrl}}/demo/hello
+
+###
+
+### TC-2.3 插件信息 API
+# @name 获取插件信息
+GET {{baseUrl}}/demo/info
+
+###
+
+
+### ================================
+### 模块 4: 边界条件测试
+### ================================
+
+### TC-4.2 操作已停止的插件
+# @name 操作已停止的插件
+POST {{baseUrl}}/plugin/admin/stop/demo-plugin
+
+###
+
+### TC-4.3 操作不存在的插件
+# @name 操作不存在的插件
+POST {{baseUrl}}/plugin/admin/start/non-existent-plugin
+
+###

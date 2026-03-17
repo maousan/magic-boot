@@ -9,8 +9,8 @@ spring:
 
 # 上传路径
 upload:
-  dir: ./storage/uploads
+  dir: ./uploads
 
 # 插件路径
 plugin:
-  dir: ./storage/plugins/
+  dir: ./plugins/
