@@ -2,6 +2,7 @@ package org.ssssssss.magicboot.pf4j.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -18,6 +19,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/plugin/admin")
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "plugin", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class PluginAdminController {
 
     private final PluginManagerService pluginManagerService;

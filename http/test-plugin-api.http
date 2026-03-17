@@ -2,7 +2,7 @@
 ### 使用 IDEA HTTP Client 执行测试
 
 ### 变量配置
-@baseUrl = http://localhost:8081
+@baseUrl = http://localhost:8089
 
 ### ================================
 ### 模块 1: 插件生命周期 API 测试

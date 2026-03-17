@@ -6,10 +6,11 @@ import org.pf4j.PluginDescriptor;
 import org.pf4j.PluginManager;
 import org.pf4j.PluginState;
 import org.pf4j.PluginWrapper;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.ssssssss.magicboot.pf4j.configuration.PluginProperties;
 import org.ssssssss.magicboot.pf4j.entity.PluginInfo;
 import org.ssssssss.magicboot.pf4j.mapper.PluginInfoMapper;
 import org.ssssssss.magicboot.pf4j.model.PluginStatus;
@@ -27,68 +28,100 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+@ConditionalOnProperty(prefix = "plugin", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class PluginManagerService {
 
     private final PluginManager pluginManager;
     private final PluginInfoMapper pluginInfoMapper;
+    private final PluginProperties pluginProperties;
 
-    @Value("${plugin.dir:D:/mb/plugins/}")
-    private String pluginDir;
-
-    public PluginManagerService(PluginManager pluginManager, PluginInfoMapper pluginInfoMapper) {
+    public PluginManagerService(PluginManager pluginManager,
+                                PluginInfoMapper pluginInfoMapper,
+                                PluginProperties pluginProperties) {
         this.pluginManager = pluginManager;
         this.pluginInfoMapper = pluginInfoMapper;
+        this.pluginProperties = pluginProperties;
+    }
+
+    // ==================== 查询方法 ====================
+
+    /**
+     * 获取所有已安装的插件列表
+     * 注意：此方法只负责查询，不会触发任何加载操作
+     */
+    public List<Map<String, Object>> listAllPlugins() {
+        List<PluginInfo> dbPlugins = pluginInfoMapper.selectList(new LambdaQueryWrapper<>());
+        return dbPlugins.stream()
+                .map(this::toPluginMap)
+                .collect(Collectors.toList());
     }
 
     /**
-     * 获取所有插件列表
+     * 扫描插件目录，返回未安装的新插件列表
+     * 注意：此方法只扫描不加载，返回 JAR 文件路径列表
      */
-    public List<Map<String, Object>> listAllPlugins() {
-        List<Map<String, Object>> result = new ArrayList<>();
+    public List<String> scanNewPlugins() {
+        List<String> newPlugins = new ArrayList<>();
+        Set<String> dbPluginIds = pluginInfoMapper.selectList(new LambdaQueryWrapper<>())
+                .stream()
+                .map(PluginInfo::getPluginId)
+                .collect(Collectors.toSet());
 
-        // 从数据库获取已安装的插件
-        List<PluginInfo> dbPlugins = pluginInfoMapper.selectList(new LambdaQueryWrapper<>());
-        Set<String> dbPluginIds = new HashSet<>();
-
-        for (PluginInfo info : dbPlugins) {
-            dbPluginIds.add(info.getPluginId());
-            Map<String, Object> pluginMap = toPluginMap(info);
-            result.add(pluginMap);
-        }
-
-        // 检查是否有新插件（在 plugins 目录但不在数据库中）
         List<Path> pluginJars = getPluginJars();
         for (Path jarPath : pluginJars) {
-            String jarName = jarPath.getFileName().toString();
-            String pluginId = extractPluginIdFromJarName(jarName);
-            if (!dbPluginIds.contains(pluginId)) {
-                // 尝试加载插件
-                try {
-                    String loadedPluginId = pluginManager.loadPlugin(jarPath);
-                    PluginWrapper wrapper = pluginManager.getPlugin(loadedPluginId);
-                    PluginDescriptor descriptor = wrapper.getDescriptor();
-                    PluginInfo info = new PluginInfo();
-                    info.setPluginId(descriptor.getPluginId());
-                    info.setPluginName(descriptor.getPluginId());
-                    info.setVersion(descriptor.getVersion());
-                    info.setDescription("");
-                    info.setAuthor(descriptor.getProvider());
-                    info.setPluginClass(descriptor.getPluginClass());
-                    info.setStatus(PluginStatus.CREATED.name());
-                    info.setJarPath(jarPath.toString());
-                    info.setCreateTime(LocalDateTime.now());
-                    info.setUpdateTime(LocalDateTime.now());
-                    pluginInfoMapper.insert(info);
+            try {
+                // 临时加载以获取 pluginId，然后立即卸载
+                String pluginId = pluginManager.loadPlugin(jarPath);
+                pluginManager.unloadPlugin(pluginId);
 
-                    Map<String, Object> pluginMap = toPluginMap(info);
-                    result.add(pluginMap);
-                } catch (Exception e) {
-                    log.warn("加载插件失败：{}", jarPath, e);
+                if (!dbPluginIds.contains(pluginId)) {
+                    newPlugins.add(jarPath.toString());
                 }
+            } catch (Exception e) {
+                log.warn("扫描插件失败：{}", jarPath, e);
             }
         }
 
-        return result;
+        return newPlugins;
+    }
+
+    /**
+     * 加载并安装插件
+     * @param jarPath JAR 文件路径
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> loadAndInstallPlugin(String jarPath) {
+        Path path = Paths.get(jarPath);
+        String pluginId = pluginManager.loadPlugin(path);
+        PluginInfo info = savePluginToDatabase(pluginId, path);
+        return toPluginMap(info);
+    }
+
+    /**
+     * 同步插件：扫描目录并安装所有新插件
+     * @return 新安装的插件列表
+     */
+    public List<Map<String, Object>> syncPlugins() {
+        List<Map<String, Object>> newPlugins = new ArrayList<>();
+        Set<String> dbPluginIds = pluginInfoMapper.selectList(new LambdaQueryWrapper<>())
+                .stream()
+                .map(PluginInfo::getPluginId)
+                .collect(Collectors.toSet());
+
+        List<Path> pluginJars = getPluginJars();
+        for (Path jarPath : pluginJars) {
+            try {
+                String pluginId = pluginManager.loadPlugin(jarPath);
+                if (!dbPluginIds.contains(pluginId)) {
+                    PluginInfo info = savePluginToDatabase(pluginId, jarPath);
+                    newPlugins.add(toPluginMap(info));
+                }
+            } catch (Exception e) {
+                log.warn("加载插件失败：{}", jarPath, e);
+            }
+        }
+
+        return newPlugins;
     }
 
     /**
@@ -103,13 +136,15 @@ public class PluginManagerService {
         return toPluginMap(info);
     }
 
+    // ==================== 安装/卸载方法 ====================
+
     /**
      * 安装插件
      */
     @Transactional(rollbackFor = Exception.class)
     public PluginInfo installPlugin(MultipartFile file) throws IOException {
         // 确保插件目录存在
-        Path pluginPath = Paths.get(pluginDir).toAbsolutePath();
+        Path pluginPath = Paths.get(pluginProperties.getDir()).toAbsolutePath();
         if (!Files.exists(pluginPath)) {
             Files.createDirectories(pluginPath);
         }
@@ -126,30 +161,10 @@ public class PluginManagerService {
         // 加载插件
         String loadedPluginId = pluginManager.loadPlugin(jarPath);
 
-        // 获取插件描述符
-        PluginWrapper wrapper = pluginManager.getPlugin(loadedPluginId);
-        PluginDescriptor descriptor = wrapper.getDescriptor();
+        // 保存到数据库
+        PluginInfo pluginInfo = savePluginToDatabase(loadedPluginId, jarPath);
 
-        // 保存插件信息到数据库
-        PluginInfo pluginInfo = new PluginInfo();
-        pluginInfo.setPluginId(descriptor.getPluginId());
-        pluginInfo.setPluginName(descriptor.getPluginId());
-        pluginInfo.setVersion(descriptor.getVersion());
-        pluginInfo.setDescription("");
-        pluginInfo.setAuthor(descriptor.getProvider());
-        pluginInfo.setPluginClass(descriptor.getPluginClass());
-        pluginInfo.setDependencies(descriptor.getDependencies().stream()
-                .map(dep -> dep.getPluginId())
-                .collect(Collectors.joining(",")));
-        pluginInfo.setProvider(descriptor.getProvider());
-        pluginInfo.setStatus(PluginStatus.CREATED.name());
-        pluginInfo.setJarPath(jarPath.toString());
-        pluginInfo.setCreateTime(LocalDateTime.now());
-        pluginInfo.setUpdateTime(LocalDateTime.now());
-
-        pluginInfoMapper.insert(pluginInfo);
         log.info("插件安装成功：{}", pluginInfo.getPluginId());
-
         return pluginInfo;
     }
 
@@ -158,8 +173,7 @@ public class PluginManagerService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void uninstallPlugin(String pluginId) {
-        PluginInfo info = pluginInfoMapper.selectOne(new LambdaQueryWrapper<PluginInfo>()
-                .eq(PluginInfo::getPluginId, pluginId));
+        PluginInfo info = getPluginInfoByPluginId(pluginId);
 
         if (info == null) {
             throw new RuntimeException("插件不存在：" + pluginId);
@@ -186,6 +200,8 @@ public class PluginManagerService {
         pluginInfoMapper.deleteById(info.getId());
         log.info("插件卸载成功：{}", pluginId);
     }
+
+    // ==================== 生命周期控制方法 ====================
 
     /**
      * 启动插件
@@ -289,6 +305,31 @@ public class PluginManagerService {
         return loadedPlugins;
     }
 
+    // ==================== 私有辅助方法 ====================
+
+    /**
+     * 保存插件到数据库
+     */
+    private PluginInfo savePluginToDatabase(String pluginId, Path jarPath) {
+        PluginWrapper wrapper = pluginManager.getPlugin(pluginId);
+        PluginDescriptor descriptor = wrapper.getDescriptor();
+
+        PluginInfo info = new PluginInfo();
+        info.setPluginId(descriptor.getPluginId());
+        info.setPluginName(descriptor.getPluginId());
+        info.setVersion(descriptor.getVersion());
+        info.setDescription("");
+        info.setAuthor(descriptor.getProvider());
+        info.setPluginClass(descriptor.getPluginClass());
+        info.setStatus(PluginStatus.CREATED.name());
+        info.setJarPath(jarPath.toString());
+        info.setCreateTime(LocalDateTime.now());
+        info.setUpdateTime(LocalDateTime.now());
+
+        pluginInfoMapper.insert(info);
+        return info;
+    }
+
     /**
      * 获取插件信息
      */
@@ -302,7 +343,7 @@ public class PluginManagerService {
      */
     private List<Path> getPluginJars() {
         List<Path> result = new ArrayList<>();
-        Path pluginPath = Paths.get(pluginDir).toAbsolutePath();
+        Path pluginPath = Paths.get(pluginProperties.getDir()).toAbsolutePath();
 
         if (Files.exists(pluginPath) && Files.isDirectory(pluginPath)) {
             try {
@@ -315,18 +356,6 @@ public class PluginManagerService {
         }
 
         return result;
-    }
-
-    /**
-     * 从 JAR 文件名提取插件 ID
-     */
-    private String extractPluginIdFromJarName(String jarName) {
-        // 简单实现：去掉 -version.jar 后缀
-        int index = jarName.lastIndexOf("-");
-        if (index > 0) {
-            return jarName.substring(0, index);
-        }
-        return jarName.replace(".jar", "");
     }
 
     /**

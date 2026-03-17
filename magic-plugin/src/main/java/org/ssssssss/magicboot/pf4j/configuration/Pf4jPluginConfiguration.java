@@ -1,11 +1,11 @@
 package org.ssssssss.magicboot.pf4j.configuration;
 
-import org.pf4j.PluginManager;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.pf4j.PluginStateEvent;
-import org.pf4j.PluginWrapper;
 import org.pf4j.spring.SpringPluginManager;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,22 +18,29 @@ import java.nio.file.Paths;
 /**
  * PF4J 插件配置类
  */
+@Slf4j
 @Configuration
+@RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "plugin", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class Pf4jPluginConfiguration {
 
-    /**
-     * 插件根目录
-     */
-    @Value("${plugin.dir:D:/mb/plugins/}")
-    private String pluginDir;
+    private final PluginProperties pluginProperties;
 
     /**
      * 插件管理器
      */
     @Bean
     public SpringPluginManager pluginManager() {
-        Path pluginsRoot = Paths.get(pluginDir).toAbsolutePath();
-        return new SpringPluginManager(pluginsRoot);
+        Path pluginsRoot = Paths.get(pluginProperties.getDir()).toAbsolutePath();
+        log.info("插件管理器初始化，插件目录: {}", pluginsRoot);
+        log.info("自动加载插件: {}, 自动启动插件: {}",
+                pluginProperties.isAutoLoad(), pluginProperties.isAutoStart());
+
+        return new CustomSpringPluginManager(
+            pluginsRoot,
+            pluginProperties.isAutoLoad(),
+            pluginProperties.isAutoStart()
+        );
     }
 
     /**

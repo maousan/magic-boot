@@ -22,7 +22,13 @@
       "Bash(git add:*)",
       "Bash(dir:*)",
       "Bash(powershell:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(ren:*)",
+      "Bash(git mv:*)",
+      "Bash(curl:*)",
+      "Bash(copy \"d:\\\\IdeaProjects\\\\magic-boot\\\\magic-plugins-demo\\\\target\\\\magic-plugin-demo.jar\" \"d:\\\\IdeaProjects\\\\magic-boot\\\\plugins\\\\magic-plugins-demo.jar\")",
+      "Bash(unzip:*)",
+      "Bash(git rm:*)"
     ]
   },
   "outputStyle": "Explanatory"

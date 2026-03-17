@@ -301,3 +301,8 @@ mybatis-plus:
     # 关闭 Banner
     banner: false
 
+plugin:
+  enabled: true              # 是否启用插件系统
+  dir: ./plugins/           # 插件目录
+  auto-load: false            # 启动时自动加载插件
+  auto-start: false           # 加载后自动启动插件

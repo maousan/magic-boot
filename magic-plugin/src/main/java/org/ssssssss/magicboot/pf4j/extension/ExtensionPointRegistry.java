@@ -2,6 +2,7 @@ package org.ssssssss.magicboot.pf4j.extension;
 
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.PluginManager;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -13,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(prefix = "plugin", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class ExtensionPointRegistry {
 
     private final PluginManager pluginManager;

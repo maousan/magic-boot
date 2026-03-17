@@ -52,7 +52,6 @@ class ApiInterceptorExtensionProcessorTest {
 
         ApiInterceptorExtension interceptor = mock(ApiInterceptorExtension.class);
         when(interceptor.preHandle(context)).thenReturn(expectedResult);
-        when(interceptor.getOrder()).thenReturn(100);
         when(extensionPointManager.getSortedApiInterceptors())
                 .thenReturn(List.of(interceptor));
 
@@ -69,9 +68,7 @@ class ApiInterceptorExtensionProcessorTest {
         ApiInterceptorExtension interceptor1 = mock(ApiInterceptorExtension.class);
         ApiInterceptorExtension interceptor2 = mock(ApiInterceptorExtension.class);
         when(interceptor1.preHandle(context)).thenReturn(null);
-        when(interceptor1.getOrder()).thenReturn(100);
         when(interceptor2.preHandle(context)).thenReturn(null);
-        when(interceptor2.getOrder()).thenReturn(200);
         when(extensionPointManager.getSortedApiInterceptors())
                 .thenReturn(Arrays.asList(interceptor1, interceptor2));
 
@@ -89,7 +86,6 @@ class ApiInterceptorExtensionProcessorTest {
 
         ApiInterceptorExtension interceptor = mock(ApiInterceptorExtension.class);
         when(interceptor.preHandle(context)).thenThrow(new RuntimeException("Test exception"));
-        when(interceptor.getOrder()).thenReturn(100);
         when(extensionPointManager.getSortedApiInterceptors())
                 .thenReturn(List.of(interceptor));
 
@@ -107,8 +103,6 @@ class ApiInterceptorExtensionProcessorTest {
 
         ApiInterceptorExtension interceptor1 = mock(ApiInterceptorExtension.class);
         ApiInterceptorExtension interceptor2 = mock(ApiInterceptorExtension.class);
-        when(interceptor1.getOrder()).thenReturn(100);
-        when(interceptor2.getOrder()).thenReturn(200);
         when(extensionPointManager.getSortedApiInterceptors())
                 .thenReturn(Arrays.asList(interceptor1, interceptor2));
 
@@ -126,8 +120,6 @@ class ApiInterceptorExtensionProcessorTest {
 
         ApiInterceptorExtension interceptor1 = mock(ApiInterceptorExtension.class);
         ApiInterceptorExtension interceptor2 = mock(ApiInterceptorExtension.class);
-        when(interceptor1.getOrder()).thenReturn(100);
-        when(interceptor2.getOrder()).thenReturn(200);
         when(extensionPointManager.getSortedApiInterceptors())
                 .thenReturn(Arrays.asList(interceptor1, interceptor2));
 
@@ -146,8 +138,6 @@ class ApiInterceptorExtensionProcessorTest {
         ApiInterceptorExtension interceptor1 = mock(ApiInterceptorExtension.class);
         ApiInterceptorExtension interceptor2 = mock(ApiInterceptorExtension.class);
         doThrow(new RuntimeException("Handler error")).when(interceptor1).onError(context, ex);
-        when(interceptor1.getOrder()).thenReturn(100);
-        when(interceptor2.getOrder()).thenReturn(200);
         when(extensionPointManager.getSortedApiInterceptors())
                 .thenReturn(Arrays.asList(interceptor1, interceptor2));
 

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ssssssss.magicboot.plugin.api.interceptor.ApiInterceptorContext;
 import org.ssssssss.magicboot.plugin.api.interceptor.ApiInterceptorExtension;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "plugin", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class ApiInterceptorExtensionProcessor {
 
     private final ExtensionPointManager extensionPointManager;

@@ -8,6 +8,7 @@ import org.pf4j.PluginState;
 import org.pf4j.PluginStateEvent;
 import org.pf4j.PluginStateListener;
 import org.ssssssss.magicboot.plugin.api.interceptor.ApiInterceptorExtension;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -20,6 +21,7 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "plugin", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class ExtensionPointManager implements PluginStateListener {
 
     private final ExtensionPointRegistry registry;
@@ -54,9 +56,11 @@ public class ExtensionPointManager implements PluginStateListener {
      */
     public List<ApiInterceptorExtension> getSortedApiInterceptors() {
         List<ApiInterceptorExtension> interceptors = registry.getExtensions(ApiInterceptorExtension.class);
-        interceptors.sort(Comparator.comparingInt(ApiInterceptorExtension::getOrder));
-        log.debug("获取到 {} 个 API 拦截器扩展点", interceptors.size());
-        return interceptors;
+        List<ApiInterceptorExtension> sortedInterceptors = interceptors.stream()
+                .sorted(Comparator.comparingInt(ApiInterceptorExtension::getOrder))
+                .toList();
+        log.debug("获取到 {} 个 API 拦截器扩展点", sortedInterceptors.size());
+        return sortedInterceptors;
     }
 
     /**

@@ -48,6 +48,7 @@ class ExtensionPointManagerTest {
     void onPluginStarted_shouldClearCache() {
         PluginWrapper pluginWrapper = mock(PluginWrapper.class);
         when(pluginWrapper.getPluginId()).thenReturn("test-plugin");
+        when(pluginWrapper.getPluginState()).thenReturn(PluginState.STARTED);
 
         PluginStateEvent event = new PluginStateEvent(pluginManager, pluginWrapper, PluginState.STARTED);
 
@@ -61,6 +62,7 @@ class ExtensionPointManagerTest {
     void onPluginStopped_shouldClearCache() {
         PluginWrapper pluginWrapper = mock(PluginWrapper.class);
         when(pluginWrapper.getPluginId()).thenReturn("test-plugin");
+        when(pluginWrapper.getPluginState()).thenReturn(PluginState.STOPPED);
 
         PluginStateEvent event = new PluginStateEvent(pluginManager, pluginWrapper, PluginState.STOPPED);
 
@@ -75,7 +77,7 @@ class ExtensionPointManagerTest {
         when(interceptor1.getOrder()).thenReturn(1);
         when(interceptor2.getOrder()).thenReturn(2);
         when(registry.getExtensions(ApiInterceptorExtension.class))
-                .thenReturn(List.of(interceptor2, interceptor1));
+                .thenReturn(new java.util.ArrayList<>(List.of(interceptor2, interceptor1)));
 
         List<ApiInterceptorExtension> result = manager.getSortedApiInterceptors();
 
