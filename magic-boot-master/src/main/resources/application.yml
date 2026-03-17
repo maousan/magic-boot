@@ -304,5 +304,5 @@ mybatis-plus:
 plugin:
   enabled: true              # 是否启用插件系统
   dir: ./plugins/           # 插件目录
-  auto-load: false            # 启动时自动加载插件
-  auto-start: false           # 加载后自动启动插件
+  auto-load: true            # 启动时自动加载插件
+  auto-start: true           # 加载后自动启动插件

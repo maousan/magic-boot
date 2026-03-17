@@ -28,7 +28,18 @@
       "Bash(curl:*)",
       "Bash(copy \"d:\\\\IdeaProjects\\\\magic-boot\\\\magic-plugins-demo\\\\target\\\\magic-plugin-demo.jar\" \"d:\\\\IdeaProjects\\\\magic-boot\\\\plugins\\\\magic-plugins-demo.jar\")",
       "Bash(unzip:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(find:*)",
+      "Bash(grep -n \"class Frontend\" \"D:/IdeaProjects/magic-boot/magic-plugin/src/main/java/org/ssssssss/magicboot/pf4j/frontend/\"*.java)",
+      "Bash(jar tf:*)",
+      "Bash(cd:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp magic-plugin-demo/target/magic-plugin-demo.jar D:/mb/plugins/)",
+      "Read(//d/mb/plugins/**)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(git reset:*)"
     ]
   },
   "outputStyle": "Explanatory"

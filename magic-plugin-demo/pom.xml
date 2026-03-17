@@ -20,6 +20,8 @@
         <maven.compiler.release>17</maven.compiler.release>
         <pf4j-spring.version>0.10.0</pf4j-spring.version>
         <pf4j.version>3.13.0</pf4j.version>
+        <!-- 跳过前端构建（可通过 -DskipFrontendBuild=true 跳过） -->
+        <skipFrontendBuild>false</skipFrontendBuild>
     </properties>
 
     <dependencies>
@@ -73,23 +75,53 @@
                     <target>17</target>
                 </configuration>
             </plugin>
+            <!-- PF4J 插件打包配置：不打包 provided 依赖，避免 ClassLoader 隔离问题 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.4.2</version>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
                 <configuration>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                    <appendAssemblyId>false</appendAssemblyId>
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        </manifest>
+                    </archive>
                 </configuration>
+            </plugin>
+
+            <!-- 前端构建插件（可选：如果 src/console 目录存在则执行） -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
                 <executions>
                     <execution>
-                        <id>make-assembly</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
+                        <id>npm-install</id>
+                        <phase>prepare-package</phase>
+                        <goals><goal>exec</goal></goals>
+                        <configuration>
+                            <workingDirectory>${project.basedir}/src/console</workingDirectory>
+                            <executable>npm</executable>
+                            <arguments>
+                                <argument>install</argument>
+                            </arguments>
+                            <!-- 如果 npm 不存在或 console 目录不存在，跳过 -->
+                            <skip>${skipFrontendBuild}</skip>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-build</id>
+                        <phase>prepare-package</phase>
+                        <goals><goal>exec</goal></goals>
+                        <configuration>
+                            <workingDirectory>${project.basedir}/src/console</workingDirectory>
+                            <executable>npm</executable>
+                            <arguments>
+                                <argument>run</argument>
+                                <argument>build</argument>
+                            </arguments>
+                            <skip>${skipFrontendBuild}</skip>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

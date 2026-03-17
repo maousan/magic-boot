@@ -36,12 +36,6 @@ public class CustomSpringPluginManager extends SpringPluginManager {
     @Override
     @PostConstruct
     public void init() {
-        // 注入 Spring 扩展点支持（必须在加载插件前完成）
-        AbstractAutowireCapableBeanFactory beanFactory =
-            (AbstractAutowireCapableBeanFactory) getApplicationContext().getAutowireCapableBeanFactory();
-        ExtensionsInjector extensionsInjector = new ExtensionsInjector(this, beanFactory);
-        extensionsInjector.injectExtensions();
-
         // 根据配置决定是否加载和启动
         if (autoLoad) {
             log.info("开始自动加载插件...");
@@ -55,5 +49,12 @@ public class CustomSpringPluginManager extends SpringPluginManager {
         } else {
             log.info("自动加载已禁用，跳过插件加载");
         }
+
+        // 注入 Spring 扩展点支持（必须在加载和启动插件后完成，才能发现扩展点）
+        AbstractAutowireCapableBeanFactory beanFactory =
+            (AbstractAutowireCapableBeanFactory) getApplicationContext().getAutowireCapableBeanFactory();
+        ExtensionsInjector extensionsInjector = new ExtensionsInjector(this, beanFactory);
+        extensionsInjector.injectExtensions();
+        log.info("扩展点注入完成");
     }
 }

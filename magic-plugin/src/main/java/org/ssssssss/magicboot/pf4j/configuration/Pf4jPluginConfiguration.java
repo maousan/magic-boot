@@ -2,7 +2,10 @@ package org.ssssssss.magicboot.pf4j.configuration;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.pf4j.PluginState;
 import org.pf4j.PluginStateEvent;
+import org.pf4j.PluginStateListener;
+import org.pf4j.PluginWrapper;
 import org.pf4j.spring.SpringPluginManager;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -11,6 +14,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import org.ssssssss.magicboot.pf4j.component.PluginControllerRegistrar;
+import org.ssssssss.magicboot.pf4j.frontend.FrontendExtensionProcessor;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -66,5 +70,40 @@ public class Pf4jPluginConfiguration {
         });
 
         return registrar;
+    }
+
+    /**
+     * 前端扩展点状态监听器
+     * 监听插件状态变化，处理前端扩展点的注册和注销
+     */
+    @Bean
+    public PluginStateListener frontendStateListener(
+            SpringPluginManager pluginManager,
+            FrontendExtensionProcessor processor) {
+
+        PluginStateListener listener = new PluginStateListener() {
+            @Override
+            public void pluginStateChanged(PluginStateEvent event) {
+                PluginWrapper plugin = event.getPlugin();
+                PluginState state = event.getPluginState();
+
+                if (state == PluginState.STARTED) {
+                    processor.onPluginStarted(plugin);
+                } else if (state == PluginState.STOPPED) {
+                    processor.onPluginStopped(plugin);
+                }
+            }
+        };
+
+        // 添加监听器到插件管理器
+        pluginManager.addPluginStateListener(listener);
+
+        // 为已启动的插件触发初始状态
+        pluginManager.getStartedPlugins().forEach(plugin -> {
+            listener.pluginStateChanged(new PluginStateEvent(
+                pluginManager, plugin, plugin.getPluginState()));
+        });
+
+        return listener;
     }
 }

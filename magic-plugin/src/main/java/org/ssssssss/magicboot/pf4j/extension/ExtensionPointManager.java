@@ -52,6 +52,15 @@ public class ExtensionPointManager implements PluginStateListener {
     }
 
     /**
+     * 获取指定类型的所有扩展点实例
+     * @param type 扩展点类型
+     * @return 扩展点实例列表
+     */
+    public <T> List<T> getExtensions(Class<T> type) {
+        return registry.getExtensions(type);
+    }
+
+    /**
      * 获取排序后的 API 拦截器扩展点
      */
     public List<ApiInterceptorExtension> getSortedApiInterceptors() {
