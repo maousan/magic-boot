@@ -77,8 +77,9 @@ public class PermissionInterceptor implements RequestInterceptor, HandlerInterce
     /**
      * 检查是否为 GET 请求
      */
-    private boolean isGetRequest(String method) {
-        return "GET".equalsIgnoreCase(method);
+    private boolean isDemoDeny(ApiInfo info) {
+        String demoDeny = Objects.toString(info.getOptionValue("demo_deny"), "");
+        return demoDeny.equalsIgnoreCase("true");
     }
 
     /*
@@ -91,8 +92,8 @@ public class PermissionInterceptor implements RequestInterceptor, HandlerInterce
             return null;
         }
 
-        // demo 环境下只允许 GET 请求
-        if (isDemoEnvironment() && !isGetRequest(request.getMethod())) {
+        // demo 环境下判断是否禁止操作
+        if (isDemoEnvironment() && !isDemoDeny(info)) {
             return StatusCode.DEMO_FORBIDDEN.json("演示环境禁止操作");
         }
 
@@ -104,7 +105,7 @@ public class PermissionInterceptor implements RequestInterceptor, HandlerInterce
             return StatusCode.CERTIFICATE_EXPIRED.json();
         } else {
             // TODO
-            List<String> permissions = (List<String>) magicAPIService.execute("post", "/system/security/permissions", new HashMap<String, Object>());
+            List<String> permissions = magicAPIService.execute("post", "/system/security/permissions", new HashMap<String, Object>());
             String permission = Objects.toString(info.getOptionValue(Options.PERMISSION), "");
             if (StringUtils.isNotBlank(permission) && !permissions.contains(permission)) {
                 return StatusCode.FORBIDDEN.json();
@@ -120,9 +121,7 @@ public class PermissionInterceptor implements RequestInterceptor, HandlerInterce
             ctx.setResponse(response.getResponse());
             ctx.setRequestTime(System.currentTimeMillis());
             Object result = extensionProcessor.processPreHandle(ctx);
-            if (result != null) {
-                return result;
-            }
+            return result;
         }
 
         return null;

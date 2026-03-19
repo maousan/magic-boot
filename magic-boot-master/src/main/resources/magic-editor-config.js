@@ -7,6 +7,7 @@ var MAGIC_EDITOR_CONFIG = {
     checkUpdate: false,
     // jdbcDrivers:['driver1','driver2'],
     // datasourceTypes:['type1', 'type2'],
+    options: [['demo_deny', '是否禁止Demo环境操作', 'true']],
     // options: [['key1', '描述','defaultValue1'],['key2','描述','defaultValue2']],
     blockClose: true,   // 是否阻止离开页面
     autoSave: true,
