@@ -5,7 +5,7 @@
   "groupId" : "0295f2b4af9145f5a0ea29fa4b797214",
   "name" : "保存",
   "createTime" : null,
-  "updateTime" : 1772968443899,
+  "updateTime" : 1773908712748,
   "lock" : null,
   "createBy" : null,
   "updateBy" : "admin",
@@ -120,7 +120,6 @@
 ================================
 import org.ssssssss.magicapi.modules.db.cache.SqlCache
 
-SqlCache.delete(`configure:${body.configureKey}${body.configureCondition}`)
 SqlCache.delete(`configure:${body.configureKey}`)
 
 if (body.id) {

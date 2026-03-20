@@ -5,7 +5,7 @@
   "groupId" : "0295f2b4af9145f5a0ea29fa4b797214",
   "name" : "列表",
   "createTime" : null,
-  "updateTime" : 1772977805385,
+  "updateTime" : 1773908697258,
   "lock" : null,
   "createBy" : null,
   "updateBy" : "admin",
@@ -241,7 +241,6 @@
 let sql = """
     select
         id,
-        configure_condition,
         configure_key,
         configure_value,
         configure_name,
@@ -252,10 +251,6 @@ let sql = """
 
     <where>
         is_del = 0
-
-        <if test="configureCondition != null and configureCondition != ''">
-            and configure_condition like concat('%', #{configureCondition}, '%')
-        </if>
 
         <if test="configureKey != null and configureKey != ''">
             and configure_key like concat('%', #{configureKey}, '%')

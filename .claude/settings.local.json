@@ -39,7 +39,19 @@
       "Read(//d/mb/plugins/**)",
       "Bash(npm install:*)",
       "Bash(npm run:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Read(//c/Users/Administrator/.agents/skills/skill-creator/**)",
+      "Bash(python -m scripts.aggregate_benchmark \"C:\\\\Users\\\\Administrator\\\\.claude\\\\skills\\\\magic-api-ms-generator-workspace\\\\iteration-1\" --skill-name \"magic-api-ms-generator\")",
+      "Bash(start:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(for file:*)",
+      "Bash(do echo:*)",
+      "Read(//d/IdeaProjects/magic-boot/**)",
+      "Bash(done)",
+      "Bash(wc:*)"
     ]
   },
   "outputStyle": "Explanatory"

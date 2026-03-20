@@ -5,11 +5,11 @@
   "groupId" : "0295f2b4af9145f5a0ea29fa4b797214",
   "name" : "详情",
   "createTime" : null,
-  "updateTime" : 1653129248115,
+  "updateTime" : 1773908706862,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
-  "path" : "/get",
+  "updateBy" : "admin",
+  "path" : "/get/{id}",
   "method" : "GET",
   "parameters" : [ ],
   "options" : [ {
@@ -27,13 +27,97 @@
   } ],
   "requestBody" : "",
   "headers" : [ ],
-  "paths" : [ ],
-  "responseBody" : null,
-  "description" : null,
+  "paths" : [ {
+    "name" : "id",
+    "value" : null,
+    "description" : null,
+    "required" : true,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  } ],
+  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": null,\n    \"timestamp\": 1773908639181,\n    \"executeTime\": 23\n}",
+  "description" : "",
   "requestBodyDefinition" : null,
-  "responseBodyDefinition" : null
+  "responseBodyDefinition" : {
+    "name" : "",
+    "value" : "",
+    "description" : "",
+    "required" : false,
+    "dataType" : "Object",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : "",
+    "error" : "",
+    "expression" : "",
+    "children" : [ {
+      "name" : "code",
+      "value" : "400",
+      "description" : "",
+      "required" : false,
+      "dataType" : "Integer",
+      "type" : null,
+      "defaultValue" : null,
+      "validateType" : "",
+      "error" : "",
+      "expression" : "",
+      "children" : [ ]
+    }, {
+      "name" : "message",
+      "value" : "参数[id]为必填项",
+      "description" : "",
+      "required" : false,
+      "dataType" : "String",
+      "type" : null,
+      "defaultValue" : null,
+      "validateType" : "",
+      "error" : "",
+      "expression" : "",
+      "children" : [ ]
+    }, {
+      "name" : "data",
+      "value" : "null",
+      "description" : "",
+      "required" : false,
+      "dataType" : "Object",
+      "type" : null,
+      "defaultValue" : null,
+      "validateType" : "",
+      "error" : "",
+      "expression" : "",
+      "children" : [ ]
+    }, {
+      "name" : "timestamp",
+      "value" : "1773908633267",
+      "description" : "",
+      "required" : false,
+      "dataType" : "Long",
+      "type" : null,
+      "defaultValue" : null,
+      "validateType" : "",
+      "error" : "",
+      "expression" : "",
+      "children" : [ ]
+    }, {
+      "name" : "executeTime",
+      "value" : "3",
+      "description" : "",
+      "required" : false,
+      "dataType" : "Integer",
+      "type" : null,
+      "defaultValue" : null,
+      "validateType" : "",
+      "error" : "",
+      "expression" : "",
+      "children" : [ ]
+    } ]
+  }
 }
 ================================
 return db.selectOne("""
-     select id,configure_condition,configure_key,configure_value,configure_name,configure_type,configure_desc_ribe,remarks,create_date from sys_configure where id = #{id}
+     select id,configure_key,configure_value,configure_name,configure_type,remark,create_date from sys_configure where id = #{id}
 """)

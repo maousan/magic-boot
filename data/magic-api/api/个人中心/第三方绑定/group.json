@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "profilebinding001",
+  "name" : "第三方绑定",
+  "type" : "api",
+  "parentId" : "profilecenter00001",
+  "path" : "",
+  "createTime" : 1710123456789,
+  "updateTime" : 1710123456789,
+  "createBy" : null,
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "profilelog001",
+  "name" : "操作日志",
+  "type" : "api",
+  "parentId" : "profilecenter00001",
+  "path" : "",
+  "createTime" : 1710123456789,
+  "updateTime" : 1710123456789,
+  "createBy" : null,
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

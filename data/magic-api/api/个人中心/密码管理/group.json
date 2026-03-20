@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "profilepassword001",
+  "name" : "密码管理",
+  "type" : "api",
+  "parentId" : "profilecenter00001",
+  "path" : "",
+  "createTime" : 1710123456789,
+  "updateTime" : 1710123456789,
+  "createBy" : null,
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

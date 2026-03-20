@@ -1,0 +1,10 @@
+{
+  "properties": {},
+  "id": "tyrjbfgxpxxpwyr5xhtnlqd37vqraxzj",
+  "name": "订单管理",
+  "type": "api",
+  "parentId": "0",
+  "path": "/order",
+  "paths": [],
+  "options": []
+}

@@ -3,9 +3,11 @@ package org.ssssssss.magicapi.modules.db.inteceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.ssssssss.magicapi.core.context.RequestEntity;
+import org.ssssssss.magicapi.core.model.ApiInfo;
 import org.ssssssss.magicapi.modules.db.BoundSql;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -17,6 +19,13 @@ import java.util.stream.Stream;
 public class DefaultSqlInterceptor implements SQLInterceptor {
 
 	public void handleLog(BoundSql boundSql, RequestEntity requestEntity) {
+		if (requestEntity != null) {
+			ApiInfo apiInfo = requestEntity.getApiInfo();
+			boolean printSqlLog = Boolean.parseBoolean(Objects.toString(apiInfo.getOptionValue("print_sql_log"), "false"));
+			if (!printSqlLog) {
+				return;
+			}
+		}
 		Logger logger = LoggerFactory.getLogger(requestEntity == null ? "Unknown" : requestEntity.getMagicScriptContext().getScriptName());
 		String parameters = Arrays.stream(boundSql.getParameters()).map(it -> {
 			if (it == null) {
@@ -32,7 +41,7 @@ public class DefaultSqlInterceptor implements SQLInterceptor {
 		if (dataSourceName != null) {
 			logger.info("数据源：{}", dataSourceName);
 		}
-		if (parameters.length() > 0) {
+		if (!parameters.isEmpty()) {
 			logger.info("SQL参数：{}", parameters);
 		}
 	}
