@@ -5,7 +5,7 @@
   "groupId" : "4f0230049d7e4f39b1e0897cc0f46f9a",
   "name" : "获取用户信息",
   "createTime" : null,
-  "updateTime" : 1773989460247,
+  "updateTime" : 1773997644594,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -323,12 +323,21 @@
 }
 ================================
 import cn.dev33.satoken.stp.StpUtil;
-import "@post:/system/security/permissions" as authoritiesList; 
+import "@post:/system/security/permissions" as authoritiesList;
 
 if (!StpUtil.isLogin()) {
     exit 402, '请先完成登录'
 }
 
-var user = db.table("sys_user").where().eq("id",StpUtil.getLoginId()).selectOne()
+// 使用 anyline 查询用户信息
+var user = anyline.query("sys_user", `++id='${StpUtil.getLoginId()}'`)
+
+if (!user) {
+    exit 0, '用户不存在'
+}
+
+// 删除敏感字段(密码)
+user.remove("password")
+
 user.authorities = authoritiesList()
 return user

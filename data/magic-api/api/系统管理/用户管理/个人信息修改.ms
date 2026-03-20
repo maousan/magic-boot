@@ -5,38 +5,25 @@
   "groupId" : "4f0230049d7e4f39b1e0897cc0f46f9a",
   "name" : "个人信息修改",
   "createTime" : 1646490239466,
-  "updateTime" : 1643713357950,
+  "updateTime" : 1773997316437,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/center/update",
   "method" : "POST",
   "parameters" : [ ],
   "options" : [ ],
-  "requestBody" : "{\r\n\t\r\n}",
+  "requestBody" : "{\r\n    \"name\":\"\",\r\n    \"id\":\"\",\r\n    \"introduction\":\"\"\t\r\n}",
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : null,
-  "description" : null,
+  "description" : "",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
 }
 ================================
 import cn.dev33.satoken.secure.SaSecureUtil;
 
-var oldPassword = db.selectValue("""
-    select password from sys_user where id = #{id}
-""")
-if(oldPassword != SaSecureUtil.sha256(password)){
-    exit 0, '原密码不正确！'
-}
+const data = body
 
-var data = {
-    id,
-    phone,
-    headPortrait
-}
-if(newPassword){
-    data.password = newPassword ? SaSecureUtil.sha256(newPassword) : ''
-}
 return db.table('sys_user').primary('id').update(data, true)
