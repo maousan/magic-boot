@@ -5,7 +5,7 @@
   "groupId" : "9ec6f9ec92d24a369952bb13eddc134f",
   "name" : "操作日志",
   "createTime" : null,
-  "updateTime" : 1772911736255,
+  "updateTime" : 1774088147219,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -375,7 +375,7 @@ let sql = """
         </if>
 
         <if test="createDateEnd != null and createDateEnd != ''">
-            and sol.create_date &lt;= #{createDateEnd}
+            and sol.create_date <= #{createDateEnd}
         </if>
 
         <if test="costTimeStart != null and costTimeStart != ''">
@@ -383,7 +383,7 @@ let sql = """
         </if>
 
         <if test="costTimeEnd != null and costTimeEnd != ''">
-            and sol.cost_time &lt;= #{costTimeEnd}
+            and sol.cost_time <= #{costTimeEnd}
         </if>
 
     </where>

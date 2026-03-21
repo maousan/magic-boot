@@ -5,7 +5,7 @@
   "groupId" : "9ec6f9ec92d24a369952bb13eddc134f",
   "name" : "登录日志",
   "createTime" : null,
-  "updateTime" : 1772977839770,
+  "updateTime" : 1774088198583,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -301,7 +301,7 @@ return db.page("""
         </if>
 
         <if test="createDateEnd != null and createDateEnd != ''">
-            and create_date &lt;= #{createDateEnd}
+            and create_date <= #{createDateEnd}
         </if>
 
     </where>
