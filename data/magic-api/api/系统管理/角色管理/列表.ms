@@ -5,7 +5,7 @@
   "groupId" : "89130d496f6f467c88b22ae4a7f688eb",
   "name" : "列表",
   "createTime" : null,
-  "updateTime" : 1773052431733,
+  "updateTime" : 1774076701150,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -239,22 +239,35 @@
 }
 ================================
 let sql = """
-    select 
+    select
         id,
         name,
         readonly,
         code,
         status,
-        permission,
         remark,
         sort,
         create_date
     from sys_role
-
     <where>
         is_del = 0
         <if test="name != null and name != ''">
             and name like concat('%', #{name}, '%')
+        </if>
+        <if test="status != null">
+            and status = #{status}
+        </if>
+        <if test="code != null and code != ''">
+            and code = #{code}
+        </if>
+        <if test="remark != null and remark != ''">
+            and remark like concat('%', #{remark}, '%')
+        </if>
+        <if test="createDateStart != null and createDateStart != ''">
+            and create_date >= #{createDateStart}
+        </if>
+        <if test="createDateEnd != null and createDateEnd != ''">
+            and create_date <= #{createDateEnd}
         </if>
     </where>
 

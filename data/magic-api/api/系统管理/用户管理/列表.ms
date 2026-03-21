@@ -325,6 +325,10 @@ let sql = """
             and su.name like concat('%', #{name}, '%')
         </if>
 
+        <if test="phone != null and phone != ''">
+            and su.phone = #{phone}
+        </if>
+
         <if test="isLogin != null">
             and su.is_login = #{isLogin}
         </if>

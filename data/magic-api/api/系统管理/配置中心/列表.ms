@@ -256,8 +256,8 @@ let sql = """
             and configure_key like concat('%', #{configureKey}, '%')
         </if>
 
-        <if test="configureValue != null and configureValue != ''">
-            and configure_value like concat('%', #{configureValue}, '%')
+        <if test="configureName != null and configureName != ''">
+            and configure_name like concat('%', #{configureName}, '%')
         </if>
     </where>
 
