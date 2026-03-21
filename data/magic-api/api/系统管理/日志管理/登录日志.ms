@@ -14,7 +14,7 @@
   "parameters" : [ {
     "name" : "username",
     "value" : null,
-    "description" : null,
+    "description" : "用户名",
     "required" : false,
     "dataType" : "String",
     "type" : null,
@@ -24,9 +24,21 @@
     "expression" : null,
     "children" : null
   }, {
-    "name" : "createTime",
+    "name" : "createDateStart",
     "value" : null,
-    "description" : null,
+    "description" : "登录开始时间",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  }, {
+    "name" : "createDateEnd",
+    "value" : null,
+    "description" : "登录结束时间",
     "required" : false,
     "dataType" : "String",
     "type" : null,
@@ -284,12 +296,12 @@ return db.page("""
             and username = #{username}
         </if>
 
-        <if test="startTime != null">
-            and create_date >= #{startTime}
+        <if test="createDateStart != null and createDateStart != ''">
+            and create_date >= #{createDateStart}
         </if>
 
-        <if test="endTime != null">
-            and create_date &lt;= #{endTime}
+        <if test="createDateEnd != null and createDateEnd != ''">
+            and create_date &lt;= #{createDateEnd}
         </if>
 
     </where>

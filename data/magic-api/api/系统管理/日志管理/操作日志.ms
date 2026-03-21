@@ -11,7 +11,103 @@
   "updateBy" : "admin",
   "path" : "/oper/list",
   "method" : "GET",
-  "parameters" : [ ],
+  "parameters" : [ {
+    "name" : "username",
+    "value" : null,
+    "description" : "用户名",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  }, {
+    "name" : "userIp",
+    "value" : null,
+    "description" : "IP地址",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  }, {
+    "name" : "apiName",
+    "value" : null,
+    "description" : "API名称",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  }, {
+    "name" : "apiPath",
+    "value" : null,
+    "description" : "API路径",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  }, {
+    "name" : "createDateStart",
+    "value" : null,
+    "description" : "创建时间起始",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  }, {
+    "name" : "createDateEnd",
+    "value" : null,
+    "description" : "创建时间截止",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  }, {
+    "name" : "costTimeStart",
+    "value" : null,
+    "description" : "耗时起始(毫秒)",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  }, {
+    "name" : "costTimeEnd",
+    "value" : null,
+    "description" : "耗时截止(毫秒)",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  } ],
   "options" : [ ],
   "requestBody" : "",
   "headers" : [ ],
@@ -274,20 +370,20 @@ let sql = """
             and sol.api_path like concat('%', #{apiPath}, '%')
         </if>
 
-        <if test="createDate != null and createDate.split(',').length > 0 and createDate.split(',')[0] != ''">
-            and sol.create_date >= #{createDate.split(',')[0]}
+        <if test="createDateStart != null and createDateStart != ''">
+            and sol.create_date >= #{createDateStart}
         </if>
 
-        <if test="createDate != null and createDate.split(',').length > 1 and createDate.split(',')[1] != ''">
-            and sol.create_date <= #{createDate.split(',')[1]}
+        <if test="createDateEnd != null and createDateEnd != ''">
+            and sol.create_date &lt;= #{createDateEnd}
         </if>
 
-        <if test="costTime != null and costTime.split(',').length > 0 and costTime.split(',')[0] != ''">
-            and sol.cost_time >= #{costTime.split(',')[0]}
+        <if test="costTimeStart != null and costTimeStart != ''">
+            and sol.cost_time >= #{costTimeStart}
         </if>
 
-        <if test="costTime != null and costTime.split(',').length > 1 and costTime.split(',')[1] != ''">
-            and sol.cost_time <= #{costTime.split(',')[1]}
+        <if test="costTimeEnd != null and costTimeEnd != ''">
+            and sol.cost_time &lt;= #{costTimeEnd}
         </if>
 
     </where>

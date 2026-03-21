@@ -311,7 +311,7 @@
 }
 ================================
 let sql = """
-    select * 
+    select *
     from magic_job_log
     <where>
         <if test="jobName != null and jobName != ''">
@@ -320,7 +320,17 @@ let sql = """
         <if test="status != null">
         and status = #{status}
         </if>
+        <if test="triggerType != null and triggerType != ''">
+        and trigger_type = #{triggerType}
+        </if>
+        <if test="createTimeStart != null and createTimeStart != ''">
+        and create_time >= #{createTimeStart}
+        </if>
+        <if test="createTimeEnd != null and createTimeEnd != ''">
+        and create_time <= #{createTimeEnd}
+        </if>
     </where>
+    order by create_time desc
 """
 
 return db.page(sql)
