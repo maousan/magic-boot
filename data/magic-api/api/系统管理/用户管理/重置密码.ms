@@ -71,7 +71,7 @@ var newPassword = body.newPassword || '123456'
 newPassword = newPassword + ''
 
 // 验证密码长度
-if(newPassword.length() < 6 || newPassword.length() > 32){
+if(newPassword.length < 6 || newPassword.length > 32){
     exit 0, '密码长度必须在6-32位之间'
 }
 

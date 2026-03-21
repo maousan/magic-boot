@@ -5,10 +5,10 @@
   "groupId" : "profilepassword001",
   "name" : "修改密码",
   "createTime" : null,
-  "updateTime" : null,
+  "updateTime" : 1774086378312,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/password/update",
   "method" : "POST",
   "parameters" : [ ],
@@ -37,8 +37,11 @@ if(body.newPassword != body.confirmPassword){
     exit 0, '两次输入的密码不一致'
 }
 
+// 确保密码是字符串类型
+var newPassword = body.newPassword + ''
+
 // 验证密码长度
-if(body.newPassword.length < 8 || body.newPassword.length > 32){
+if(newPassword.length < 8 || newPassword.length > 32){
     exit 0, '密码长度必须在8-32位之间'
 }
 
@@ -59,5 +62,5 @@ if(oldPassword != SaSecureUtil.sha256(body.oldPassword)){
 // 更新密码
 return db.table('sys_user').primary('id').update({
     id: userId,
-    password: SaSecureUtil.sha256(body.newPassword)
+    password: SaSecureUtil.sha256(newPassword)
 }, true)
