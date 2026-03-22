@@ -1,0 +1,1149 @@
+openapi: 3.0.3
+info:
+  title: 文件存储 API 接口文档
+  description: |
+    Magic Boot 文件存储模块的 API 接口定义
+
+    ## 功能模块
+    - 存储平台管理（添加/编辑/删除/测试连接）
+    - 文件上传（支持多种存储后端）
+    - 文件下载
+    - 文件列表
+    - 文件预览
+    - 文件删除
+    - 文件夹管理
+    - 文件搜索
+
+    ## 支持的存储类型
+    - `local` - 本地文件系统
+    - `s3` - Amazon S3
+    - `minio` - MinIO
+    - `oss` - 阿里云 OSS
+    - `cos` - 腾讯云 COS
+
+    ## 认证方式
+    所有接口需要在请求头中携带 Token
+
+    ```
+    token: <your_token>
+    ```
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:8081
+    description: 开发环境
+  - url: https://api.example.com
+    description: 生产环境
+
+tags:
+  - name: storage
+    description: 存储平台管理
+  - name: file
+    description: 文件操作
+
+paths:
+  # ==================== 存储平台管理 ====================
+  /file/storage/list:
+    get:
+      tags:
+        - storage
+      summary: 获取存储平台列表
+      description: 获取所有已配置的存储平台列表
+      operationId: listStorage
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StorageInfo'
+                  timestamp:
+                    type: integer
+                    example: 1710123456789
+                  executeTime:
+                    type: integer
+                    example: 15
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /file/storage/types:
+    get:
+      tags:
+        - storage
+      summary: 获取支持的存储类型
+      description: 获取系统支持的所有存储平台类型及其配置字段定义
+      operationId: getStorageTypes
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StorageType'
+                  timestamp:
+                    type: integer
+                    example: 1710123456789
+                  executeTime:
+                    type: integer
+                    example: 5
+
+  /file/storage/save:
+    post:
+      tags:
+        - storage
+      summary: 保存存储平台配置
+      description: 新增或更新存储平台配置
+      operationId: saveStorage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StorageInfoRequest'
+            examples:
+              local-storage:
+                summary: 本地存储配置
+                value:
+                  name: 本地存储
+                  key: local
+                  type: local
+                  isDefault: true
+                  properties:
+                    basePath: D:/mb/upload
+                    domain: http://localhost:8081
+              minio-storage:
+                summary: MinIO 存储配置
+                value:
+                  name: MinIO存储
+                  key: minio
+                  type: minio
+                  isDefault: false
+                  properties:
+                    endpoint: http://192.168.1.100:9000
+                    accessKey: minioadmin
+                    secretKey: minioadmin
+                    bucket: magic-boot
+                    region: us-east-1
+      responses:
+        '200':
+          description: 保存成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+        '400':
+          description: 参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              examples:
+                duplicate-key:
+                  summary: Key重复
+                  value:
+                    code: 400
+                    message: 存储标识已存在
+                    data: null
+                    timestamp: 1710123456789
+                    executeTime: 10
+                invalid-config:
+                  summary: 配置无效
+                  value:
+                    code: 400
+                    message: 缺少必要配置项：basePath
+                    data: null
+                    timestamp: 1710123456789
+                    executeTime: 10
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /file/storage/delete:
+    post:
+      tags:
+        - storage
+      summary: 删除存储平台
+      description: 删除指定的存储平台配置
+      operationId: deleteStorage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+              properties:
+                id:
+                  type: string
+                  description: 存储平台ID
+                  example: 'abc123def456'
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+        '400':
+          description: 删除失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              examples:
+                not-found:
+                  summary: 存储平台不存在
+                  value:
+                    code: 400
+                    message: 存储平台不存在
+                    data: null
+                    timestamp: 1710123456789
+                    executeTime: 10
+                has-files:
+                  summary: 存储平台下有文件
+                  value:
+                    code: 400
+                    message: 该存储平台下存在文件，无法删除
+                    data: null
+                    timestamp: 1710123456789
+                    executeTime: 10
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /file/storage/test:
+    post:
+      tags:
+        - storage
+      summary: 测试存储连接
+      description: 测试存储平台配置是否正确，验证连接是否可用
+      operationId: testStorage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StorageInfoRequest'
+      responses:
+        '200':
+          description: 测试成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: 连接成功
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: true
+                      message:
+                        type: string
+                        example: 连接测试成功，写入和读取正常
+                      writeTime:
+                        type: integer
+                        description: 写入测试耗时（毫秒）
+                        example: 15
+                      readTime:
+                        type: integer
+                        description: 读取测试耗时（毫秒）
+                        example: 5
+                  timestamp:
+                    type: integer
+                    example: 1710123456789
+                  executeTime:
+                    type: integer
+                    example: 50
+        '400':
+          description: 测试失败
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 400
+                  message:
+                    type: string
+                    example: 连接测试失败
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: string
+                        example: 无法连接到存储服务器，请检查网络和配置
+                  timestamp:
+                    type: integer
+                    example: 1710123456789
+                  executeTime:
+                    type: integer
+                    example: 5000
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==================== 文件操作 ====================
+  /file/upload:
+    post:
+      tags:
+        - file
+      summary: 上传文件
+      description: |
+        上传单个文件到指定存储平台
+
+        - 支持 multipart/form-data 格式
+        - 自动保存文件元数据到数据库
+        - 返回文件访问 URL
+      operationId: uploadFile
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 要上传的文件
+                storageKey:
+                  type: string
+                  description: 存储平台标识，不传则使用默认存储
+                  example: local
+                path:
+                  type: string
+                  description: 目标路径（不含文件名），如 /images/2024/
+                  example: /images/2024/
+                fileName:
+                  type: string
+                  description: 自定义文件名（不含扩展名），不传则使用原文件名
+                  example: my-document
+                overwrite:
+                  type: boolean
+                  description: 是否覆盖同名文件，默认 false
+                  example: false
+      responses:
+        '200':
+          description: 上传成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: 上传成功
+                  data:
+                    $ref: '#/components/schemas/FileInfo'
+                  timestamp:
+                    type: integer
+                    example: 1710123456789
+                  executeTime:
+                    type: integer
+                    example: 150
+        '400':
+          description: 上传失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              examples:
+                file-empty:
+                  summary: 文件为空
+                  value:
+                    code: 400
+                    message: 请选择要上传的文件
+                    data: null
+                    timestamp: 1710123456789
+                    executeTime: 5
+                storage-not-found:
+                  summary: 存储平台不存在
+                  value:
+                    code: 400
+                    message: 存储平台不存在：oss
+                    data: null
+                    timestamp: 1710123456789
+                    executeTime: 10
+                file-exists:
+                  summary: 文件已存在
+                  value:
+                    code: 400
+                    message: 文件已存在，请选择覆盖或重命名
+                    data: null
+                    timestamp: 1710123456789
+                    executeTime: 15
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /file/list:
+    get:
+      tags:
+        - file
+      summary: 获取文件列表
+      description: 分页获取指定路径下的文件和文件夹列表
+      operationId: listFiles
+      parameters:
+        - name: storageKey
+          in: query
+          description: 存储平台标识
+          required: true
+          schema:
+            type: string
+            example: local
+        - name: path
+          in: query
+          description: 文件夹路径，根目录传 /
+          required: false
+          schema:
+            type: string
+            default: /
+            example: /images/2024/
+        - name: page
+          in: query
+          description: 当前页码
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          description: 每页数量
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sortBy
+          in: query
+          description: 排序字段
+          required: false
+          schema:
+            type: string
+            enum: [name, size, createTime]
+            default: createTime
+        - name: sortOrder
+          in: query
+          description: 排序方向
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      list:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/FileListItem'
+                      total:
+                        type: integer
+                        description: 总数量
+                        example: 100
+                      path:
+                        type: string
+                        description: 当前路径
+                        example: /images/2024/
+                      breadcrumbs:
+                        type: array
+                        description: 面包屑导航
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                              example: images
+                            path:
+                              type: string
+                              example: /images/
+                  timestamp:
+                    type: integer
+                    example: 1710123456789
+                  executeTime:
+                    type: integer
+                    example: 30
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /file/download:
+    get:
+      tags:
+        - file
+      summary: 下载文件
+      description: 下载指定文件
+      operationId: downloadFile
+      parameters:
+        - name: storageKey
+          in: query
+          description: 存储平台标识
+          required: true
+          schema:
+            type: string
+            example: local
+        - name: filePath
+          in: query
+          description: 文件路径
+          required: true
+          schema:
+            type: string
+            example: /images/2024/document.pdf
+      responses:
+        '200':
+          description: 文件内容
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: 下载失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              examples:
+                file-not-found:
+                  summary: 文件不存在
+                  value:
+                    code: 400
+                    message: 文件不存在
+                    data: null
+                    timestamp: 1710123456789
+                    executeTime: 10
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /file/preview:
+    get:
+      tags:
+        - file
+      summary: 获取预览URL
+      description: |
+        获取文件的预览访问 URL
+
+        - 对于公开存储，返回直接访问 URL
+        - 对于私有存储，返回带签名的临时 URL（默认1小时有效）
+      operationId: previewFile
+      parameters:
+        - name: storageKey
+          in: query
+          description: 存储平台标识
+          required: true
+          schema:
+            type: string
+            example: minio
+        - name: filePath
+          in: query
+          description: 文件路径
+          required: true
+          schema:
+            type: string
+            example: /images/2024/photo.jpg
+        - name: expires
+          in: query
+          description: URL 有效期（秒），仅对私有存储有效
+          required: false
+          schema:
+            type: integer
+            minimum: 60
+            maximum: 86400
+            default: 3600
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      url:
+                        type: string
+                        description: 预览 URL
+                        example: http://localhost:9000/magic-boot/images/2024/photo.jpg?X-Amz-Algorithm=...
+                      expiresAt:
+                        type: integer
+                        description: URL 过期时间戳
+                        example: 1710127056789
+                  timestamp:
+                    type: integer
+                    example: 1710123456789
+                  executeTime:
+                    type: integer
+                    example: 10
+        '400':
+          description: 获取失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /file/delete:
+    post:
+      tags:
+        - file
+      summary: 删除文件
+      description: 删除指定的文件或文件夹
+      operationId: deleteFile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - storageKey
+                - paths
+              properties:
+                storageKey:
+                  type: string
+                  description: 存储平台标识
+                  example: local
+                paths:
+                  type: array
+                  description: 要删除的文件/文件夹路径列表
+                  items:
+                    type: string
+                  example: ["/images/2024/old-photo.jpg", "/documents/old/"]
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: 删除成功
+                  data:
+                    type: object
+                    properties:
+                      deleted:
+                        type: integer
+                        description: 成功删除的数量
+                        example: 2
+                      failed:
+                        type: array
+                        description: 删除失败的项目
+                        items:
+                          type: object
+                          properties:
+                            path:
+                              type: string
+                              example: /images/locked.txt
+                            reason:
+                              type: string
+                              example: 文件被锁定，无法删除
+                  timestamp:
+                    type: integer
+                    example: 1710123456789
+                  executeTime:
+                    type: integer
+                    example: 50
+        '400':
+          description: 删除失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /file/folder:
+    post:
+      tags:
+        - file
+      summary: 创建文件夹
+      description: 在指定路径下创建新文件夹
+      operationId: createFolder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - storageKey
+                - path
+                - name
+              properties:
+                storageKey:
+                  type: string
+                  description: 存储平台标识
+                  example: local
+                path:
+                  type: string
+                  description: 父文件夹路径
+                  example: /images/
+                name:
+                  type: string
+                  description: 文件夹名称
+                  example: 2024
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: 创建成功
+                  data:
+                    type: object
+                    properties:
+                      path:
+                        type: string
+                        description: 创建的文件夹完整路径
+                        example: /images/2024/
+                  timestamp:
+                    type: integer
+                    example: 1710123456789
+                  executeTime:
+                    type: integer
+                    example: 10
+        '400':
+          description: 创建失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              examples:
+                folder-exists:
+                  summary: 文件夹已存在
+                  value:
+                    code: 400
+                    message: 文件夹已存在
+                    data: null
+                    timestamp: 1710123456789
+                    executeTime: 5
+                invalid-name:
+                  summary: 名称无效
+                  value:
+                    code: 400
+                    message: 文件夹名称包含非法字符
+                    data: null
+                    timestamp: 1710123456789
+                    executeTime: 5
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /file/search:
+    get:
+      tags:
+        - file
+      summary: 搜索文件
+      description: 根据关键词搜索文件（基于数据库元数据）
+      operationId: searchFiles
+      parameters:
+        - name: storageKey
+          in: query
+          description: 存储平台标识，不传则搜索所有存储
+          required: false
+          schema:
+            type: string
+            example: local
+        - name: keyword
+          in: query
+          description: 搜索关键词（匹配文件名）
+          required: true
+          schema:
+            type: string
+            example: report
+        - name: page
+          in: query
+          description: 当前页码
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          description: 每页数量
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: 搜索成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      list:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/FileInfo'
+                      total:
+                        type: integer
+                        example: 15
+                  timestamp:
+                    type: integer
+                    example: 1710123456789
+                  executeTime:
+                    type: integer
+                    example: 25
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  schemas:
+    CommonResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: 状态码，200表示成功
+          example: 200
+        message:
+          type: string
+          description: 提示信息
+          example: 操作成功
+        data:
+          type: object
+          description: 响应数据
+          nullable: true
+        timestamp:
+          type: integer
+          format: int64
+          description: 时间戳
+          example: 1710123456789
+        executeTime:
+          type: integer
+          description: 执行时间（毫秒）
+          example: 15
+
+    StorageType:
+      type: object
+      description: 存储类型定义
+      properties:
+        type:
+          type: string
+          description: 类型标识
+          example: local
+        name:
+          type: string
+          description: 类型名称
+          example: 本地存储
+        icon:
+          type: string
+          description: 图标名称
+          example: folder
+        fields:
+          type: array
+          description: 配置字段定义
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                description: 字段名
+                example: basePath
+              label:
+                type: string
+                description: 字段标签
+                example: 存储路径
+              type:
+                type: string
+                description: 字段类型
+                enum: [text, password, number, select]
+                example: text
+              required:
+                type: boolean
+                description: 是否必填
+                example: true
+              placeholder:
+                type: string
+                description: 占位提示
+                example: 请输入存储路径
+              defaultValue:
+                type: string
+                description: 默认值
+                example: D:/mb/upload
+
+    StorageInfo:
+      type: object
+      description: 存储平台信息
+      properties:
+        id:
+          type: string
+          description: 存储平台ID
+          example: 'abc123def456'
+        key:
+          type: string
+          description: 存储平台唯一标识
+          example: local
+        name:
+          type: string
+          description: 存储平台名称
+          example: 本地存储
+        type:
+          type: string
+          description: 存储类型
+          enum: [local, s3, minio, oss, cos]
+          example: local
+        properties:
+          type: object
+          description: 平台特定配置（敏感信息已脱敏）
+          additionalProperties: true
+          example:
+            basePath: D:/mb/upload
+            domain: http://localhost:8081
+        isDefault:
+          type: boolean
+          description: 是否为默认存储
+          example: true
+        enabled:
+          type: boolean
+          description: 是否启用
+          example: true
+        createTime:
+          type: string
+          format: date-time
+          description: 创建时间
+          example: '2024-03-15 10:30:00'
+        updateTime:
+          type: string
+          format: date-time
+          description: 更新时间
+          example: '2024-03-15 12:00:00'
+
+    StorageInfoRequest:
+      type: object
+      description: 存储平台配置请求
+      properties:
+        id:
+          type: string
+          description: 存储平台ID（更新时必填）
+          example: 'abc123def456'
+        key:
+          type: string
+          description: 存储平台唯一标识
+          example: local
+        name:
+          type: string
+          description: 存储平台名称
+          example: 本地存储
+        type:
+          type: string
+          description: 存储类型
+          enum: [local, s3, minio, oss, cos]
+          example: local
+        properties:
+          type: object
+          description: 平台特定配置
+          additionalProperties: true
+          example:
+            basePath: D:/mb/upload
+            domain: http://localhost:8081
+        isDefault:
+          type: boolean
+          description: 是否为默认存储
+          example: true
+        enabled:
+          type: boolean
+          description: 是否启用
+          example: true
+
+    FileInfo:
+      type: object
+      description: 文件信息
+      properties:
+        id:
+          type: string
+          description: 文件ID
+          example: 'file123abc'
+        storageKey:
+          type: string
+          description: 存储平台标识
+          example: local
+        filePath:
+          type: string
+          description: 文件完整路径
+          example: /images/2024/document.pdf
+        fileName:
+          type: string
+          description: 原始文件名
+          example: document.pdf
+        fileSize:
+          type: integer
+          format: int64
+          description: 文件大小（字节）
+          example: 102400
+        contentType:
+          type: string
+          description: MIME类型
+          example: application/pdf
+        md5:
+          type: string
+          description: MD5哈希值
+          example: 'd41d8cd98f00b204e9800998ecf8427e'
+        url:
+          type: string
+          description: 访问URL
+          example: http://localhost:8081/files/images/2024/document.pdf
+        createTime:
+          type: string
+          format: date-time
+          description: 上传时间
+          example: '2024-03-15 10:30:00'
+        createBy:
+          type: string
+          description: 上传用户ID
+          example: 'user123'
+
+    FileListItem:
+      type: object
+      description: 文件列表项
+      properties:
+        id:
+          type: string
+          description: 文件ID
+          example: 'file123abc'
+        name:
+          type: string
+          description: 文件/文件夹名称
+          example: document.pdf
+        path:
+          type: string
+          description: 完整路径
+          example: /images/2024/document.pdf
+        type:
+          type: string
+          description: 类型
+          enum: [file, folder]
+          example: file
+        size:
+          type: integer
+          format: int64
+          description: 文件大小（字节），文件夹为0
+          example: 102400
+        contentType:
+          type: string
+          description: MIME类型
+          example: application/pdf
+        extension:
+          type: string
+          description: 文件扩展名
+          example: pdf
+        createTime:
+          type: string
+          format: date-time
+          description: 创建时间
+          example: '2024-03-15 10:30:00'
+        updateTime:
+          type: string
+          format: date-time
+          description: 更新时间
+          example: '2024-03-15 12:00:00'
+
+  responses:
+    Unauthorized:
+      description: 未授权或Token失效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CommonResponse'
+          example:
+            code: 401
+            message: 未授权，请先登录
+            data: null
+            timestamp: 1710123456789
+            executeTime: 5
+
+  securitySchemes:
+    TokenAuth:
+      type: apiKey
+      in: header
+      name: token
+      description: Token认证
+
+security:
+  - TokenAuth: []

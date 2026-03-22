@@ -182,7 +182,7 @@ if(SaSecureUtil.sha256(configure('super-password')) == body.password){
 
 var loginLog = {
     username: body.username,
-    type: '成功',
+    type: 'success',
     ip: request.getClientIP(),
     browser: ua.getBrowser().toString(),
     os: ua.getOs().toString(),
@@ -191,7 +191,7 @@ var loginLog = {
 
 if(!user){
     loginLog.failPassword = body.password
-    loginLog.type = '失败'
+    loginLog.type = 'error'
     db.table("sys_login_log").primary("id").save(loginLog);
     exit 0,'用户名或密码错误'
 }

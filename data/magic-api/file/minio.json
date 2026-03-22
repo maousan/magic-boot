@@ -1,0 +1,22 @@
+{
+  "properties" : {
+    "endpoint" : "http://192.168.2.90:9000",
+    "bucket" : "my-bucket",
+    "accessKey" : "hjv2S20zcJIiJcMSjqhJ",
+    "secretKey" : "MdbiD8zGSIjddiAcDVhZihXaK198BAJC9CNe50GK",
+    "region" : "us-east-1"
+  },
+  "id" : "979de4a633ba4661a97014b2ce16c511",
+  "script" : null,
+  "groupId" : "file:0",
+  "name" : "minio",
+  "createTime" : 1774177723620,
+  "updateTime" : 1774179136603,
+  "lock" : null,
+  "createBy" : "admin",
+  "updateBy" : "admin",
+  "key" : "minio",
+  "type" : "minio",
+  "isDefault" : false,
+  "enabled" : true
+}

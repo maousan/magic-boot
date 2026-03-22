@@ -70,6 +70,9 @@
         <!-- Anyline ORM -->
         <anyline.version>8.7.3-jdk17-20260202</anyline.version>
 
+        <!-- 文件存储 -->
+        <x-file-storage.version>2.2.1</x-file-storage.version>
+
         <!-- Maven 插件 -->
         <exec-maven-plugin.version>1.6.0</exec-maven-plugin.version>
         <maven-resources-plugin.version>3.2.0</maven-resources-plugin.version>
@@ -114,6 +117,11 @@
             <dependency>
                 <groupId>org.ssssssss</groupId>
                 <artifactId>magic-api-plugin-excel</artifactId>
+                <version>${magic-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.ssssssss</groupId>
+                <artifactId>magic-api-plugin-file</artifactId>
                 <version>${magic-api.version}</version>
             </dependency>
             <dependency>
@@ -337,6 +345,18 @@
                 <groupId>org.ssssssss</groupId>
                 <artifactId>magic-plugin-api</artifactId>
                 <version>${revision}</version>
+            </dependency>
+
+            <!-- X-File-Storage 文件存储 -->
+            <dependency>
+                <groupId>org.dromara.x-file-storage</groupId>
+                <artifactId>x-file-storage-core</artifactId>
+                <version>${x-file-storage.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dromara.x-file-storage</groupId>
+                <artifactId>x-file-storage-spring</artifactId>
+                <version>${x-file-storage.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

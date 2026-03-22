@@ -22,6 +22,7 @@
         <module>magic-api-plugin-mqtt</module>
         <module>magic-api-plugin-springdoc</module>
         <module>magic-api-plugin-excel</module>
+        <module>magic-api-plugin-file</module>
     </modules>
 
     <properties>

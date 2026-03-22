@@ -57,6 +57,10 @@
         </dependency>
         <dependency>
             <groupId>org.ssssssss</groupId>
+            <artifactId>magic-api-plugin-file</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.ssssssss</groupId>
             <artifactId>magic-api-plugin-liteflow</artifactId>
         </dependency>
         <dependency>

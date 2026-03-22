@@ -1,0 +1,19 @@
+{
+  "properties" : {
+    "basePath" : "upload/",
+    "domain" : "http://localhost:8089"
+  },
+  "id" : "ef4d7d120a3b445fa37ef603a25c6a4c",
+  "script" : null,
+  "groupId" : "file:0",
+  "name" : "local",
+  "createTime" : 1774177048192,
+  "updateTime" : null,
+  "lock" : null,
+  "createBy" : "admin",
+  "updateBy" : null,
+  "key" : "local",
+  "type" : "local",
+  "isDefault" : true,
+  "enabled" : true
+}
