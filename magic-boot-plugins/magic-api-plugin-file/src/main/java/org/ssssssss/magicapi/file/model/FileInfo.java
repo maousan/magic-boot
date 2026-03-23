@@ -9,6 +9,7 @@ public class FileInfo {
     private String storageKey;
     private String filePath;
     private String fileName;
+    private String fileType;
     private Long fileSize;
     private String contentType;
     private String fileExt;
@@ -50,6 +51,14 @@ public class FileInfo {
 
     public void setFileName(String fileName) {
         this.fileName = fileName;
+    }
+
+    public String getFileType() {
+        return fileType;
+    }
+
+    public void setFileType(String fileType) {
+        this.fileType = fileType;
     }
 
     public Long getFileSize() {

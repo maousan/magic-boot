@@ -35,33 +35,33 @@ goto :help
 
 :start
     call :print_info "检查系统环境..."
-    
+
     where docker >nul 2>&1
     if errorlevel 1 (
         call :print_error "Docker 未安装，请先安装 Docker Desktop"
         exit /b 1
     )
-    
+
     call :print_success "环境检查通过"
     call :print_info "创建必要的目录..."
-    
+
     if not exist "data\magic-api" mkdir data\magic-api
     if not exist "uploads" mkdir uploads
     if not exist "logs" mkdir logs
     if not exist "db" mkdir db
     if not exist "nginx\conf.d" mkdir nginx\conf.d
     if not exist "nginx\ssl" mkdir nginx\ssl
-    
+
     call :print_success "目录创建完成"
     call :print_info "启动 Docker 服务..."
-    
+
     REM 检查是否有参数
     set COMPOSE_OPTS=
     if "%2"=="--with-tools" set COMPOSE_OPTS=--profile tools
     if "%2"=="--production" set COMPOSE_OPTS=--profile production
-    
+
     docker compose %COMPOSE_OPTS% up -d
-    
+
     call :print_success "服务启动完成！"
     echo.
     call :show_access_info
@@ -102,7 +102,7 @@ goto :help
 :clean
     call :print_warning "⚠️  此操作将删除所有容器、网络和数据卷！"
     set /p CONFIRM="确认继续吗？(yes/no): "
-    
+
     if "%CONFIRM%"=="yes" (
         call :print_info "清理环境中..."
         docker compose down -v --rmi all
@@ -116,7 +116,7 @@ goto :help
     for /f "tokens=2-4 delims=/ " %%a in ('date /t') do (set mydate=%%c%%a%%b)
     for /f "tokens=1-2 delims=/:" %%a in ('time /t') do (set mytime=%%a%%b)
     set BACKUP_FILE=backup_%mydate%_%mytime%.sql
-    
+
     call :print_info "备份数据库到文件: %BACKUP_FILE%"
     docker compose exec -T mysql mysqldump -u root -proot123456 --single-transaction --routines --triggers magic-boot > %BACKUP_FILE%
     call :print_success "数据库备份完成: %BACKUP_FILE%"
@@ -174,9 +174,9 @@ goto :help
     echo %GREEN%╚════════════════════════════════════════════════════════╝%NC%
     echo.
     echo %BLUE%📱 访问地址：%NC%
-    echo    • 应用主页：    http://localhost:8081
-    echo    • Magic-API：   http://localhost:8081/magic/web
-    echo    • Druid监控：   http://localhost:8081/druid
+    echo    • 应用主页：    http://localhost:8089
+    echo    • Magic-API：   http://localhost:8089/magic/web
+    echo    • Druid监控：   http://localhost:8089/druid
     echo.
     echo %BLUE%🔑 登录凭证：%NC%
     echo    • Magic-API：   admin / admin123456

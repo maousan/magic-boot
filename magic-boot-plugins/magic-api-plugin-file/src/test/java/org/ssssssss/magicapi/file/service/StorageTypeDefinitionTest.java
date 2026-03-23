@@ -1,15 +1,14 @@
 package org.ssssssss.magicapi.file.service;
 
-import org.dromara.x.file.storage.core.FileStorageService;
-import org.junit.jupiter.api.*;
-import org.ssssssss.magicapi.file.model.StorageInfo;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.dromara.x.file.storage.core.FileStorageService;
+import org.junit.jupiter.api.*;
+import org.ssssssss.magicapi.file.model.StorageInfo;
 
 /**
  * 存储类型定义测试
@@ -66,7 +65,7 @@ class StorageTypeDefinitionTest {
     void testCreateLocalStorageService() {
         StorageInfo info = createLocalStorageInfo();
         info.getProperties().put("basePath", "target/test-storage/");
-        info.getProperties().put("domain", "http://localhost:8081");
+        info.getProperties().put("domain", "http://localhost:8089");
 
         var service = fileClient.createFileStorageService(info);
         assertNotNull(service, "本地存储服务创建失败");
@@ -200,7 +199,7 @@ class StorageTypeDefinitionTest {
 
         Map<String, Object> properties = new HashMap<>();
         properties.put("basePath", "/tmp/upload");
-        properties.put("domain", "http://localhost:8081");
+        properties.put("domain", "http://localhost:8089");
         info.setProperties(properties);
 
         return info;

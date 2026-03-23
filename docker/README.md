@@ -97,7 +97,7 @@ docker-compose logs -f app
 
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
-| `APP_PORT` | 应用暴露端口 | `8081` |
+| `APP_PORT` | 应用暴露端口 | `8089` |
 | `SPRING_PROFILES_ACTIVE` | Spring Profile | `dev` |
 | `UPLOAD_DIR` | 上传目录 | `/app/uploads` |
 
@@ -235,10 +235,10 @@ SPRING_DATA_REDIS_DATABASE=3
 
 ```bash
 # 检查应用健康状态
-curl http://localhost:8081/actuator/health
+curl http://localhost:8089/actuator/health
 
 # 访问 magic-api 管理界面
-# http://localhost:8081/magic/web
+# http://localhost:8089/magic/web
 # 默认账号：admin / K7vQ9@xP4Lr2!mZ8
 ```
 

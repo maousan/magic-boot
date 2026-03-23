@@ -29,7 +29,7 @@ chmod +x docker-manage.sh
 |------|------|------|------|
 | **MySQL** | mysql:8.0 | 3306 | 主数据库 |
 | **Redis** | redis:7-alpine | 6379 | 缓存数据库 |
-| **App** | 自定义构建 | 8081 | Spring Boot应用 |
+| **App** | 自定义构建 | 8089 | Spring Boot应用 |
 | **Redis UI** | redis-commander | 8082 | Redis可视化管理（可选） |
 | **Nginx** | nginx:alpine | 80/443 | 反向代理（可选） |
 
@@ -160,7 +160,7 @@ docker-manage.bat restart
 docker-manage.bat logs
 
 # 检查端口占用
-netstat -ano | findstr :8081
+netstat -ano | findstr :8089
 netstat -ano | findstr :3306
 netstat -ano | findstr :6379
 ```
@@ -185,9 +185,9 @@ docker-manage.bat start
 
 启动成功后访问：
 
-- **应用主页**: http://localhost:8081
-- **Magic-API编辑器**: http://localhost:8081/magic/web
-- **Druid监控**: http://localhost:8081/druid
+- **应用主页**: http://localhost:8089
+- **Magic-API编辑器**: http://localhost:8089/magic/web
+- **Druid监控**: http://localhost:8089/druid
 - **Redis管理**: http://localhost:8082 (需使用 `--with-tools` 参数)
 
 ---

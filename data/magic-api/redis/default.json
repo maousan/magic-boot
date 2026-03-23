@@ -11,10 +11,10 @@
       "max-wait" : "5000"
     }
   },
-  "id" : "a12f66e26a4c47b5998fe61f834280e5",
+  "id" : "",
   "script" : null,
   "groupId" : "redis:0",
-  "name" : "default",
+  "name" : "默认数据源",
   "createTime" : 1772600888470,
   "updateTime" : 1772704667416,
   "lock" : null,

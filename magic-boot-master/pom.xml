@@ -59,6 +59,25 @@
             <groupId>org.ssssssss</groupId>
             <artifactId>magic-api-plugin-file</artifactId>
         </dependency>
+        <!-- 文件存储插件依赖 -->
+        <dependency>
+            <groupId>org.dromara.x-file-storage</groupId>
+            <artifactId>x-file-storage-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.dromara.x-file-storage</groupId>
+            <artifactId>x-file-storage-spring</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.5.10</version>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-s3</artifactId>
+            <version>1.12.600</version>
+        </dependency>
         <dependency>
             <groupId>org.ssssssss</groupId>
             <artifactId>magic-api-plugin-liteflow</artifactId>

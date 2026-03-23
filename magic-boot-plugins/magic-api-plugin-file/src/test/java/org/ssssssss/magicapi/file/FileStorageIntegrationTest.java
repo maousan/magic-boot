@@ -1,10 +1,6 @@
 package org.ssssssss.magicapi.file;
 
-import org.dromara.x.file.storage.core.FileInfo;
-import org.dromara.x.file.storage.core.FileStorageService;
-import org.junit.jupiter.api.*;
-import org.ssssssss.magicapi.file.model.StorageInfo;
-import org.ssssssss.magicapi.file.service.MagicDynamicFileClient;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -14,8 +10,11 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.dromara.x.file.storage.core.FileInfo;
+import org.dromara.x.file.storage.core.FileStorageService;
+import org.junit.jupiter.api.*;
+import org.ssssssss.magicapi.file.model.StorageInfo;
+import org.ssssssss.magicapi.file.service.MagicDynamicFileClient;
 
 /**
  * 文件存储集成测试
@@ -25,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class FileStorageIntegrationTest {
 
     private static final String TEST_BASE_PATH = "target/integration-test-upload/";
-    private static final String TEST_DOMAIN = "http://localhost:8081";
+    private static final String TEST_DOMAIN = "http://localhost:8089";
     private static MagicDynamicFileClient fileClient;
     private static String uploadedFilePath;
     private static FileInfo uploadedFileInfo;
@@ -89,10 +88,7 @@ class FileStorageIntegrationTest {
         ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes);
 
         String fileName = "test-text-" + UUID.randomUUID() + ".txt";
-        FileInfo fileInfo = service.of(inputStream)
-                .setOriginalFilename(fileName)
-                .setPath("text/")
-                .upload();
+        FileInfo fileInfo = service.of(inputStream).setOriginalFilename(fileName).setPath("text/").upload();
 
         assertNotNull(fileInfo, "文件上传失败");
         assertNotNull(fileInfo.getUrl(), "文件URL不应为空");
@@ -124,10 +120,7 @@ class FileStorageIntegrationTest {
         ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes);
         String fileName = "test-binary-" + UUID.randomUUID() + ".bin";
 
-        FileInfo fileInfo = service.of(inputStream)
-                .setOriginalFilename(fileName)
-                .setPath("binary/")
-                .upload();
+        FileInfo fileInfo = service.of(inputStream).setOriginalFilename(fileName).setPath("binary/").upload();
 
         assertNotNull(fileInfo);
         assertEquals(size, fileInfo.getSize());
@@ -144,9 +137,7 @@ class FileStorageIntegrationTest {
         String content = "Secondary storage test";
         byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
 
-        FileInfo fileInfo = secondaryService.of(bytes)
-                .setOriginalFilename("secondary-test.txt")
-                .upload();
+        FileInfo fileInfo = secondaryService.of(bytes).setOriginalFilename("secondary-test.txt").upload();
 
         assertNotNull(fileInfo);
         assertTrue(fileInfo.getUrl().contains("secondary"));
@@ -163,10 +154,11 @@ class FileStorageIntegrationTest {
         String content = "中文文件名测试";
         byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
 
-        FileInfo fileInfo = service.of(bytes)
-                .setOriginalFilename("测试文件_" + UUID.randomUUID() + ".txt")
-                .setPath("chinese/")
-                .upload();
+        FileInfo fileInfo = service
+            .of(bytes)
+            .setOriginalFilename("测试文件_" + UUID.randomUUID() + ".txt")
+            .setPath("chinese/")
+            .upload();
 
         assertNotNull(fileInfo);
         assertTrue(fileInfo.getOriginalFilename().contains("测试"));
@@ -186,10 +178,7 @@ class FileStorageIntegrationTest {
         // 嵌套路径
         String nestedPath = "level1/level2/level3/";
 
-        FileInfo fileInfo = service.of(bytes)
-                .setOriginalFilename("nested.txt")
-                .setPath(nestedPath)
-                .upload();
+        FileInfo fileInfo = service.of(bytes).setOriginalFilename("nested.txt").setPath(nestedPath).upload();
 
         assertNotNull(fileInfo);
         assertTrue(fileInfo.getUrl().contains(nestedPath));
@@ -268,10 +257,11 @@ class FileStorageIntegrationTest {
             threads[i] = new Thread(() -> {
                 try {
                     String content = "Concurrent test " + index + " - " + UUID.randomUUID();
-                    FileInfo info = service.of(content.getBytes())
-                            .setOriginalFilename("concurrent-" + index + ".txt")
-                            .setPath("concurrent/")
-                            .upload();
+                    FileInfo info = service
+                        .of(content.getBytes())
+                        .setOriginalFilename("concurrent-" + index + ".txt")
+                        .setPath("concurrent/")
+                        .upload();
                     results[index] = (info != null && info.getUrl() != null);
                 } catch (Exception e) {
                     results[index] = false;

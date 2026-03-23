@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration debug="false">
-    <!--定义日志文件的存储地址 -->
-    <property name="LOG_HOME" value="./logs"/>
+    <!--使用 Spring 属性读取项目根目录，通过 user.dir 获取 -->
+    <property name="LOG_HOME" value="${user.dir}/logs"/>
     <property name="APP_NAME" value="all"/>
     <property name="MAX_HISTORY" value="14"/>
     <property name="MAX_FILE_SIZE" value="100MB"/>

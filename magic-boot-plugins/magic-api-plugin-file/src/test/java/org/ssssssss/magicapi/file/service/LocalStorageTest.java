@@ -1,10 +1,6 @@
 package org.ssssssss.magicapi.file.service;
 
-import org.dromara.x.file.storage.core.FileStorageService;
-import org.dromara.x.file.storage.core.FileInfo;
-import org.dromara.x.file.storage.core.platform.LocalPlusFileStorage;
-import org.junit.jupiter.api.*;
-import org.ssssssss.magicapi.file.model.StorageInfo;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -14,8 +10,11 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.dromara.x.file.storage.core.FileInfo;
+import org.dromara.x.file.storage.core.FileStorageService;
+import org.dromara.x.file.storage.core.platform.LocalPlusFileStorage;
+import org.junit.jupiter.api.*;
+import org.ssssssss.magicapi.file.model.StorageInfo;
 
 /**
  * 本地存储测试用例
@@ -24,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class LocalStorageTest {
 
     private static final String TEST_BASE_PATH = "target/test-upload/";
-    private static final String TEST_DOMAIN = "http://localhost:8081";
+    private static final String TEST_DOMAIN = "http://localhost:8089";
     private static MagicDynamicFileClient fileClient;
     private static String testStorageId;
 
@@ -59,8 +58,10 @@ class LocalStorageTest {
 
         assertNotNull(service, "本地存储服务创建失败");
         assertFalse(service.getFileStorageList().isEmpty(), "存储平台列表不应为空");
-        assertTrue(service.getFileStorageList().get(0) instanceof LocalPlusFileStorage,
-                "存储平台应为 LocalPlusFileStorage");
+        assertTrue(
+            service.getFileStorageList().get(0) instanceof LocalPlusFileStorage,
+            "存储平台应为 LocalPlusFileStorage"
+        );
 
         System.out.println("✅ 本地存储服务创建成功，使用 LocalPlusFileStorage");
     }
@@ -76,9 +77,7 @@ class LocalStorageTest {
         ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes);
 
         String fileName = "test-" + UUID.randomUUID() + ".txt";
-        FileInfo fileInfo = service.of(inputStream)
-                .setOriginalFilename(fileName)
-                .upload();
+        FileInfo fileInfo = service.of(inputStream).setOriginalFilename(fileName).upload();
 
         assertNotNull(fileInfo, "文件上传失败");
         assertNotNull(fileInfo.getUrl(), "文件URL不应为空");
@@ -98,10 +97,7 @@ class LocalStorageTest {
         ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes);
 
         String fileName = "subpath-test.txt";
-        FileInfo fileInfo = service.of(inputStream)
-                .setOriginalFilename(fileName)
-                .setPath("subdir/2024/")
-                .upload();
+        FileInfo fileInfo = service.of(inputStream).setOriginalFilename(fileName).setPath("subdir/2024/").upload();
 
         assertNotNull(fileInfo, "文件上传失败");
         assertTrue(fileInfo.getUrl().contains("subdir/2024/"), "文件路径应包含子目录");
@@ -137,9 +133,13 @@ class LocalStorageTest {
     @Order(6)
     void testGetClientWithInvalidKey() {
         // 获取不存在的客户端应该抛出异常
-        assertThrows(IllegalArgumentException.class, () -> {
-            fileClient.getClient("non-existent-key");
-        }, "获取不存在的客户端应该抛出异常");
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> {
+                fileClient.getClient("non-existent-key");
+            },
+            "获取不存在的客户端应该抛出异常"
+        );
 
         System.out.println("✅ 无效 Key 异常测试通过");
     }

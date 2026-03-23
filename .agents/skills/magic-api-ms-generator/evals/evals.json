@@ -1,0 +1,65 @@
+{
+  "skill_name": "magic-api-ms-generator",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我需要开发一个产品列表查询接口。表名是 sys_product，模块是产品管理，需要支持按产品名称和状态进行模糊查询，按创建时间倒序排列。请帮我创建这个接口。",
+      "expected_output": "创建一个 .ms 文件，包含分页查询逻辑、权限配置（product:view）、动态 SQL 查询条件",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "新增一个订单保存接口。表名是 sys_order，需要保存订单编号（order_no）、客户ID（customer_id）、订单金额（amount）、订单状态（status）等字段。如果是新增则插入，如果是修改（有 id）则更新。",
+      "expected_output": "创建一个保存接口 .ms 文件，使用 anyline 框架，支持新增和更新逻辑，权限码为 order:save",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "创建一个定时任务，每天凌晨 2 点执行数据同步。任务名称是 data-sync，需要从临时表 tmp_data 中读取数据并同步到正式表 sys_data 中，同步完成后记录日志。",
+      "expected_output": "创建一个定时任务 .ms 文件，cron 表达式为 '0 0 2 * * ?'，包含数据同步逻辑和日志记录",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "开发一个删除用户接口。表名是 sys_user，支持批量删除（id 用逗号分隔），需要删除用户关联的角色关系表 sys_user_role 中的数据。模块是用户管理。",
+      "expected_output": "创建删除接口 .ms 文件，路径为 /delete/{id}，HTTP 方法为 DELETE，权限码为 user:delete，支持批量删除，使用 anyline.deletes 删除关联数据",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "新增一个商品导出接口。表名是 sys_goods，模块是商品管理，需要导出商品编码（goods_code）、商品名称（goods_name）、价格（price）、库存（stock）等字段，导出文件名为 商品列表_时间戳.xlsx。",
+      "expected_output": "创建导出接口 .ms 文件，HTTP 方法为 GET，权限码为 goods:export，使用 excel.write() 生成 Excel 文件，response.download() 返回文件流",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "开发一个学生信息导入接口。表名是 sys_student，模块是学生管理，Excel 中包含学号（student_no）、姓名（name）、性别（gender）、班级（class_name）等列。需要检查学号是否重复，重复则更新，不重复则新增。",
+      "expected_output": "创建导入接口 .ms 文件，HTTP 方法为 POST，权限码为 student:import，接收 body.datas 数组，使用 anyline.select 检查重复，使用 anyline.insert 或 anyline.update",
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "新增一个根据 ID 查询订单详情的接口。表名是 sys_order，模块是订单管理，需要关联查询客户表 sys_customer 获取客户名称，关联查询订单明细表 sys_order_item 获取商品列表。",
+      "expected_output": "创建详情查询接口 .ms 文件，路径为 /detail/{id}，HTTP 方法为 GET，权限码为 order:view，使用 SQL 关联查询多个表",
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "开发一个修改用户状态的接口。表名是 sys_user，模块是用户管理，需要修改用户的 status 字段（0 禁用，1 启用），接收用户 ID 和新状态值，操作前需要验证用户是否存在。",
+      "expected_output": "创建状态修改接口 .ms 文件，HTTP 方法为 POST，权限码为 user:save，参数验证，使用 anyline.update 更新状态字段",
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "创建一个每 5 分钟执行一次的监控任务。任务名称是 system-monitor，需要检查系统日志表 sys_log 中最近 10 分钟的错误日志数量，如果超过 100 条则记录告警日志。",
+      "expected_output": "创建定时任务 .ms 文件，cron 表达式为 '0 */5 * * * ?'，查询 sys_log 表，统计错误日志数量，超过阈值记录告警",
+      "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "新增一个批量导入部门数据的接口。表名是 sys_dept，模块是部门管理，Excel 数据中包含部门编码（dept_code）、部门名称（dept_name）、上级部门编码（parent_code）。需要根据 parent_code 查询上级部门 ID 并填充 parent_id 字段。",
+      "expected_output": "创建批量导入接口 .ms 文件，HTTP 方法为 POST，权限码为 dept:import，解析 Excel 数据，查询上级部门 ID，使用 anyline.insert 批量插入",
+      "files": []
+    }
+  ]
+}

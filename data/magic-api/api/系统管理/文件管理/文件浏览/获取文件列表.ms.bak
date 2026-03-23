@@ -1,0 +1,72 @@
+{
+  "properties" : { },
+  "id" : "filemgrlist001",
+  "script" : null,
+  "groupId" : "filemgr001",
+  "name" : "获取文件列表",
+  "createTime" : null,
+  "updateTime" : null,
+  "lock" : "0",
+  "createBy" : null,
+  "updateBy" : "admin",
+  "path" : "/list",
+  "method" : "GET",
+  "parameters" : [ {
+    "name" : "dirPath",
+    "value" : "/",
+    "description" : "目录路径",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : "/",
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  } ],
+  "options" : [ ],
+  "requestBody" : "",
+  "headers" : [ ],
+  "paths" : [ ],
+  "responseBody" : null,
+  "description" : "获取指定目录下的文件列表",
+  "requestBodyDefinition" : null,
+  "responseBodyDefinition" : null
+}
+================================
+import cn.hutool.core.util.StrUtil
+import file
+
+// 获取路径参数
+if(StrUtil.isBlank(dirPath)){
+    dirPath = '/'
+}
+
+// 确保路径以 / 结尾
+if(!dirPath.endsWith('/')){
+    dirPath = dirPath + '/'
+}
+
+// 使用 file 模块列出文件
+var fileList = file.list(dirPath)
+
+// 转换结果
+var result = []
+for(item in fileList){
+    result.push({
+        name: item.getFilename(),
+        path: dirPath + item.getFilename(),
+        size: item.getSize(),
+        isDirectory: false,
+        lastModified: item.getLastModified() != null ? item.getLastModified().getTime() : null,
+        contentType: item.getContentType(),
+        url: item.getUrl(),
+        eTag: item.getETag()
+    })
+}
+
+return {
+    currentPath: dirPath,
+    files: result,
+    total: result.size()
+}

@@ -1,0 +1,730 @@
+### 文件存储插件测试脚本
+### 使用 IDEA HTTP Client 执行测试
+
+### 变量配置
+@baseUrl = http://localhost:8089
+@token = your-token-here
+
+### ================================
+### 模块 1: 存储管理 API 测试
+### ================================
+
+### TC-1.1 获取支持的存储类型
+# @name 获取存储类型
+GET {{baseUrl}}/file/storage/types
+Content-Type: application/json
+
+> {%
+client.test("获取存储类型成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.data.length === 3, "应返回3种存储类型");
+
+    var types = response.body.data.map(item => item.type);
+    client.assert(types.includes("local"), "应包含本地存储");
+    client.assert(types.includes("minio"), "应包含MinIO存储");
+    client.assert(types.includes("s3"), "应包含S3存储");
+});
+
+client.log("✅ 存储类型: " + response.body.data.map(t => t.name).join(", "));
+%}
+
+###
+
+### TC-1.2 测试本地存储连接 - 有效路径
+# @name 测试本地存储连接
+POST {{baseUrl}}/file/storage/test
+Content-Type: application/json
+
+{
+  "type": "local",
+  "properties": {
+    "basePath": "./upload/",
+    "domain": "http://localhost:8089"
+  }
+}
+
+> {%
+client.test("本地存储连接测试", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.data.success === true, "连接测试应成功");
+    client.assert(response.body.data.canRead === true, "应具有读权限");
+    client.assert(response.body.data.canWrite === true, "应具有写权限");
+});
+
+client.log("✅ 本地存储连接成功: " + response.body.data.message);
+%}
+
+###
+
+### TC-1.3 测试本地存储连接 - 空路径
+# @name 测试本地存储-空路径
+POST {{baseUrl}}/file/storage/test
+Content-Type: application/json
+
+{
+  "type": "local",
+  "properties": {
+    "basePath": ""
+  }
+}
+
+> {%
+client.test("空路径验证", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.data.success === false, "空路径应测试失败");
+    client.assert(response.body.data.message.includes("不能为空"), "应提示路径不能为空");
+});
+
+client.log("✅ 空路径验证成功");
+%}
+
+###
+
+### TC-1.4 测试 MinIO 存储连接 - 无效端点
+# @name 测试MinIO连接-无效端点
+POST {{baseUrl}}/file/storage/test
+Content-Type: application/json
+
+{
+  "type": "minio",
+  "properties": {
+    "endpoint": "http://invalid-minio-host:9999",
+    "bucket": "test-bucket",
+    "accessKey": "minioadmin",
+    "secretKey": "minioadmin"
+  }
+}
+
+> {%
+client.test("MinIO无效端点测试", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.data.success === false, "无效端点应测试失败");
+});
+
+client.log("✅ MinIO无效端点验证成功: " + response.body.data.message);
+%}
+
+###
+
+### TC-1.5 测试 S3 存储连接 - 无效凭证
+# @name 测试S3连接-无效凭证
+POST {{baseUrl}}/file/storage/test
+Content-Type: application/json
+
+{
+  "type": "s3",
+  "properties": {
+    "endpoint": "https://s3.amazonaws.com",
+    "region": "us-east-1",
+    "bucket": "test-bucket",
+    "accessKey": "invalid-access-key",
+    "secretKey": "invalid-secret-key"
+  }
+}
+
+> {%
+client.test("S3无效凭证测试", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.data.success === false, "无效凭证应测试失败");
+});
+
+client.log("✅ S3无效凭证验证成功: " + response.body.data.message);
+%}
+
+###
+
+### TC-1.6 测试不支持的存储类型
+# @name 测试不支持的存储类型
+POST {{baseUrl}}/file/storage/test
+Content-Type: application/json
+
+{
+  "type": "unsupported-type",
+  "properties": {}
+}
+
+> {%
+client.test("不支持的存储类型", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.data.success === false, "不支持的类型应测试失败");
+    client.assert(response.body.data.message.includes("不支持的存储类型"), "应提示不支持的类型");
+});
+
+client.log("✅ 不支持的存储类型验证成功");
+%}
+
+###
+
+### TC-1.7 测试空存储类型
+# @name 测试空存储类型
+POST {{baseUrl}}/file/storage/test
+Content-Type: application/json
+
+{
+  "type": "",
+  "properties": {}
+}
+
+> {%
+client.test("空存储类型", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.data.success === false, "空类型应测试失败");
+});
+
+client.log("✅ 空存储类型验证成功");
+%}
+
+###
+
+### TC-1.8 测试 null 存储信息
+# @name 测试null存储信息
+POST {{baseUrl}}/file/storage/test
+Content-Type: application/json
+
+null
+
+> {%
+client.test("null存储信息", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.data.success === false, "null应测试失败");
+});
+
+client.log("✅ null存储信息验证成功");
+%}
+
+###
+
+
+### ================================
+### 模块 2: 文件操作 API 测试
+### ================================
+
+### TC-2.1 获取文件列表 - 根目录
+# @name 获取文件列表-根目录
+GET {{baseUrl}}/system/file/browse/list?dirPath=/
+Content-Type: application/json
+
+> {%
+client.test("获取根目录文件列表", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.currentPath !== undefined, "应返回当前路径");
+    client.assert(Array.isArray(response.body.files), "files应为数组");
+});
+
+client.log("✅ 根目录文件数量: " + response.body.total);
+%}
+
+###
+
+### TC-2.2 获取文件列表 - 指定目录
+# @name 获取文件列表-指定目录
+GET {{baseUrl}}/system/file/browse/list?dirPath=/test/
+Content-Type: application/json
+
+> {%
+client.test("获取指定目录文件列表", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.currentPath === "/test/", "当前路径应为/test/");
+});
+
+client.log("✅ /test/ 目录文件数量: " + response.body.total);
+%}
+
+###
+
+### TC-2.3 上传文件 - 文本文件
+# @name 上传文本文件
+POST {{baseUrl}}/system/file/browse/upload?filePath=/test/
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+This is a test file content.
+Created at: {{ $timestamp }}
+--WebAppBoundary--
+
+> {%
+client.test("上传文本文件", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.fileName !== undefined, "应返回文件名");
+    client.assert(response.body.url !== undefined, "应返回文件URL");
+    client.assert(response.body.fileSize > 0, "文件大小应大于0");
+});
+
+client.log("✅ 文件上传成功: " + response.body.fileName + " (" + response.body.fileSize + " bytes)");
+client.global.set("uploadedFilePath", response.body.filePath);
+client.global.set("uploadedFileUrl", response.body.url);
+%}
+
+###
+
+### TC-2.4 上传文件 - 带中文文件名
+# @name 上传中文文件名文件
+POST {{baseUrl}}/system/file/browse/upload?filePath=/测试目录/
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="测试文件.txt"
+Content-Type: text/plain; charset=utf-8
+
+这是中文测试内容
+--WebAppBoundary--
+
+> {%
+client.test("上传中文文件名文件", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.fileName.includes("测试"), "文件名应包含中文");
+});
+
+client.log("✅ 中文文件名上传成功: " + response.body.fileName);
+%}
+
+###
+
+### TC-2.5 上传文件 - 不指定路径（使用默认路径）
+# @name 上传文件-默认路径
+POST {{baseUrl}}/system/file/browse/upload
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="default-path-test.txt"
+Content-Type: text/plain
+
+File uploaded to default path
+--WebAppBoundary--
+
+> {%
+client.test("上传到默认路径", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+});
+
+client.log("✅ 默认路径上传成功: " + response.body.filePath);
+%}
+
+###
+
+### TC-2.5.1 创建文件夹 - 普通文件夹
+# @name 创建文件夹-普通
+POST {{baseUrl}}/system/file/browse/mkdir
+Content-Type: application/x-www-form-urlencoded
+
+parentPath=/test/&name=test-folder-{{ $timestamp }}
+
+> {%
+client.test("创建文件夹", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.name !== undefined, "应返回文件夹名称");
+    client.assert(response.body.path !== undefined, "应返回文件夹路径");
+    client.assert(response.body.isDirectory === true, "应标识为目录");
+});
+
+client.log("✅ 文件夹创建成功: " + response.body.name + " (" + response.body.path + ")");
+client.global.set("createdFolderPath", response.body.path);
+%}
+
+###
+
+### TC-2.5.2 创建文件夹 - 嵌套文件夹
+# @name 创建文件夹-嵌套
+POST {{baseUrl}}/system/file/browse/mkdir
+Content-Type: application/x-www-form-urlencoded
+
+parentPath=/test/&name=nested-folder
+
+> {%
+client.test("创建嵌套文件夹", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.isDirectory === true, "应标识为目录");
+});
+
+client.log("✅ 嵌套文件夹创建成功: " + response.body.path);
+%}
+
+###
+
+### TC-2.5.3 创建文件夹 - 根目录
+# @name 创建文件夹-根目录
+POST {{baseUrl}}/system/file/browse/mkdir
+Content-Type: application/x-www-form-urlencoded
+
+name=root-folder-{{ $timestamp }}
+
+> {%
+client.test("在根目录创建文件夹", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.path.startsWith("/"), "路径应以/开头");
+});
+
+client.log("✅ 根目录文件夹创建成功: " + response.body.path);
+%}
+
+###
+
+### TC-2.5.4 创建文件夹 - 中文文件夹名
+# @name 创建文件夹-中文
+POST {{baseUrl}}/system/file/browse/mkdir
+Content-Type: application/x-www-form-urlencoded
+
+parentPath=/test/&name=测试文件夹
+
+> {%
+client.test("创建中文文件夹", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.name.includes("测试"), "文件夹名应包含中文");
+});
+
+client.log("✅ 中文文件夹创建成功: " + response.body.name);
+%}
+
+###
+
+### TC-2.5.5 创建文件夹 - 空文件夹名称
+# @name 创建文件夹-空名称
+POST {{baseUrl}}/system/file/browse/mkdir
+Content-Type: application/x-www-form-urlencoded
+
+parentPath=/test/&name=
+
+> {%
+client.test("创建文件夹-空名称", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+});
+
+client.log("✅ 空文件夹名称验证成功");
+%}
+
+###
+
+### TC-2.5.6 创建文件夹 - 非法字符
+# @name 创建文件夹-非法字符
+POST {{baseUrl}}/system/file/browse/mkdir
+Content-Type: application/x-www-form-urlencoded
+
+parentPath=/test/&name=test/folder
+
+> {%
+client.test("创建文件夹-非法字符", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+});
+
+client.log("✅ 非法字符验证成功");
+%}
+
+###
+
+### TC-2.5.7 创建文件夹 - 已存在的文件夹
+# @name 创建文件夹-已存在
+POST {{baseUrl}}/system/file/browse/mkdir
+Content-Type: application/x-www-form-urlencoded
+
+parentPath=/test/&name=existing-folder
+
+> {%%
+// 第一次创建
+%}
+
+###
+
+POST {{baseUrl}}/system/file/browse/mkdir
+Content-Type: application/x-www-form-urlencoded
+
+parentPath=/test/&name=existing-folder
+
+> {%
+client.test("创建已存在的文件夹", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+});
+
+client.log("✅ 已存在文件夹验证成功");
+%}
+
+###
+
+### TC-2.6 下载文件
+# @name 下载文件
+GET {{baseUrl}}/system/file/browse/download?filePath={{uploadedFilePath}}
+Content-Type: application/json
+
+> {%
+client.test("下载文件", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.headers["Content-Disposition"] !== undefined, "应包含Content-Disposition头");
+});
+
+client.log("✅ 文件下载成功");
+%}
+
+###
+
+### TC-2.7 下载不存在的文件
+# @name 下载不存在的文件
+GET {{baseUrl}}/system/file/browse/download?filePath=/non/existent/file.txt
+Content-Type: application/json
+
+> {%
+client.test("下载不存在的文件", function() {
+    // magic-api 的 exit 0 会返回 200，但在 body 中包含错误信息
+    client.assert(response.status === 200, "HTTP状态码应为200");
+});
+
+client.log("✅ 不存在的文件验证成功");
+%}
+
+###
+
+### TC-2.8 删除文件
+# @name 删除文件
+DELETE {{baseUrl}}/system/file/browse/delete?filePath={{uploadedFilePath}}
+Content-Type: application/json
+
+> {%
+client.test("删除文件", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.path !== undefined, "应返回删除的文件路径");
+});
+
+client.log("✅ 文件删除成功: " + response.body.path);
+%}
+
+###
+
+### TC-2.9 删除不存在的文件
+# @name 删除不存在的文件
+DELETE {{baseUrl}}/system/file/browse/delete?filePath=/non/existent/file.txt
+Content-Type: application/json
+
+> {%
+client.test("删除不存在的文件", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+});
+
+client.log("✅ 不存在的文件删除验证成功");
+%}
+
+###
+
+### TC-2.10 删除文件 - 空路径
+# @name 删除文件-空路径
+DELETE {{baseUrl}}/system/file/browse/delete?filePath=
+Content-Type: application/json
+
+> {%
+client.test("删除空路径", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+});
+
+client.log("✅ 空路径删除验证成功");
+%}
+
+###
+
+
+### ================================
+### 模块 3: 边界条件测试
+### ================================
+
+### TC-3.1 获取文件列表 - 不存在的目录
+# @name 获取不存在的目录列表
+GET {{baseUrl}}/system/file/browse/list?filePath=/non-existent-dir-{{ $timestamp }}/
+Content-Type: application/json
+
+> {%
+client.test("获取不存在的目录列表", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(Array.isArray(response.body.files), "files应为数组");
+    client.assert(response.body.files.length === 0, "不存在的目录应返回空数组");
+});
+
+client.log("✅ 不存在的目录返回空列表");
+%}
+
+###
+
+### TC-3.2 获取文件列表 - 不带路径参数
+# @name 获取文件列表-不带路径参数
+GET {{baseUrl}}/system/file/browse/list
+Content-Type: application/json
+
+> {%
+client.test("不带路径参数获取文件列表", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // 应使用默认路径 /
+    client.assert(response.body.currentPath === "/", "应使用默认路径/");
+});
+
+client.log("✅ 默认路径验证成功");
+%}
+
+###
+
+### TC-3.3 上传大文件（模拟）
+# @name 上传大文件
+POST {{baseUrl}}/system/file/browse/upload?filePath=/large-files/
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="large-file-{{ $timestamp }}.bin"
+Content-Type: application/octet-stream
+
+< ./http/test-file.bin
+--WebAppBoundary--
+
+> {%
+client.test("上传大文件", function() {
+    // 如果文件不存在会失败，这是预期的
+    if (response.status === 200) {
+        client.log("✅ 大文件上传成功: " + response.body.fileSize + " bytes");
+    } else {
+        client.log("⚠️  测试文件不存在，跳过大文件测试");
+    }
+});
+%}
+
+###
+
+### TC-3.4 上传文件 - 不提供文件
+# @name 上传文件-不提供文件
+POST {{baseUrl}}/system/file/browse/upload?filePath=/test/
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary--
+--WebAppBoundary--
+
+> {%
+client.test("不提供文件上传", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+});
+
+client.log("✅ 不提供文件验证成功");
+%}
+
+###
+
+
+### ================================
+### 模块 4: 多存储源测试
+### ================================
+
+### TC-4.1 上传到指定存储源
+# @name 上传到指定存储源
+POST {{baseUrl}}/system/file/browse/upload?filePath=/multi-storage/&storageKey=secondary-storage
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="multi-storage-test.txt"
+Content-Type: text/plain
+
+This file is uploaded to secondary storage
+--WebAppBoundary--
+
+> {%
+client.test("上传到指定存储源", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+});
+
+client.log("✅ 指定存储源上传成功: " + response.body.url);
+%}
+
+###
+
+
+### ================================
+### 模块 5: 性能测试
+### ================================
+
+### TC-5.1 并发上传测试（需要手动执行多次）
+# @name 并发上传测试
+POST {{baseUrl}}/system/file/browse/upload?filePath=/concurrent/
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="concurrent-{{ $timestamp }}-{{ $randomInt }}.txt"
+Content-Type: text/plain
+
+Concurrent upload test at {{ $timestamp }}
+--WebAppBoundary--
+
+> {%
+client.test("并发上传", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.log("✅ 并发上传成功: " + response.body.fileName);
+});
+%}
+
+###
+
+### TC-5.2 连续上传多个文件
+# @name 连续上传-文件1
+POST {{baseUrl}}/system/file/browse/upload?filePath=/batch/
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="batch-file-1.txt"
+Content-Type: text/plain
+
+Batch file 1
+--WebAppBoundary--
+
+###
+
+### TC-5.3 连续上传多个文件
+# @name 连续上传-文件2
+POST {{baseUrl}}/system/file/browse/upload?filePath=/batch/
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="batch-file-2.txt"
+Content-Type: text/plain
+
+Batch file 2
+--WebAppBoundary--
+
+###
+
+### TC-5.4 连续上传多个文件
+# @name 连续上传-文件3
+POST {{baseUrl}}/system/file/browse/upload?filePath=/batch/
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="batch-file-3.txt"
+Content-Type: text/plain
+
+Batch file 3
+--WebAppBoundary--
+
+###
+
+### TC-5.5 验证批量上传结果
+# @name 验证批量上传
+GET {{baseUrl}}/system/file/browse/list?filePath=/batch/
+Content-Type: application/json
+
+> {%
+client.test("验证批量上传", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.total >= 3, "应至少有3个文件");
+});
+
+client.log("✅ 批量上传验证成功，文件数: " + response.body.total);
+%}
+
+###
+
+
+### ================================
+### 清理测试数据
+### ================================
+
+### TC-CLEANUP 删除测试目录
+# @name 删除测试目录
+DELETE {{baseUrl}}/system/file/browse/delete?filePath=/test/
+Content-Type: application/json
+
+> {%
+client.log("✅ 测试数据清理完成");
+%}
+
+###

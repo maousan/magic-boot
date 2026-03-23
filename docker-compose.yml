@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 # 环境变量文件，可选
 # 创建 .env 文件覆盖默认值：
@@ -47,7 +47,7 @@ services:
       retries: 5
       start_period: 30s
     profiles:
-      - docker-db  # 使用 --profile docker-db 启用 Docker 内置数据库
+      - docker-db # 使用 --profile docker-db 启用 Docker 内置数据库
 
   # Redis 缓存服务（可选，使用外部数据源时可不启动）
   redis:
@@ -73,7 +73,7 @@ services:
       retries: 3
       start_period: 10s
     profiles:
-      - docker-db  # 使用 --profile docker-db 启用 Docker 内置数据库
+      - docker-db # 使用 --profile docker-db 启用 Docker 内置数据库
 
   # Redis Commander (Redis 可视化管理工具，可选)
   redis-commander:
@@ -83,14 +83,14 @@ services:
     environment:
       - REDIS_HOSTS=local:redis:6379:0:${REDIS_PASSWORD:-Magic@Redis2026}
     ports:
-      - "8082:8081"
+      - "8089:8089"
     depends_on:
       redis:
         condition: service_healthy
     networks:
       - magic-boot-network
     profiles:
-      - tools  # 使用 --profile tools 启用
+      - tools # 使用 --profile tools 启用
 
   # Spring Boot 应用服务
   app:
@@ -100,12 +100,12 @@ services:
     container_name: magic-boot-app
     restart: unless-stopped
     ports:
-      - "${APP_PORT:-8081}:8081"
+      - "${APP_PORT:-8089}:8089"
     environment:
       # Spring 环境
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-dev}
       # 服务器端口配置（覆盖 application-dev.yml 中的 8089 端口）
-      - SERVER_PORT=8081
+      - SERVER_PORT=8089
       # MySQL 数据库配置
       # 支持两种模式：
       # 1. USE_DOCKER_DB=true: 使用内置数据库，MYSQL_HOST 默认为 mysql
@@ -145,7 +145,7 @@ services:
     networks:
       - magic-boot-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8089/actuator/health"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -169,7 +169,7 @@ services:
     networks:
       - magic-boot-network
     profiles:
-      - production  # 使用 --profile production 启用
+      - production # 使用 --profile production 启用
 
 volumes:
   mysql_data:

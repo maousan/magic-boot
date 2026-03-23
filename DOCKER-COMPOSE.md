@@ -36,7 +36,7 @@ docker-compose down -v
 |------|------|------|----------|
 | **MySQL** | 3306 | 主数据库 | - |
 | **Redis** | 6379 | 缓存数据库 | - |
-| **App** | 8081 | Spring Boot应用 | http://localhost:8081 |
+| **App** | 8089 | Spring Boot应用 | http://localhost:8089 |
 | **Redis UI** | 8082 | Redis可视化管理 | http://localhost:8082 (可选) |
 | **Nginx** | 80/443 | 反向代理 | - (可选) |
 
@@ -52,11 +52,11 @@ docker-compose up -d
 **包含服务：** MySQL + Redis + App
 
 **访问地址：**
-- 应用：http://localhost:8081
-- Magic-API编辑器：http://localhost:8081/magic/web
+- 应用：http://localhost:8089
+- Magic-API编辑器：http://localhost:8089/magic/web
   - 用户名：admin
   - 密码：admin123456
-- Druid监控：http://localhost:8081/druid
+- Druid监控：http://localhost:8089/druid
   - 用户名：admin
   - 密码：123456
 
@@ -255,7 +255,7 @@ docker-compose up -d
 
 ```yaml
 ports:
-  - "8081:8081" 
+  - "8089:8089" 
 ```
 
 ## 🔐 安全建议

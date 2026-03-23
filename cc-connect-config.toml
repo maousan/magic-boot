@@ -1,0 +1,22 @@
+# cc-connect 配置文件
+# 用于将 Claude Code 连接到飞书机器人
+
+[[projects]]
+name = "magic-boot"
+
+[projects.agent]
+type = "claudecode"
+
+[projects.agent.options]
+# 工作目录设置为 magic-boot 项目路径
+work_dir = "D:/IdeaProjects/magic-boot"
+# 模式：default（默认模式）
+mode = "default"
+
+[[projects.platforms]]
+type = "feishu"
+
+[projects.platforms.options]
+# 飞书应用凭证
+app_id = "cli_a94a71d379f9dcd1"
+app_secret = "NlRqPKFQ7jlYHOrD4cbFJb2iIBU3lz6D"

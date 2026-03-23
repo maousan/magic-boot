@@ -21,9 +21,9 @@ docker-compose down -v
 ```
 
 访问地址：
-- 应用：http://localhost:8081
-- Magic-API编辑器：http://localhost:8081/magic/web
-- Druid监控：http://localhost:8081/druid
+- 应用：http://localhost:8089
+- Magic-API编辑器：http://localhost:8089/magic/web
+- Druid监控：http://localhost:8089/druid
 
 ### 方式二：仅构建应用镜像
 
@@ -34,7 +34,7 @@ docker build -t magic-boot:latest .
 # 运行容器（需要外部MySQL）
 docker run -d \
   --name magic-boot \
-  -p 8081:8081 \
+  -p 8089:8089 \
   -e SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/magic-boot?useSSL=false \
   -e SPRING_DATASOURCE_USERNAME=magic \
   -e SPRING_DATASOURCE_PASSWORD=Magic@2026 \
@@ -75,7 +75,7 @@ docker run -d \
 ```bash
 docker run -d \
   --name magic-boot \
-  -p 8081:8081 \
+  -p 8089:8089 \
   -e SPRING_PROFILES_ACTIVE=online \
   -e SPRING_DATASOURCE_URL=jdbc:mysql://prod-mysql:3306/magic-boot \
   -e SPRING_DATASOURCE_USERNAME=magic \
@@ -99,7 +99,7 @@ docker run -d \
   --name magic-boot \
   --memory="2g" \
   --cpus="2" \
-  -p 8081:8081 \
+  -p 8089:8089 \
   magic-boot:latest
 ```
 

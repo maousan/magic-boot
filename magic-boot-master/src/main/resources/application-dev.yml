@@ -1,4 +1,3 @@
-
 server:
   port: 8089
 
@@ -6,6 +5,10 @@ spring:
   datasource:
     username: magic
     password: Magic@2026
+
+  config:
+    import:
+      - optional:classpath:application.yml
 
 # 上传路径
 upload:

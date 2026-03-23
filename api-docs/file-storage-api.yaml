@@ -33,7 +33,7 @@ info:
     email: support@example.com
 
 servers:
-  - url: http://localhost:8081
+  - url: http://localhost:8089
     description: 开发环境
   - url: https://api.example.com
     description: 生产环境
@@ -54,7 +54,7 @@ paths:
       description: 获取所有已配置的存储平台列表
       operationId: listStorage
       responses:
-        '200':
+        "200":
           description: 获取成功
           content:
             application/json:
@@ -70,15 +70,15 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/StorageInfo'
+                      $ref: "#/components/schemas/StorageInfo"
                   timestamp:
                     type: integer
                     example: 1710123456789
                   executeTime:
                     type: integer
                     example: 15
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /file/storage/types:
     get:
@@ -88,7 +88,7 @@ paths:
       description: 获取系统支持的所有存储平台类型及其配置字段定义
       operationId: getStorageTypes
       responses:
-        '200':
+        "200":
           description: 获取成功
           content:
             application/json:
@@ -104,7 +104,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/StorageType'
+                      $ref: "#/components/schemas/StorageType"
                   timestamp:
                     type: integer
                     example: 1710123456789
@@ -124,7 +124,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/StorageInfoRequest'
+              $ref: "#/components/schemas/StorageInfoRequest"
             examples:
               local-storage:
                 summary: 本地存储配置
@@ -135,7 +135,7 @@ paths:
                   isDefault: true
                   properties:
                     basePath: D:/mb/upload
-                    domain: http://localhost:8081
+                    domain: http://localhost:8089
               minio-storage:
                 summary: MinIO 存储配置
                 value:
@@ -150,18 +150,18 @@ paths:
                     bucket: magic-boot
                     region: us-east-1
       responses:
-        '200':
+        "200":
           description: 保存成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommonResponse'
-        '400':
+                $ref: "#/components/schemas/CommonResponse"
+        "400":
           description: 参数错误
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommonResponse'
+                $ref: "#/components/schemas/CommonResponse"
               examples:
                 duplicate-key:
                   summary: Key重复
@@ -179,8 +179,8 @@ paths:
                     data: null
                     timestamp: 1710123456789
                     executeTime: 10
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /file/storage/delete:
     post:
@@ -201,20 +201,20 @@ paths:
                 id:
                   type: string
                   description: 存储平台ID
-                  example: 'abc123def456'
+                  example: "abc123def456"
       responses:
-        '200':
+        "200":
           description: 删除成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommonResponse'
-        '400':
+                $ref: "#/components/schemas/CommonResponse"
+        "400":
           description: 删除失败
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommonResponse'
+                $ref: "#/components/schemas/CommonResponse"
               examples:
                 not-found:
                   summary: 存储平台不存在
@@ -232,8 +232,8 @@ paths:
                     data: null
                     timestamp: 1710123456789
                     executeTime: 10
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /file/storage/test:
     post:
@@ -247,9 +247,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/StorageInfoRequest'
+              $ref: "#/components/schemas/StorageInfoRequest"
       responses:
-        '200':
+        "200":
           description: 测试成功
           content:
             application/json:
@@ -285,7 +285,7 @@ paths:
                   executeTime:
                     type: integer
                     example: 50
-        '400':
+        "400":
           description: 测试失败
           content:
             application/json:
@@ -313,8 +313,8 @@ paths:
                   executeTime:
                     type: integer
                     example: 5000
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   # ==================== 文件操作 ====================
   /file/upload:
@@ -359,7 +359,7 @@ paths:
                   description: 是否覆盖同名文件，默认 false
                   example: false
       responses:
-        '200':
+        "200":
           description: 上传成功
           content:
             application/json:
@@ -373,19 +373,19 @@ paths:
                     type: string
                     example: 上传成功
                   data:
-                    $ref: '#/components/schemas/FileInfo'
+                    $ref: "#/components/schemas/FileInfo"
                   timestamp:
                     type: integer
                     example: 1710123456789
                   executeTime:
                     type: integer
                     example: 150
-        '400':
+        "400":
           description: 上传失败
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommonResponse'
+                $ref: "#/components/schemas/CommonResponse"
               examples:
                 file-empty:
                   summary: 文件为空
@@ -411,8 +411,8 @@ paths:
                     data: null
                     timestamp: 1710123456789
                     executeTime: 15
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /file/list:
     get:
@@ -471,7 +471,7 @@ paths:
             enum: [asc, desc]
             default: desc
       responses:
-        '200':
+        "200":
           description: 获取成功
           content:
             application/json:
@@ -490,7 +490,7 @@ paths:
                       list:
                         type: array
                         items:
-                          $ref: '#/components/schemas/FileListItem'
+                          $ref: "#/components/schemas/FileListItem"
                       total:
                         type: integer
                         description: 总数量
@@ -517,8 +517,8 @@ paths:
                   executeTime:
                     type: integer
                     example: 30
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /file/download:
     get:
@@ -543,19 +543,19 @@ paths:
             type: string
             example: /images/2024/document.pdf
       responses:
-        '200':
+        "200":
           description: 文件内容
           content:
             application/octet-stream:
               schema:
                 type: string
                 format: binary
-        '400':
+        "400":
           description: 下载失败
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommonResponse'
+                $ref: "#/components/schemas/CommonResponse"
               examples:
                 file-not-found:
                   summary: 文件不存在
@@ -565,8 +565,8 @@ paths:
                     data: null
                     timestamp: 1710123456789
                     executeTime: 10
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /file/preview:
     get:
@@ -604,7 +604,7 @@ paths:
             maximum: 86400
             default: 3600
       responses:
-        '200':
+        "200":
           description: 获取成功
           content:
             application/json:
@@ -634,14 +634,14 @@ paths:
                   executeTime:
                     type: integer
                     example: 10
-        '400':
+        "400":
           description: 获取失败
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommonResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/CommonResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /file/delete:
     post:
@@ -671,7 +671,7 @@ paths:
                     type: string
                   example: ["/images/2024/old-photo.jpg", "/documents/old/"]
       responses:
-        '200':
+        "200":
           description: 删除成功
           content:
             application/json:
@@ -709,14 +709,14 @@ paths:
                   executeTime:
                     type: integer
                     example: 50
-        '400':
+        "400":
           description: 删除失败
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommonResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/CommonResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /file/folder:
     post:
@@ -749,7 +749,7 @@ paths:
                   description: 文件夹名称
                   example: 2024
       responses:
-        '200':
+        "200":
           description: 创建成功
           content:
             application/json:
@@ -775,12 +775,12 @@ paths:
                   executeTime:
                     type: integer
                     example: 10
-        '400':
+        "400":
           description: 创建失败
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommonResponse'
+                $ref: "#/components/schemas/CommonResponse"
               examples:
                 folder-exists:
                   summary: 文件夹已存在
@@ -798,8 +798,8 @@ paths:
                     data: null
                     timestamp: 1710123456789
                     executeTime: 5
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /file/search:
     get:
@@ -841,7 +841,7 @@ paths:
             maximum: 100
             default: 20
       responses:
-        '200':
+        "200":
           description: 搜索成功
           content:
             application/json:
@@ -860,7 +860,7 @@ paths:
                       list:
                         type: array
                         items:
-                          $ref: '#/components/schemas/FileInfo'
+                          $ref: "#/components/schemas/FileInfo"
                       total:
                         type: integer
                         example: 15
@@ -870,8 +870,8 @@ paths:
                   executeTime:
                     type: integer
                     example: 25
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
 components:
   schemas:
@@ -955,7 +955,7 @@ components:
         id:
           type: string
           description: 存储平台ID
-          example: 'abc123def456'
+          example: "abc123def456"
         key:
           type: string
           description: 存储平台唯一标识
@@ -975,7 +975,7 @@ components:
           additionalProperties: true
           example:
             basePath: D:/mb/upload
-            domain: http://localhost:8081
+            domain: http://localhost:8089
         isDefault:
           type: boolean
           description: 是否为默认存储
@@ -988,12 +988,12 @@ components:
           type: string
           format: date-time
           description: 创建时间
-          example: '2024-03-15 10:30:00'
+          example: "2024-03-15 10:30:00"
         updateTime:
           type: string
           format: date-time
           description: 更新时间
-          example: '2024-03-15 12:00:00'
+          example: "2024-03-15 12:00:00"
 
     StorageInfoRequest:
       type: object
@@ -1002,7 +1002,7 @@ components:
         id:
           type: string
           description: 存储平台ID（更新时必填）
-          example: 'abc123def456'
+          example: "abc123def456"
         key:
           type: string
           description: 存储平台唯一标识
@@ -1022,7 +1022,7 @@ components:
           additionalProperties: true
           example:
             basePath: D:/mb/upload
-            domain: http://localhost:8081
+            domain: http://localhost:8089
         isDefault:
           type: boolean
           description: 是否为默认存储
@@ -1039,7 +1039,7 @@ components:
         id:
           type: string
           description: 文件ID
-          example: 'file123abc'
+          example: "file123abc"
         storageKey:
           type: string
           description: 存储平台标识
@@ -1064,20 +1064,20 @@ components:
         md5:
           type: string
           description: MD5哈希值
-          example: 'd41d8cd98f00b204e9800998ecf8427e'
+          example: "d41d8cd98f00b204e9800998ecf8427e"
         url:
           type: string
           description: 访问URL
-          example: http://localhost:8081/files/images/2024/document.pdf
+          example: http://localhost:8089/files/images/2024/document.pdf
         createTime:
           type: string
           format: date-time
           description: 上传时间
-          example: '2024-03-15 10:30:00'
+          example: "2024-03-15 10:30:00"
         createBy:
           type: string
           description: 上传用户ID
-          example: 'user123'
+          example: "user123"
 
     FileListItem:
       type: object
@@ -1086,7 +1086,7 @@ components:
         id:
           type: string
           description: 文件ID
-          example: 'file123abc'
+          example: "file123abc"
         name:
           type: string
           description: 文件/文件夹名称
@@ -1117,12 +1117,12 @@ components:
           type: string
           format: date-time
           description: 创建时间
-          example: '2024-03-15 10:30:00'
+          example: "2024-03-15 10:30:00"
         updateTime:
           type: string
           format: date-time
           description: 更新时间
-          example: '2024-03-15 12:00:00'
+          example: "2024-03-15 12:00:00"
 
   responses:
     Unauthorized:
@@ -1130,7 +1130,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/CommonResponse'
+            $ref: "#/components/schemas/CommonResponse"
           example:
             code: 401
             message: 未授权，请先登录

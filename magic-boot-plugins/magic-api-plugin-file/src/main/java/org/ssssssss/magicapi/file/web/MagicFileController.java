@@ -11,11 +11,16 @@ import io.minio.BucketExistsArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.errors.ErrorResponseException;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.dromara.x.file.storage.core.FileInfo;
 import org.dromara.x.file.storage.core.FileStorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.*;
 import org.ssssssss.magicapi.core.config.MagicConfiguration;
 import org.ssssssss.magicapi.core.model.JsonBean;
 import org.ssssssss.magicapi.core.web.MagicController;
@@ -23,12 +28,6 @@ import org.ssssssss.magicapi.core.web.MagicExceptionHandler;
 import org.ssssssss.magicapi.file.model.StorageInfo;
 import org.ssssssss.magicapi.file.model.StorageType;
 import org.ssssssss.magicapi.file.service.MagicDynamicFileClient;
-import org.springframework.web.bind.annotation.*;
-
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
 
 /**
  * 文件存储管理接口
@@ -50,9 +49,9 @@ public class MagicFileController extends MagicController implements MagicExcepti
     @ResponseBody
     public JsonBean<List<StorageType>> getStorageTypes() {
         List<StorageType> types = Arrays.asList(
-                createLocalStorageType(),
-                createS3StorageType(),
-                createMinioStorageType()
+            createLocalStorageType(),
+            createS3StorageType(),
+            createMinioStorageType()
         );
         return new JsonBean<>(types);
     }
@@ -63,8 +62,29 @@ public class MagicFileController extends MagicController implements MagicExcepti
     @PostMapping("/file/storage/test")
     @ResponseBody
     public JsonBean<Map<String, Object>> testStorage(@RequestBody StorageInfo storageInfo) {
+        // 空值检查
+        if (storageInfo == null) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("message", "存储配置信息不能为空");
+            return new JsonBean<>(result);
+        }
+
         String type = storageInfo.getType();
         Map<String, Object> properties = storageInfo.getProperties();
+
+        // 类型空值检查
+        if (type == null || type.isEmpty()) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("message", "存储类型不能为空");
+            return new JsonBean<>(result);
+        }
+
+        // 属性空值检查
+        if (properties == null) {
+            properties = new HashMap<>();
+        }
 
         try {
             switch (type) {
@@ -103,16 +123,14 @@ public class MagicFileController extends MagicController implements MagicExcepti
         try {
             // 创建 MinIO 客户端
             MinioClient minioClient = MinioClient.builder()
-                    .endpoint(endpoint)
-                    .credentials(accessKey, secretKey)
-                    .build();
+                .endpoint(endpoint)
+                .credentials(accessKey, secretKey)
+                .build();
 
             long startTime = System.currentTimeMillis();
 
             // 检查 bucket 是否存在
-            boolean bucketExists = minioClient.bucketExists(BucketExistsArgs.builder()
-                    .bucket(bucket)
-                    .build());
+            boolean bucketExists = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucket).build());
 
             long responseTime = System.currentTimeMillis() - startTime;
 
@@ -157,10 +175,10 @@ public class MagicFileController extends MagicController implements MagicExcepti
             // 创建 S3 客户端
             BasicAWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
             AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
-                    .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpoint, region))
-                    .withCredentials(new AWSStaticCredentialsProvider(credentials))
-                    .withPathStyleAccessEnabled(true)
-                    .build();
+                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpoint, region))
+                .withCredentials(new AWSStaticCredentialsProvider(credentials))
+                .withPathStyleAccessEnabled(true)
+                .build();
 
             long startTime = System.currentTimeMillis();
 
@@ -294,7 +312,7 @@ public class MagicFileController extends MagicController implements MagicExcepti
         domain.setLabel("访问域名");
         domain.setType("text");
         domain.setRequired(true);
-        domain.setPlaceholder("例如: http://localhost:8081");
+        domain.setPlaceholder("例如: http://localhost:8089");
         fields.add(domain);
 
         type.setFields(fields);
