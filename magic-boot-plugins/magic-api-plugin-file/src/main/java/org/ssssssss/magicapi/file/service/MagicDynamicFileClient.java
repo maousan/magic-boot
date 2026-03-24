@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -39,6 +40,8 @@ public class MagicDynamicFileClient {
     private static final Logger logger = LoggerFactory.getLogger(MagicDynamicFileClient.class);
 
     private final Map<String, FileStorageService> clients = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> defaultFlags = new ConcurrentHashMap<>();
+    private final Map<String, StorageInfo> storageInfoMap = new ConcurrentHashMap<>();
     private String defaultKey;
 
     /**
@@ -59,6 +62,13 @@ public class MagicDynamicFileClient {
     /**
      * 获取所有存储配置Key
      */
+    public void put(String id, String key, String name, FileStorageService client, Boolean isDefault) {
+        String normalizedKey = key == null ? "" : key;
+        put(id, normalizedKey, name, client);
+        defaultFlags.put(normalizedKey, Boolean.TRUE.equals(isDefault));
+        refreshDefaultKey();
+    }
+
     public List<String> listKeys() {
         return new ArrayList<>(clients.keySet());
     }
@@ -77,11 +87,22 @@ public class MagicDynamicFileClient {
         if (key == null || key.isEmpty()) {
             key = defaultKey;
         }
+        if (key == null || key.isEmpty()) {
+            throw new IllegalArgumentException("找不到文件存储配置: default");
+        }
         FileStorageService client = clients.get(key);
         if (client == null) {
             throw new IllegalArgumentException("找不到文件存储配置: " + key);
         }
         return client;
+    }
+
+    /**
+     * 获取所有存储配置信息
+     * @return
+     */
+    public List<StorageInfo> getStorageInfoList() {
+        return new ArrayList<>(storageInfoMap.values());
     }
 
     /**
@@ -113,6 +134,8 @@ public class MagicDynamicFileClient {
 
             builder.addFileStorage(storage);
             builder.useDefault();
+
+            storageInfoMap.put(platform, info);
 
             return builder.build();
         } catch (Exception e) {
@@ -301,7 +324,12 @@ public class MagicDynamicFileClient {
      * 删除存储客户端
      */
     public void delete(String key) {
+        if (key == null) {
+            key = "";
+        }
         FileStorageService client = clients.remove(key);
+        defaultFlags.remove(key);
+        refreshDefaultKey();
         if (client != null) {
             logger.info("删除文件存储配置: {}", key);
         }
@@ -328,5 +356,20 @@ public class MagicDynamicFileClient {
     private String getString(Map<String, Object> properties, String key, String defaultValue) {
         String value = getString(properties, key);
         return StringUtils.hasText(value) ? value : defaultValue;
+    }
+
+    private void refreshDefaultKey() {
+        Optional<String> explicitDefault = defaultFlags.entrySet().stream()
+                .filter(entry -> Boolean.TRUE.equals(entry.getValue()) && clients.containsKey(entry.getKey()))
+                .map(Map.Entry::getKey)
+                .findFirst();
+        if (explicitDefault.isPresent()) {
+            defaultKey = explicitDefault.get();
+            return;
+        }
+        if (defaultKey != null && clients.containsKey(defaultKey)) {
+            return;
+        }
+        defaultKey = clients.keySet().stream().findFirst().orElse(null);
     }
 }

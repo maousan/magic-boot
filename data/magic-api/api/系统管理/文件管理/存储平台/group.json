@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "f6b8c4d2a9e1473cb8d9f1a25c0e7b4f",
+  "name" : "存储平台",
+  "type" : "api",
+  "parentId" : "fd3d225a1cf141bf9998c4ec4bf4a6ab",
+  "path" : "/storage",
+  "createTime" : null,
+  "updateTime" : null,
+  "createBy" : null,
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

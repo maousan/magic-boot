@@ -194,6 +194,25 @@ client.log("✅ null存储信息验证成功");
 
 ###
 
+### TC-1.9 查询存储平台列表
+# @name 查询存储平台列表
+GET {{baseUrl}}/system/file/storage/list
+Content-Type: application/json
+
+> {%
+client.test("查询存储平台列表成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    client.assert(response.body.total !== undefined, "应返回 total 字段");
+    client.assert(Array.isArray(response.body.list), "list 应为数组");
+});
+
+if (Array.isArray(response.body.list)) {
+    client.log("✅ 存储平台数量: " + response.body.list.length);
+}
+%}
+
+###
+
 
 ### ================================
 ### 模块 2: 文件操作 API 测试

@@ -49,7 +49,7 @@ public class FileMagicDynamicRegistry extends AbstractMagicDynamicRegistry<Stora
         if (fileStorageService == null) {
             return false;
         }
-        magicDynamicFileClient.put(id, key, name, fileStorageService);
+        magicDynamicFileClient.put(id, key, name, fileStorageService, info.getIsDefault());
         return true;
     }
 

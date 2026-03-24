@@ -59,6 +59,7 @@ httpyac test-file-plugin-api.http --name "获取存储类型"
 | TC-1.6 | 测试不支持的存储类型 | `/file/storage/test` | POST |
 | TC-1.7 | 测试空存储类型 | `/file/storage/test` | POST |
 | TC-1.8 | 测试 null 存储信息 | `/file/storage/test` | POST |
+| TC-1.9 | 查询存储平台列表 | `/system/file/storage/list` | GET |
 
 **关键验证点：**
 - ✅ 返回 3 种存储类型（local、minio、s3）
@@ -144,9 +145,9 @@ client.test("获取存储类型成功", function() {
 
 | 接口类型 | 接口数量 | 测试用例数 | 覆盖率 |
 |---------|---------|-----------|--------|
-| 存储管理 | 2 | 8 | 100% |
+| 存储管理 | 3 | 9 | 100% |
 | 文件操作 | 4 | 15 | 100% |
-| **总计** | **6** | **23** | **100%** |
+| **总计** | **7** | **24** | **100%** |
 
 ### 测试类型覆盖
 

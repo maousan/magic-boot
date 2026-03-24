@@ -9,16 +9,27 @@ import org.dromara.x.file.storage.core.get.ListFilesResult;
 import org.dromara.x.file.storage.core.copy.CopyPretreatment;
 import org.dromara.x.file.storage.core.move.MovePretreatment;
 import org.ssssssss.magicapi.core.annotation.MagicModule;
+import org.ssssssss.magicapi.core.config.Constants;
+import org.ssssssss.magicapi.core.config.MagicConfiguration;
+import org.ssssssss.magicapi.core.interceptor.Authorization;
+import org.ssssssss.magicapi.core.model.Attributes;
+import org.ssssssss.magicapi.core.model.Group;
+import org.ssssssss.magicapi.core.model.MagicEntity;
+import org.ssssssss.magicapi.core.model.TreeNode;
+import org.ssssssss.magicapi.core.service.MagicDynamicRegistry;
+import org.ssssssss.magicapi.core.service.MagicResourceService;
+import org.ssssssss.magicapi.core.servlet.MagicHttpServletRequest;
 import org.ssssssss.magicapi.file.event.FileEventPublisher;
 import org.ssssssss.magicapi.file.model.FileUploadResult;
+import org.ssssssss.magicapi.file.model.StorageInfo;
 import org.ssssssss.magicapi.file.service.MagicDynamicFileClient;
 import org.ssssssss.script.annotation.Comment;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.function.Function;
 
 /**
  * 文件存储模块
@@ -31,6 +42,8 @@ public class FileModule {
     private FileStorageService fileStorageService;
     private FileEventPublisher eventPublisher;
     private String storageKey;
+    private MagicResourceService magicResourceService;
+    private MagicConfiguration magicConfiguration;
 
     public FileModule(MagicDynamicFileClient magicDynamicFileClient) {
         this.magicDynamicFileClient = magicDynamicFileClient;
@@ -39,6 +52,11 @@ public class FileModule {
     public FileModule(FileStorageService fileStorageService) {
         this.magicDynamicFileClient = null;
         this.fileStorageService = fileStorageService;
+    }
+
+    @Comment("获取所有文件存储平台")
+    public List<StorageInfo> getAllFilePlatforms() {
+        return magicDynamicFileClient.getStorageInfoList();
     }
 
     /**
