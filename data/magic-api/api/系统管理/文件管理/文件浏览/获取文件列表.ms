@@ -5,7 +5,7 @@
   "groupId" : "filemgr001",
   "name" : "获取文件列表",
   "createTime" : null,
-  "updateTime" : 1774492612832,
+  "updateTime" : 1774507219862,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -24,8 +24,8 @@
     "expression" : null,
     "children" : null
   }, {
-    "name" : "dirPath",
-    "value" : "",
+    "name" : "parentPath",
+    "value" : "/111",
     "description" : "目录路径（兼容参数）",
     "required" : false,
     "dataType" : "String",
@@ -52,7 +52,7 @@
   "requestBody" : "",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": {\n        \"total\": 1,\n        \"list\": [\n            {\n                \"id\": \"8041547fc4434022b9b6931bebc44940\",\n                \"storageKey\": \"local\",\n                \"filePath\": \"/111/\",\n                \"parentId\": null,\n                \"fileName\": \"111\",\n                \"fileType\": \"DIR\",\n                \"fileSize\": 0,\n                \"contentType\": null,\n                \"fileExt\": null,\n                \"url\": null,\n                \"md5\": null,\n                \"createTime\": \"2026-03-26 09:30:45\",\n                \"createBy\": \"system\",\n                \"hasChild\": 1\n            }\n        ]\n    },\n    \"timestamp\": 1774492609408,\n    \"executeTime\": 15\n}",
+  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": {\n        \"total\": 1,\n        \"list\": [\n            {\n                \"id\": \"03c9c17fef1148bab7e8e302c7da1f03\",\n                \"storageKey\": \"local\",\n                \"filePath\": \"/111/2222/\",\n                \"parentId\": \"8041547fc4434022b9b6931bebc44940\",\n                \"fileName\": \"2222\",\n                \"fileType\": \"DIR\",\n                \"fileSize\": 0,\n                \"contentType\": null,\n                \"fileExt\": null,\n                \"url\": null,\n                \"md5\": null,\n                \"createTime\": \"2026-03-26 09:31:50\",\n                \"createBy\": \"system\",\n                \"hasChild\": 0\n            }\n        ]\n    },\n    \"timestamp\": 1774507216628,\n    \"executeTime\": 13\n}",
   "description" : "获取指定目录下的直属文件列表",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : {
@@ -349,8 +349,8 @@ var resolvedParentId = null
 
 if(StrUtil.isNotBlank(parentId)){
     resolvedParentId = parentId
-}else if(StrUtil.isNotBlank(dirPath)){
-    var normalizedDirPath = dirPath
+}else if(StrUtil.isNotBlank(parentPath)){
+    var normalizedDirPath = parentPath
     if(!normalizedDirPath.startsWith('/')){
         normalizedDirPath = '/' + normalizedDirPath
     }
@@ -363,12 +363,12 @@ if(StrUtil.isNotBlank(parentId)){
         from sys_file
         where is_deleted = 0
           and storage_key = #{resolvedStorageKey}
-          and file_path = #{dirPath}
+          and file_path = #{parentPath}
         limit 1
     """
     var parent = db.selectOne(parentQuery, {
         resolvedStorageKey: resolvedStorageKey,
-        dirPath: normalizedDirPath
+        parentPath: normalizedDirPath
     })
     resolvedParentId = parent != null ? parent.id : null
 }
