@@ -25,6 +25,7 @@ import org.ssssssss.magicapi.liteflow.model.FlowComponentInfo;
 import org.ssssssss.magicapi.liteflow.model.FlowInfo;
 import org.ssssssss.magicapi.liteflow.service.*;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.ssssssss.magicapi.liteflow.web.MagicLiteflowController;
@@ -32,9 +33,15 @@ import org.ssssssss.magicapi.liteflow.web.MagicLiteflowController;
 import java.util.List;
 
 @Configuration
+@EnableConfigurationProperties(LiteflowProperties.class)
 public class MagicAPILiteflowConfiguration implements MagicPluginConfiguration {
 
     private final Logger logger = LoggerFactory.getLogger(MagicAPILiteflowConfiguration.class);
+    private final LiteflowProperties liteflowProperties;
+
+    public MagicAPILiteflowConfiguration(LiteflowProperties liteflowProperties) {
+        this.liteflowProperties = liteflowProperties;
+    }
 
     @Bean
     @ConditionalOnMissingBean
@@ -85,6 +92,10 @@ public class MagicAPILiteflowConfiguration implements MagicPluginConfiguration {
 
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady(ApplicationReadyEvent event) {
+        if (!liteflowProperties.isEnabled()) {
+            logger.info("LiteFlow 插件已禁用，跳过资源加载");
+            return;
+        }
         MagicResourceService magicResourceService = SpringUtil.getBean(MagicResourceService.class);
 //        List<MagicEntity> componentResources = magicResourceService.files("liteflow-component");
 //        componentResources.forEach(entity -> {
@@ -104,7 +115,7 @@ public class MagicAPILiteflowConfiguration implements MagicPluginConfiguration {
 //                    .build();
 //            logger.info("创建脚本节点: {}[{}]", componentInfo.getNodeId(), componentInfo.getScriptType());
 //        });
-        List<MagicEntity> chainResources = magicResourceService.files("liteflow-chain");
+        List<MagicEntity> chainResources = magicResourceService.files(liteflowProperties.getLocation());
         chainResources.forEach(entity -> {
             FlowInfo flowInfo = (FlowInfo) entity;
             var validResult = LiteFlowChainELBuilder.validateWithEx(flowInfo.getScript());
