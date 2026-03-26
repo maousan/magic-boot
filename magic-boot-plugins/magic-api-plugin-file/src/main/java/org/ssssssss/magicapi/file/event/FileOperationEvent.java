@@ -3,34 +3,15 @@ package org.ssssssss.magicapi.file.event;
 import org.springframework.context.ApplicationEvent;
 
 /**
- * 文件操作事件
- * 用于在文件操作完成后通知消费者进行数据库落库
+ * 文件操作事件。
  */
 public class FileOperationEvent extends ApplicationEvent {
 
-    /**
-     * 操作类型
-     */
     public enum OperationType {
-        /**
-         * 上传文件
-         */
         UPLOAD,
-        /**
-         * 创建目录
-         */
         MKDIR,
-        /**
-         * 删除文件
-         */
         DELETE,
-        /**
-         * 复制文件
-         */
         COPY,
-        /**
-         * 移动文件
-         */
         MOVE
     }
 
@@ -58,8 +39,6 @@ public class FileOperationEvent extends ApplicationEvent {
         this.md5 = md5;
         this.operator = operator;
     }
-
-    // ==================== Getters ====================
 
     public OperationType getOperationType() {
         return operationType;
@@ -97,11 +76,6 @@ public class FileOperationEvent extends ApplicationEvent {
         return operator;
     }
 
-    // ==================== 静态工厂方法 ====================
-
-    /**
-     * 创建上传文件事件
-     */
     public static FileOperationEvent upload(Object source, String storageKey, String filePath,
                                             String fileName, Long fileSize, String contentType,
                                             String url, String md5, String operator) {
@@ -109,20 +83,18 @@ public class FileOperationEvent extends ApplicationEvent {
                 fileName, fileSize, contentType, url, md5, operator);
     }
 
-    /**
-     * 创建目录事件
-     */
     public static FileOperationEvent mkdir(Object source, String storageKey, String filePath,
                                            String dirName, String operator) {
         return new FileOperationEvent(source, OperationType.MKDIR, storageKey, filePath,
                 dirName, 0L, null, null, null, operator);
     }
 
-    /**
-     * 创建删除文件事件
-     */
-    public static FileOperationEvent delete(Object source, String filePath, String operator) {
-        return new FileOperationEvent(source, OperationType.DELETE, null, filePath,
+    public static FileOperationEvent delete(Object source, String storageKey, String filePath, String operator) {
+        return new FileOperationEvent(source, OperationType.DELETE, storageKey, filePath,
                 null, null, null, null, null, operator);
+    }
+
+    public static FileOperationEvent delete(Object source, String filePath, String operator) {
+        return delete(source, null, filePath, operator);
     }
 }

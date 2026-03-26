@@ -86,9 +86,11 @@ public class MagicFileConfiguration implements MagicPluginConfiguration {
     @ConditionalOnMissingBean
     public FileModule magicFileModule(
             @Qualifier("magicDynamicFileClient") MagicDynamicFileClient magicDynamicFileClient,
-            @Qualifier("fileEventPublisher") FileEventPublisher fileEventPublisher) {
+            @Qualifier("fileEventPublisher") FileEventPublisher fileEventPublisher,
+            SysFileService sysFileService) {
         FileModule fileModule = new FileModule(magicDynamicFileClient);
         fileModule.setEventPublisher(fileEventPublisher);
+        fileModule.setSysFileService(sysFileService);
         return fileModule;
     }
 }

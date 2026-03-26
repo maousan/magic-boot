@@ -2,38 +2,30 @@ package org.ssssssss.magicapi.file;
 
 import org.dromara.x.file.storage.core.FileInfo;
 import org.dromara.x.file.storage.core.FileStorageService;
+import org.dromara.x.file.storage.core.copy.CopyPretreatment;
 import org.dromara.x.file.storage.core.get.GetFilePretreatment;
 import org.dromara.x.file.storage.core.get.ListFilesPretreatment;
-import org.dromara.x.file.storage.core.get.RemoteFileInfo;
 import org.dromara.x.file.storage.core.get.ListFilesResult;
-import org.dromara.x.file.storage.core.copy.CopyPretreatment;
+import org.dromara.x.file.storage.core.get.RemoteFileInfo;
 import org.dromara.x.file.storage.core.move.MovePretreatment;
 import org.ssssssss.magicapi.core.annotation.MagicModule;
-import org.ssssssss.magicapi.core.config.Constants;
-import org.ssssssss.magicapi.core.config.MagicConfiguration;
-import org.ssssssss.magicapi.core.interceptor.Authorization;
-import org.ssssssss.magicapi.core.model.Attributes;
-import org.ssssssss.magicapi.core.model.Group;
-import org.ssssssss.magicapi.core.model.MagicEntity;
-import org.ssssssss.magicapi.core.model.TreeNode;
-import org.ssssssss.magicapi.core.service.MagicDynamicRegistry;
-import org.ssssssss.magicapi.core.service.MagicResourceService;
-import org.ssssssss.magicapi.core.servlet.MagicHttpServletRequest;
 import org.ssssssss.magicapi.file.event.FileEventPublisher;
 import org.ssssssss.magicapi.file.model.FileUploadResult;
 import org.ssssssss.magicapi.file.model.StorageInfo;
+import org.ssssssss.magicapi.file.model.SysFile;
 import org.ssssssss.magicapi.file.service.MagicDynamicFileClient;
+import org.ssssssss.magicapi.file.service.SysFileService;
 import org.ssssssss.script.annotation.Comment;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.util.*;
-import java.util.function.Function;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 /**
- * 文件存储模块
- * 提供给 magic-api 脚本使用的文件操作 API
+ * 文件存储模块，提供给 magic-api 脚本使用。
  */
 @MagicModule("file")
 public class FileModule {
@@ -41,9 +33,8 @@ public class FileModule {
     private final MagicDynamicFileClient magicDynamicFileClient;
     private FileStorageService fileStorageService;
     private FileEventPublisher eventPublisher;
+    private SysFileService sysFileService;
     private String storageKey;
-    private MagicResourceService magicResourceService;
-    private MagicConfiguration magicConfiguration;
 
     public FileModule(MagicDynamicFileClient magicDynamicFileClient) {
         this.magicDynamicFileClient = magicDynamicFileClient;
@@ -59,52 +50,37 @@ public class FileModule {
         return magicDynamicFileClient.getStorageInfoList();
     }
 
-    /**
-     * 设置事件发布器
-     */
+    @Comment("获取默认文件存储平台")
+    public String getDefaultPlatform() {
+        return magicDynamicFileClient.getDefaultKey();
+    }
+
     public void setEventPublisher(FileEventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
     }
 
-    /**
-     * 设置存储标识
-     */
+    public void setSysFileService(SysFileService sysFileService) {
+        this.sysFileService = sysFileService;
+    }
+
     public void setStorageKey(String storageKey) {
         this.storageKey = storageKey;
     }
 
-    /**
-     * 切换存储源
-     *
-     * @param key 存储标识
-     * @return FileModule 实例
-     */
     public FileModule use(String key) {
         FileStorageService service = magicDynamicFileClient.getClient(key);
         FileModule module = new FileModule(service);
         module.setEventPublisher(this.eventPublisher);
+        module.setSysFileService(this.sysFileService);
         module.setStorageKey(key);
         return module;
     }
 
-    /**
-     * 上传文件
-     *
-     * @param file 文件对象（MultipartFile 或 byte[]）
-     * @return 文件信息
-     */
     @Comment("上传文件")
     public FileUploadResult upload(@Comment(name = "file", value = "文件对象(MultipartFile/byte[]/InputStream)") Object file) {
         return upload(null, file, null);
     }
 
-    /**
-     * 上传文件
-     *
-     * @param path 目标路径
-     * @param file 文件对象
-     * @return 文件信息
-     */
     @Comment("上传文件到指定路径")
     public FileUploadResult upload(
             @Comment(name = "path", value = "目标路径，如 /images/2024/") String path,
@@ -112,14 +88,6 @@ public class FileModule {
         return upload(path, file, null);
     }
 
-    /**
-     * 上传文件
-     *
-     * @param path     目标路径
-     * @param file     文件对象
-     * @param fileName 文件名
-     * @return 文件信息
-     */
     @Comment("上传文件（可指定文件名）")
     public FileUploadResult upload(
             @Comment(name = "path", value = "目标路径") String path,
@@ -135,85 +103,55 @@ public class FileModule {
         }
         FileInfo fileInfo = upload.upload();
 
-        // 发布文件上传事件
+        String fullPath = toFullPath(fileInfo);
+        String effectiveStorageKey = currentStorageKey();
+
         if (eventPublisher != null && fileInfo != null) {
             String operator = getCurrentUser();
             eventPublisher.publishUploadEvent(
-                    storageKey != null ? storageKey : "default",
-                    fileInfo.getPath(),
+                    effectiveStorageKey,
+                    fullPath,
                     fileInfo.getOriginalFilename(),
                     fileInfo.getSize(),
                     fileInfo.getContentType(),
                     fileInfo.getUrl(),
-                    null, // MD5 需要单独计算
+                    null,
                     operator
             );
         }
 
-        return convertToFileUploadResult(fileInfo);
+        return convertToFileUploadResult(fileInfo, fullPath, effectiveStorageKey);
     }
 
-    /**
-     * 创建目录
-     *
-     * @param parentPath 父目录路径
-     * @param dirName    目录名称
-     * @return 是否成功
-     */
     @Comment("创建目录")
     public boolean mkdir(
             @Comment(name = "parentPath", value = "父目录路径") String parentPath,
             @Comment(name = "dirName", value = "目录名称") String dirName) {
-        // 确保父路径以 / 结尾
-        if (parentPath == null || parentPath.isEmpty()) {
-            parentPath = "/";
-        }
-        if (!parentPath.endsWith("/")) {
-            parentPath = parentPath + "/";
-        }
+        String normalizedParentPath = normalizeDirPath(parentPath);
+        String normalizedDirName = normalizeName(dirName);
+        String dirPath = normalizedParentPath + normalizedDirName + "/";
 
-        // 构建完整目录路径
-        String dirPath = parentPath + dirName + "/";
-
-        // 创建空文件作为目录标记
-        FileStorageService service = getFileStorageService();
-        ByteArrayInputStream emptyStream = new ByteArrayInputStream(new byte[0]);
-        var upload = service.of(emptyStream);
-        upload.setPath(dirPath);
-        upload.setSaveFilename(".folder");
-        FileInfo fileInfo = upload.upload();
-
-        // 发布创建目录事件
-        if (eventPublisher != null && fileInfo != null) {
-            String operator = getCurrentUser();
-            eventPublisher.publishMkdirEvent(
-                    storageKey != null ? storageKey : "default",
-                    dirPath,
-                    dirName,
-                    operator
-            );
+        String effectiveStorageKey = currentStorageKey();
+        if (sysFileService != null) {
+            if (sysFileService.existsByPath(effectiveStorageKey, dirPath)) {
+                return false;
+            }
+            sysFileService.createDirectory(effectiveStorageKey, normalizedParentPath, normalizedDirName, getCurrentUser());
+            return true;
         }
 
-        return fileInfo != null;
+        if (eventPublisher != null) {
+            eventPublisher.publishMkdirEvent(effectiveStorageKey, dirPath, normalizedDirName, getCurrentUser());
+            return true;
+        }
+        return false;
     }
 
-    /**
-     * 下载文件
-     *
-     * @param path 文件路径
-     * @return 文件字节数组
-     */
     @Comment("下载文件")
     public byte[] download(@Comment(name = "path", value = "文件路径") String path) {
         return getFileStorageService().download(path).bytes();
     }
 
-    /**
-     * 下载文件（返回 InputStream）
-     *
-     * @param path 文件路径
-     * @return InputStream
-     */
     @Comment("下载文件（返回 InputStream）")
     public InputStream downloadAsStream(@Comment(name = "path", value = "文件路径") String path) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -231,12 +169,6 @@ public class FileModule {
         return new ByteArrayInputStream(baos.toByteArray());
     }
 
-    /**
-     * 获取文件信息
-     *
-     * @param path 文件路径
-     * @return 文件信息
-     */
     @Comment("获取文件信息")
     public RemoteFileInfo info(@Comment(name = "path", value = "文件路径") String path) {
         GetFilePretreatment pretreatment = getFileStorageService().getFile();
@@ -244,43 +176,33 @@ public class FileModule {
         return pretreatment.getFile();
     }
 
-    /**
-     * 判断文件是否存在
-     *
-     * @param path 文件路径
-     * @return 是否存在
-     */
     @Comment("判断文件是否存在")
     public boolean exists(@Comment(name = "path", value = "文件路径") String path) {
+        String effectiveStorageKey = currentStorageKey();
+        if (sysFileService != null) {
+            return sysFileService.existsByPath(effectiveStorageKey, path);
+        }
         RemoteFileInfo fileInfo = info(path);
         return fileInfo != null;
     }
 
-    /**
-     * 删除文件
-     *
-     * @param path 文件路径
-     * @return 是否成功
-     */
-    @Comment("删除文件")
+    @Comment("删除文件或目录")
     public boolean delete(@Comment(name = "path", value = "文件路径") String path) {
-        boolean result = getFileStorageService().delete(path);
-
-        // 发布删除文件事件
-        if (result && eventPublisher != null) {
-            String operator = getCurrentUser();
-            eventPublisher.publishDeleteEvent(path, operator);
+        String effectiveStorageKey = currentStorageKey();
+        SysFile node = sysFileService == null ? null : sysFileService.findByPath(effectiveStorageKey, path);
+        if (node != null && Objects.equals(node.getFileType(), SysFile.TYPE_DIR)) {
+            return sysFileService.softDeleteSubtree(effectiveStorageKey, node.getId(), getCurrentUser());
         }
 
+        boolean result = getFileStorageService().delete(path);
+        if (sysFileService != null) {
+            sysFileService.deleteByPath(effectiveStorageKey, path, getCurrentUser());
+        } else if (result && eventPublisher != null) {
+            eventPublisher.publishDeleteEvent(effectiveStorageKey, path, getCurrentUser());
+        }
         return result;
     }
 
-    /**
-     * 列出文件
-     *
-     * @param path 文件夹路径
-     * @return 文件列表
-     */
     @Comment("列出文件")
     public List<RemoteFileInfo> list(@Comment(name = "path", value = "文件夹路径") String path) {
         ListFilesPretreatment pretreatment = getFileStorageService().listFiles();
@@ -292,13 +214,6 @@ public class FileModule {
         return new ArrayList<>();
     }
 
-    /**
-     * 复制文件
-     *
-     * @param sourcePath 源文件路径
-     * @param targetPath 目标文件路径
-     * @return 文件信息
-     */
     @Comment("复制文件")
     public FileInfo copy(
             @Comment(name = "sourcePath", value = "源文件路径") String sourcePath,
@@ -308,37 +223,41 @@ public class FileModule {
         return pretreatment.copy();
     }
 
-    /**
-     * 移动文件
-     *
-     * @param sourcePath 源文件路径
-     * @param targetPath 目标文件路径
-     * @return 文件信息
-     */
     @Comment("移动文件")
     public FileInfo move(
             @Comment(name = "sourcePath", value = "源文件路径") String sourcePath,
             @Comment(name = "targetPath", value = "目标文件路径") String targetPath) {
+        String effectiveStorageKey = currentStorageKey();
+        SysFile source = sysFileService == null ? null : sysFileService.findByPath(effectiveStorageKey, sourcePath);
+
+        if (source != null && Objects.equals(source.getFileType(), SysFile.TYPE_DIR)) {
+            String targetParentPath = extractParentPath(targetPath);
+            SysFile targetParent = "/".equals(targetParentPath) ? null : sysFileService.findByPath(effectiveStorageKey, targetParentPath);
+            String targetParentId = targetParent == null ? null : targetParent.getId();
+            sysFileService.move(effectiveStorageKey, sourcePath, targetParentId, getCurrentUser());
+            return null;
+        }
+
         MovePretreatment pretreatment = getFileStorageService().move(sourcePath);
         pretreatment.setPath(targetPath);
-        return pretreatment.move();
+        FileInfo moved = pretreatment.move();
+
+        if (sysFileService != null && source != null) {
+            String targetParentPath = extractParentPath(targetPath);
+            SysFile targetParent = "/".equals(targetParentPath) ? null : sysFileService.findByPath(effectiveStorageKey, targetParentPath);
+            String targetParentId = targetParent == null ? null : targetParent.getId();
+            sysFileService.move(effectiveStorageKey, sourcePath, targetParentId, getCurrentUser());
+        }
+
+        return moved;
     }
 
-    /**
-     * 获取文件访问URL
-     *
-     * @param path 文件路径
-     * @return 访问URL
-     */
     @Comment("获取文件访问URL")
     public String getUrl(@Comment(name = "path", value = "文件路径") String path) {
         RemoteFileInfo fileInfo = info(path);
         return fileInfo != null ? fileInfo.getUrl() : null;
     }
 
-    /**
-     * 获取文件存储服务
-     */
     private FileStorageService getFileStorageService() {
         if (fileStorageService != null) {
             return fileStorageService;
@@ -349,28 +268,88 @@ public class FileModule {
         throw new IllegalStateException("FileStorageService 未初始化，请先配置文件存储");
     }
 
-    /**
-     * 获取当前用户
-     */
     private String getCurrentUser() {
-        // 默认返回 system，子类可重写此方法集成认证框架
         return "system";
     }
 
-    /**
-     * 转换为 FileUploadResult
-     */
-    private FileUploadResult convertToFileUploadResult(FileInfo fileInfo) {
+    private String currentStorageKey() {
+        if (storageKey != null && !storageKey.isEmpty()) {
+            return storageKey;
+        }
+        if (magicDynamicFileClient != null && magicDynamicFileClient.getDefaultKey() != null) {
+            return magicDynamicFileClient.getDefaultKey();
+        }
+        return "default";
+    }
+
+    private FileUploadResult convertToFileUploadResult(FileInfo fileInfo, String fullPath, String effectiveStorageKey) {
         if (fileInfo == null) {
             return null;
         }
         FileUploadResult result = new FileUploadResult();
         result.setId(fileInfo.getId());
-        result.setFilePath(fileInfo.getPath());
+        result.setStorageKey(effectiveStorageKey);
+        result.setFilePath(fullPath);
         result.setFileName(fileInfo.getOriginalFilename());
         result.setFileSize(fileInfo.getSize());
         result.setContentType(fileInfo.getContentType());
         result.setUrl(fileInfo.getUrl());
         return result;
+    }
+
+    private String toFullPath(FileInfo fileInfo) {
+        if (fileInfo == null) {
+            return null;
+        }
+        String path = fileInfo.getPath() == null ? "" : fileInfo.getPath();
+        String filename = fileInfo.getFilename() == null ? "" : fileInfo.getFilename();
+        return normalizePath(path + filename);
+    }
+
+    private String normalizeDirPath(String path) {
+        if (path == null || path.isBlank() || "/".equals(path.trim())) {
+            return "/";
+        }
+        String normalized = path.trim();
+        if (!normalized.startsWith("/")) {
+            normalized = "/" + normalized;
+        }
+        if (!normalized.endsWith("/")) {
+            normalized = normalized + "/";
+        }
+        return normalized;
+    }
+
+    private String normalizeName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("目录名称不能为空");
+        }
+        return name.trim();
+    }
+
+    private String normalizePath(String path) {
+        if (path == null || path.isBlank()) {
+            return "/";
+        }
+        String normalized = path.trim();
+        if (!normalized.startsWith("/")) {
+            normalized = "/" + normalized;
+        }
+        return normalized;
+    }
+
+    private String extractParentPath(String fullPath) {
+        if (fullPath == null || fullPath.isBlank() || "/".equals(fullPath)) {
+            return "/";
+        }
+        String target = fullPath;
+        if (target.endsWith("/")) {
+            target = target.substring(0, target.length() - 1);
+        }
+        int slash = target.lastIndexOf('/');
+        if (slash <= 0) {
+            return "/";
+        }
+        return target.substring(0, slash + 1);
     }
 }

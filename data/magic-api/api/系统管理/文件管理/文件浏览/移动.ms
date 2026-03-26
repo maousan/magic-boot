@@ -11,45 +11,61 @@
   "updateBy" : null,
   "path" : "/move",
   "method" : "POST",
-  "parameters" : [ {
-    "name" : "sourcePath",
-    "value" : "",
-    "description" : "源文件路径",
-    "required" : true,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : "",
-    "error" : "源路径不能为空",
-    "expression" : null,
-    "children" : null
-  }, {
-    "name" : "targetDirPath",
-    "value" : "",
-    "description" : "目标目录路径",
-    "required" : true,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : "",
-    "error" : "目标目录不能为空",
-    "expression" : null,
-    "children" : null
-  } ],
+  "parameters" : [
+    {
+      "name" : "sourcePath",
+      "value" : "",
+      "description" : "源文件或目录路径",
+      "required" : true,
+      "dataType" : "String",
+      "type" : null,
+      "defaultValue" : null,
+      "validateType" : "",
+      "error" : "源路径不能为空",
+      "expression" : null,
+      "children" : null
+    },
+    {
+      "name" : "targetDirPath",
+      "value" : "",
+      "description" : "目标目录路径",
+      "required" : true,
+      "dataType" : "String",
+      "type" : null,
+      "defaultValue" : null,
+      "validateType" : "",
+      "error" : "目标目录不能为空",
+      "expression" : null,
+      "children" : null
+    },
+    {
+      "name" : "storageKey",
+      "value" : "",
+      "description" : "存储源标识（可选）",
+      "required" : false,
+      "dataType" : "String",
+      "type" : null,
+      "defaultValue" : "",
+      "validateType" : null,
+      "error" : null,
+      "expression" : null,
+      "children" : null
+    }
+  ],
   "options" : [ ],
   "requestBody" : "",
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : null,
-  "description" : "移动文件到新位置",
+  "description" : "移动文件或目录",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
 }
 ================================
 import cn.hutool.core.util.StrUtil
 import file
+import request
 
-// 验证参数
 if(StrUtil.isBlank(sourcePath)){
     exit 0, '源路径不能为空'
 }
@@ -57,46 +73,36 @@ if(StrUtil.isBlank(targetDirPath)){
     exit 0, '目标目录不能为空'
 }
 
-// 检查源文件是否存在
-if(!file.exists(sourcePath)){
+var storageKeyValues = request.getValues('storageKey')
+var resolvedStorageKey = (storageKeyValues != null && storageKeyValues.size() > 0) ? storageKeyValues[0] : null
+var module = StrUtil.isNotBlank(resolvedStorageKey) ? file.use(resolvedStorageKey) : file
+if(!module.exists(sourcePath)){
     exit 0, '源文件不存在'
 }
 
-// 确保目标路径以 / 结尾
 if(!targetDirPath.endsWith('/')){
     targetDirPath = targetDirPath + '/'
 }
 
-// 获取文件名
 var fileName = sourcePath
 var lastSlash = sourcePath.lastIndexOf('/')
 if(lastSlash >= 0){
     fileName = sourcePath.substring(lastSlash + 1)
 }
 
-// 构建目标文件路径
 var targetFilePath = targetDirPath + fileName
-
-// 如果是目录，保持目录标记
 if(sourcePath.endsWith('/')){
     targetFilePath = targetFilePath + '/'
 }
 
-// 检查目标是否已存在
-if(file.exists(targetFilePath)){
+if(module.exists(targetFilePath)){
     exit 0, '目标位置已存在同名文件'
 }
 
-// 使用 file 模块移动文件
-var result = file.move(sourcePath, targetFilePath)
-
-if(result == null){
-    exit 0, '移动失败'
-}
+module.move(sourcePath, targetFilePath)
 
 return {
     sourcePath: sourcePath,
     targetDirPath: targetDirPath,
-    targetFilePath: targetFilePath,
-    url: result.getUrl()
+    targetFilePath: targetFilePath
 }

@@ -5,7 +5,7 @@
   "groupId" : "67b2ce258e24491194b74992958c74aa",
   "name" : "当前用户菜单",
   "createTime" : null,
-  "updateTime" : 1773303209552,
+  "updateTime" : 1774491146198,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -603,7 +603,6 @@ for(menu in menus){
     menu.meta.title = menu.title
     menu.meta.icon = menu.icon
     menu.meta.keepAlive = (menu.keepAlive === 1 ? true : false)
-    delete
 }
 var nodes = menus.toMap(it => it.id)
 nodes.each((key, node) => {

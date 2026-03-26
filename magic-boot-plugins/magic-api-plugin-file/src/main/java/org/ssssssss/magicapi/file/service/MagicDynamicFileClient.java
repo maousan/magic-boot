@@ -62,10 +62,15 @@ public class MagicDynamicFileClient {
     /**
      * 获取所有存储配置Key
      */
-    public void put(String id, String key, String name, FileStorageService client, Boolean isDefault) {
+    public synchronized void put(String id, String key, String name, FileStorageService client, Boolean isDefault) {
         String normalizedKey = key == null ? "" : key;
         put(id, normalizedKey, name, client);
-        defaultFlags.put(normalizedKey, Boolean.TRUE.equals(isDefault));
+        boolean markedDefault = Boolean.TRUE.equals(isDefault);
+        if (markedDefault) {
+            defaultFlags.replaceAll((k, v) -> false);
+        }
+        defaultFlags.put(normalizedKey, markedDefault);
+        syncStorageDefaultFlags(normalizedKey, markedDefault);
         refreshDefaultKey();
     }
 
@@ -102,7 +107,13 @@ public class MagicDynamicFileClient {
      * @return
      */
     public List<StorageInfo> getStorageInfoList() {
-        return new ArrayList<>(storageInfoMap.values());
+        return storageInfoMap.values().stream()
+                .sorted((a, b) -> {
+                    boolean aDefault = Boolean.TRUE.equals(a.getIsDefault());
+                    boolean bDefault = Boolean.TRUE.equals(b.getIsDefault());
+                    return Boolean.compare(bDefault, aDefault);
+                })
+                .collect(java.util.stream.Collectors.toList());
     }
 
     /**
@@ -323,12 +334,13 @@ public class MagicDynamicFileClient {
     /**
      * 删除存储客户端
      */
-    public void delete(String key) {
+    public synchronized void delete(String key) {
         if (key == null) {
             key = "";
         }
         FileStorageService client = clients.remove(key);
         defaultFlags.remove(key);
+        storageInfoMap.remove(key);
         refreshDefaultKey();
         if (client != null) {
             logger.info("删除文件存储配置: {}", key);
@@ -356,6 +368,19 @@ public class MagicDynamicFileClient {
     private String getString(Map<String, Object> properties, String key, String defaultValue) {
         String value = getString(properties, key);
         return StringUtils.hasText(value) ? value : defaultValue;
+    }
+
+    private void syncStorageDefaultFlags(String currentKey, boolean markedDefault) {
+        storageInfoMap.forEach((k, info) -> {
+            if (info == null) {
+                return;
+            }
+            if (markedDefault) {
+                info.setIsDefault(k.equals(currentKey));
+            } else if (k.equals(currentKey)) {
+                info.setIsDefault(false);
+            }
+        });
     }
 
     private void refreshDefaultKey() {
