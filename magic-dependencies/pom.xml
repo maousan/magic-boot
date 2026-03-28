@@ -83,6 +83,11 @@
 
         <!-- SQL 引擎 -->
         <calcite.version>1.36.0</calcite.version>
+
+        <!-- Tiga 引擎 -->
+        <groovy.version>4.0.21</groovy.version>
+        <fastjson2.version>2.0.43</fastjson2.version>
+        <bouncy-castle.version>1.77</bouncy-castle.version>
     </properties>
 
     <dependencyManagement>
@@ -375,6 +380,44 @@
                 <groupId>org.apache.calcite</groupId>
                 <artifactId>calcite-linq4j</artifactId>
                 <version>${calcite.version}</version>
+            </dependency>
+
+            <!-- Tiga 引擎模块 -->
+            <dependency>
+                <groupId>com.ocean.tiga</groupId>
+                <artifactId>tiga-engine</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ocean.tiga</groupId>
+                <artifactId>tiga-engine-spring</artifactId>
+                <version>${revision}</version>
+            </dependency>
+
+            <!-- Groovy (由 groovy.version 属性覆盖 Spring Boot BOM 默认值) -->
+            <dependency>
+                <groupId>org.apache.groovy</groupId>
+                <artifactId>groovy</artifactId>
+                <version>${groovy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.groovy</groupId>
+                <artifactId>groovy-json</artifactId>
+                <version>${groovy.version}</version>
+            </dependency>
+
+            <!-- BouncyCastle -->
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>${bouncy-castle.version}</version>
+            </dependency>
+
+            <!-- FastJSON2 -->
+            <dependency>
+                <groupId>com.alibaba.fastjson2</groupId>
+                <artifactId>fastjson2</artifactId>
+                <version>${fastjson2.version}</version>
             </dependency>
 
         </dependencies>

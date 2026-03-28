@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Tiga Pro - 业务设计器</title>
+    <link rel="stylesheet" href="./js/element-plus/index.css" />
+    <link rel="stylesheet" href="./css/index.css" />
+    
+    <script src="./js/axios.min.js"></script>
+   
+    <script src="./js/vue3/vue.global.prod.js"></script>
+    <script src="./js/element-plus/index.full.min.js"></script>
+    <script src="./js/vue3/index.iife.min.js"></script> 
+    <script src="./js/monaco/loader.min.js"></script>
+    
+    <script src="./js/vue3/dynamic.compile.js"></script>
+    <script src="./js/monaco/monaco.solon.groovy.js"></script>
+    <script src="./js/utils/SqlToGinqModal.js"></script>
+	<script src="./js/vue3/dynamic.preview.page.js"></script>
+    
+    <style>
+
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="layout" :class="{ 'is-dragging': dragging }">
+        <div class="main-content">
+            <div class="split-container">
+                <div class="pane-top" :style="{ height: topHeight + 'px' }">
+                    <div class="toolbar">
+                        <span class="label-tag" style="padding-left:10px;color: #0e8a4d;font-size: 25px;">{{componentName}}</span>
+                        <div>
+							<el-button type="info" size="small" @click="saveComponent">保存</el-button>
+							<el-button type="primary" size="small" @click="refreshPreview">运行预览</el-button>
+						</div>
+                    </div>
+                    <div class="editor-box editors-container">
+					    <div class="editor-left" :class="{'fullscreen-target': fullType === 'sfc'}">
+                            <div class="toolbar" style="background: #f0f0f0;">
+                                <span style="font-size: 11px; color: rgb(43 41 41);height: 40px;line-height: 40px;">SFC TEMPLATE</span>
+                                <el-button :icon="fullType === 'sfc' ? 'ScaleToOriginal' : 'FullScreen'" size="small" link @click="toggleFull('sfc')"></el-button>
+                            </div>
+					        <div id="monaco-editor-SCF" class="editor-inner"></div>
+					    </div>
+					    <div class="editor-right" :class="{'fullscreen-target': fullType === 'code'}">
+                            <div class="toolbar" style="background: #f0f0f0;">
+                                <span style="font-size: 11px; color: rgb(43 41 41);height: 40px;line-height: 40px;">JAVA CODE</span>
+                                <el-button :icon="fullType === 'code' ? 'ScaleToOriginal' : 'FullScreen'" size="small" link @click="toggleFull('code')"></el-button>
+                            </div>
+					        <div id="monaco-editor-CODE" class="editor-inner"></div>
+					    </div>
+					</div>
+                </div>
+
+                <div class="resizer" v-show="!fullType" @mousedown="initDrag"></div>
+
+                <div class="pane-bottom" :class="{'fullscreen-target': fullType === 'preview'}">
+                    <div class="toolbar">
+                        <span class="label-tag" style="height: 40px;line-height: 40px;">RUNTIME PREVIEW</span>
+                        <el-button :icon="fullType === 'preview' ? 'ScaleToOriginal' : 'FullScreen'" size="small" link @click="toggleFull('preview')"></el-button>
+                    </div>
+                    <div class="runtime-container">
+                        <dynamic-preview-page v-if="componentId" :id="componentId" :key="componentId" />
+		            </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const { createApp, ref, onMounted, nextTick } = Vue;
+
+const mainApp = createApp({
+    setup() {
+    	const params = window.params;
+        const topHeight = ref(400);
+        const dragging = ref(false);
+        const fullType = ref(''); // '', 'sfc', 'code', 'preview'
+        const componentId = ref('')
+        const componentName = ref('')
+       
+        if(!top.window['_components']){
+			top.window['_components'] = {};
+		}
+        
+     	// 当父页面执行 iframe.contentWindow.params = item 时
+        // 拦截 window.params 的赋值
+        Object.defineProperty(window, 'params', {
+            configurable: true,
+            set: async (item) => {
+            	componentName.value = item.name;
+                try {
+                    const res = await axios.get('tiga/component/getById', {params: { id: item.id }});
+                    if (res.data.code === 200) {
+                    	const detail = res.data.data;
+                    	top.window['_components'][item.id] = detail;
+                    	componentId.value = item.id+'?_t=' + Date.now();
+                        if (window.sfcEditor) window.sfcEditor.setValue(detail.raw_sfc || '');
+                    	if (window.codeEditor) window.codeEditor.setValue(detail.script || '');
+                    }
+                } catch (e) { 
+                	console.error(e);
+                    ElementPlus.ElMessage.error('获取组件详情失败');
+                }
+            }
+        });
+        // 全屏切换切换逻辑
+        const toggleFull = (type) => {
+            if (fullType.value === type) {
+                fullType.value = '';
+            } else {
+                fullType.value = type;
+            }
+            // 必须在 DOM 更新后触发 Monaco 重新计算布局
+            nextTick(() => {
+                if (sfcEditor) sfcEditor.layout();
+                if (codeEditor) codeEditor.layout();
+            });
+        };
+
+        const saveComponent = async() => {
+        	if(componentId.value){
+        		let data = DynamicCompile.handleCompileAndSave(sfcEditor.getValue(), codeEditor.getValue());
+            	data['id'] = componentId.value.substring(0,componentId.value.indexOf('?'));
+            	try {
+                    const res = await axios.post('tiga/component/update', data);
+                    if (res.data.code === 200) {
+                    	delete top.window['_components'][data.id]
+                    	componentId.value = data.id+'?_t=' + Date.now();
+                    	ElementPlus.ElMessage.success('保存组件信息成功');
+                    }
+                } catch (e) { 
+                	console.error(e);
+                    ElementPlus.ElMessage.error('保存组件信息失败');
+                }
+        	}
+        }
+
+        
+        const refreshPreview = () => {
+        	let data = DynamicCompile.handleCompileAndSave(sfcEditor.getValue(), codeEditor.getValue());
+        	data['id'] = componentId.value.substring(0,componentId.value.indexOf('?'));
+        	top.window['_components'][data.id] = data;
+        	componentId.value = data.id+'?_t=' + Date.now();
+        };
+
+        const initDrag = (e) => {
+            if(fullType.value) return; // 全屏状态禁止拖拽
+            dragging.value = true;
+            const startY = e.clientY;
+            const startH = topHeight.value;
+            const onMove = (ev) => {
+                const newH = startH + (ev.clientY - startY);
+                if (newH > 100 && newH < window.innerHeight - 100) topHeight.value = newH;
+            };
+            const onUp = () => {
+                dragging.value = false;
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                if (sfcEditor) sfcEditor.layout();
+                if (codeEditor) codeEditor.layout();
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        };
+
+        onMounted(async() => {
+        	window.codeEditor = await MonacoSolonGroovy('monaco-editor-CODE');
+            require(['vs/editor/editor.main'], () => {
+            	window.sfcEditor = monaco.editor.create(document.getElementById('monaco-editor-SCF'), {
+                    value: '',
+                    language: 'html',
+                    theme: 'vs-dark',
+                    automaticLayout: true,
+                    minimap: { enabled: false },
+                    scrollbar: { vertical: 'visible', horizontal: 'visible', useShadows: false }
+                });
+            }); 
+        });
+        return {componentId, componentName, topHeight, dragging, initDrag, refreshPreview, fullType, toggleFull,saveComponent };
+    }
+});
+
+for (const [k, c] of Object.entries(ElementPlusIconsVue)) { mainApp.component(k, c); }
+
+DynamicPreviewPage(mainApp)
+
+mainApp.use(ElementPlus).mount('#app');
+
+</script>
+</body>
+</html>

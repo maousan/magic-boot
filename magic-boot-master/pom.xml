@@ -179,6 +179,12 @@
             <artifactId>mybatis-plus-jsqlparser</artifactId>
         </dependency>
 
+        <!-- Tiga 脚本引擎 -->
+        <dependency>
+            <groupId>com.ocean.tiga</groupId>
+            <artifactId>tiga-engine-spring</artifactId>
+        </dependency>
+
     </dependencies>
 
 <!--    <repositories>-->

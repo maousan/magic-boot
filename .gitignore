@@ -52,4 +52,4 @@ plugins/
 upload/
 .flattened-pom.xml
 magic-boot-vben/
-tiga-platform/
+#tiga-platform/

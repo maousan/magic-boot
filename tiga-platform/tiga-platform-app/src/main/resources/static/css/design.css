@@ -1,0 +1,151 @@
+:root {
+	--sidebar-bg: #304156;
+	--primary-color: #409EFF;
+}
+
+body, html, #app {
+	margin: 0;
+	height: 100%;
+	overflow: hidden;
+	background: var(--sidebar-bg);
+}
+
+.layout {
+	display: flex;
+	height: 100vh;
+	width: 100vw;
+}
+
+.sidebar {
+	width: 200px;
+	background: var(--sidebar-bg);
+	color: #fff;
+	flex-shrink: 0;
+	z-index: 10;
+}
+
+.main-content {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	background: #f0f2f5;
+	overflow: hidden;
+}
+
+.split-container {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	overflow: hidden;
+}
+
+.pane-top {
+	flex-shrink: 0;
+	background: #fff;
+	display: flex;
+	flex-direction: column;
+	position: relative;
+	z-index: 5;
+}
+
+.pane-bottom {
+	flex: 1;
+	height: 0;
+	background: #fff;
+	display: flex;
+	flex-direction: column;
+	border-top: 1px solid #dcdfe6;
+	position: relative;
+	z-index: 1;
+}
+
+.resizer {
+	height: 8px;
+	background: #79b5ee;
+	cursor: ns-resize;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-shrink: 0;
+}
+
+.resizer:hover, .is-dragging .resizer {
+	background: var(--primary-color);
+}
+
+.is-dragging iframe {
+	pointer-events: none;
+}
+
+.editor-box {
+	flex: 1;
+	width: 100%;
+	flex-direction: row;
+	overflow: hidden;
+}
+
+.iframe-box {
+	flex: 1;
+	width: 100%;
+	height: 100%;
+	border: none;
+	background: #fff;
+}
+
+.toolbar {
+	height: 40px;
+	background: #fafafa;
+	border-bottom: 1px solid #eee;
+	display: flex;
+	align-items: center;
+	padding: 0 10px;
+	justify-content: space-between;
+}
+
+.label-tag {
+	font-size: 12px;
+	font-weight: bold;
+	color: #606266;
+}
+
+.editors-container {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    height: 100%;
+}
+
+/* 重点修改：全屏样式类 */
+.fullscreen-target {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+    background: #fff !important;
+}
+
+.editor-left,
+.editor-right {
+    width: 50%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #eee;
+}
+
+.editor-inner {
+    width: 100%;
+    flex: 1;
+}
+    
+.pane-bottom { display: flex; flex-direction: column; overflow: hidden; }
+.runtime-container { flex: 1; width: 100%; height: 100%; background-color: #f5f7fa; }
+
+.tool-btns {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}

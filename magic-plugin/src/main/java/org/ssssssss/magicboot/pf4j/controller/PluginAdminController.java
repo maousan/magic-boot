@@ -1,6 +1,6 @@
 package org.ssssssss.magicboot.pf4j.controller;
 
-import cn.dev33.satoken.stp.StpUtil;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
@@ -13,9 +13,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * 插件管理 Controller
- */
 @RestController
 @RequestMapping("/plugin/admin")
 @RequiredArgsConstructor
@@ -24,9 +21,6 @@ public class PluginAdminController {
 
     private final PluginManagerService pluginManagerService;
 
-    /**
-     * 获取所有插件列表
-     */
     @GetMapping("/list")
     public ResponseEntity<?> listPlugins() {
         try {
@@ -37,9 +31,6 @@ public class PluginAdminController {
         }
     }
 
-    /**
-     * 获取插件详情
-     */
     @GetMapping("/info/{pluginId}")
     public ResponseEntity<?> getPluginInfo(@PathVariable String pluginId) {
         try {
@@ -50,109 +41,183 @@ public class PluginAdminController {
         }
     }
 
-    /**
-     * 安装插件
-     */
-    @PostMapping("/install")
-    public ResponseEntity<?> installPlugin(@RequestParam("file") MultipartFile file) {
+    @GetMapping("/runtime/summary")
+    public ResponseEntity<?> getRuntimeSummary() {
         try {
-            // 检查权限
-//            StpUtil.checkLogin();
-            pluginManagerService.installPlugin(file);
-            return ResponseEntity.ok(success("插件安装成功"));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.ok(error(e.getMessage()));
-        } catch (IOException e) {
-            return ResponseEntity.ok(error("插件安装失败：" + e.getMessage()));
+            return ResponseEntity.ok(success(pluginManagerService.getRuntimeSummary()));
         } catch (Exception e) {
-            return ResponseEntity.ok(error("插件安装失败：" + e.getMessage()));
+            return ResponseEntity.ok(error("Get runtime summary failed: " + e.getMessage()));
         }
     }
 
-    /**
-     * 卸载插件
-     */
+    @GetMapping("/runtime/{pluginId}")
+    public ResponseEntity<?> getRuntimePluginInfo(@PathVariable String pluginId) {
+        try {
+            return ResponseEntity.ok(success(pluginManagerService.getRuntimePluginInfo(pluginId)));
+        } catch (Exception e) {
+            return ResponseEntity.ok(error("Get runtime plugin info failed: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/upload")
+    public ResponseEntity<?> uploadPlugin(@RequestParam("file") MultipartFile file) {
+        try {
+            pluginManagerService.installPlugin(file);
+            return ResponseEntity.ok(success("Upload and install success"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.ok(error("Install failed: invalid params, " + e.getMessage()));
+        } catch (IOException e) {
+            return ResponseEntity.ok(error("Install failed: upload io error, " + e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.ok(error("Install failed: upload install error, " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/install")
+    public ResponseEntity<?> installPlugin(@RequestBody InstallRequest request) {
+        try {
+            if (request == null) {
+                return ResponseEntity.ok(error("Install failed: request body is required"));
+            }
+            Map<String, Object> result = pluginManagerService.installPluginBySource(
+                    request.getSource(),
+                    request.getJarPath(),
+                    request.getUrl()
+            );
+            return ResponseEntity.ok(success(result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.ok(error("Install failed: invalid params, " + e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.ok(error("Install failed: " + e.getMessage()));
+        }
+    }
+
     @PostMapping("/uninstall/{pluginId}")
     public ResponseEntity<?> uninstallPlugin(@PathVariable String pluginId) {
         try {
-//            StpUtil.checkLogin();
             pluginManagerService.uninstallPlugin(pluginId);
-            return ResponseEntity.ok(success("插件卸载成功"));
+            return ResponseEntity.ok(success("Plugin uninstalled"));
         } catch (Exception e) {
-            return ResponseEntity.ok(error("插件卸载失败：" + e.getMessage()));
+            return ResponseEntity.ok(error("Plugin uninstall failed: " + e.getMessage()));
         }
     }
 
-    /**
-     * 启动插件
-     */
     @PostMapping("/start/{pluginId}")
     public ResponseEntity<?> startPlugin(@PathVariable String pluginId) {
         try {
-//            StpUtil.checkLogin();
             pluginManagerService.startPlugin(pluginId);
-            return ResponseEntity.ok(success("插件启动成功"));
+            return ResponseEntity.ok(success("Plugin started"));
         } catch (Exception e) {
-            return ResponseEntity.ok(error("插件启动失败：" + e.getMessage()));
+            return ResponseEntity.ok(error("Plugin start failed: " + e.getMessage()));
         }
     }
 
-    /**
-     * 停止插件
-     */
     @PostMapping("/stop/{pluginId}")
     public ResponseEntity<?> stopPlugin(@PathVariable String pluginId) {
         try {
-//            StpUtil.checkLogin();
             pluginManagerService.stopPlugin(pluginId);
-            return ResponseEntity.ok(success("插件停止成功"));
+            return ResponseEntity.ok(success("Plugin stopped"));
         } catch (Exception e) {
-            return ResponseEntity.ok(error("插件停止失败：" + e.getMessage()));
+            return ResponseEntity.ok(error("Plugin stop failed: " + e.getMessage()));
         }
     }
 
-    /**
-     * 重新加载插件
-     */
     @PostMapping("/reload/{pluginId}")
     public ResponseEntity<?> reloadPlugin(@PathVariable String pluginId) {
         try {
-//            StpUtil.checkLogin();
             pluginManagerService.reloadPlugin(pluginId);
-            return ResponseEntity.ok(success("插件重新加载成功"));
+            return ResponseEntity.ok(success("Plugin reloaded"));
         } catch (Exception e) {
-            return ResponseEntity.ok(error("插件重新加载失败：" + e.getMessage()));
+            return ResponseEntity.ok(error("Plugin reload failed: " + e.getMessage()));
         }
     }
 
-    /**
-     * 重新扫描插件目录
-     */
+    @PostMapping("/enable/{pluginId}")
+    public ResponseEntity<?> enablePlugin(@PathVariable String pluginId) {
+        try {
+            return ResponseEntity.ok(success(pluginManagerService.enablePlugin(pluginId)));
+        } catch (Exception e) {
+            return ResponseEntity.ok(error("Plugin enable failed: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/disable/{pluginId}")
+    public ResponseEntity<?> disablePlugin(@PathVariable String pluginId) {
+        try {
+            return ResponseEntity.ok(success(pluginManagerService.disablePlugin(pluginId)));
+        } catch (Exception e) {
+            return ResponseEntity.ok(error("Plugin disable failed: " + e.getMessage()));
+        }
+    }
+
     @PostMapping("/rescan")
     public ResponseEntity<?> rescanPlugins() {
         try {
-//            StpUtil.checkLogin();
             List<String> loadedPlugins = pluginManagerService.rescanPlugins();
             Map<String, Object> result = new HashMap<>();
             result.put("loadedPlugins", loadedPlugins);
             result.put("count", loadedPlugins.size());
             return ResponseEntity.ok(success(result));
         } catch (Exception e) {
-            return ResponseEntity.ok(error("重新扫描插件失败：" + e.getMessage()));
+            return ResponseEntity.ok(error("Rescan plugins failed: " + e.getMessage()));
         }
     }
 
-    /**
-     * 手动触发运行态插件增量同步到数据库
-     */
+    @PostMapping("/scan-new")
+    public ResponseEntity<?> scanNewPlugins() {
+        try {
+            return ResponseEntity.ok(success(pluginManagerService.scanNewPlugins()));
+        } catch (Exception e) {
+            return ResponseEntity.ok(error("Scan new plugins failed: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/sync")
+    public ResponseEntity<?> syncPlugins() {
+        try {
+            return ResponseEntity.ok(success(pluginManagerService.syncPlugins()));
+        } catch (Exception e) {
+            return ResponseEntity.ok(error("Sync plugins failed: " + e.getMessage()));
+        }
+    }
+
     @PostMapping("/init-sync")
     public ResponseEntity<?> initSyncPlugins() {
         try {
-//            StpUtil.checkLogin();
             Map<String, Object> result = pluginManagerService.initMissingPluginsFromRuntime();
             return ResponseEntity.ok(success(result));
         } catch (Exception e) {
-            return ResponseEntity.ok(error("初始化插件同步失败：" + e.getMessage()));
+            return ResponseEntity.ok(error("Init sync failed: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/reconcile")
+    public ResponseEntity<?> reconcilePlugins(@RequestBody(required = false) ReconcileRequest request) {
+        try {
+            boolean dryRun = request == null || request.getDryRun() == null || request.getDryRun();
+            return ResponseEntity.ok(success(pluginManagerService.reconcilePlugins(dryRun)));
+        } catch (Exception e) {
+            return ResponseEntity.ok(error("Reconcile plugins failed: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/health/{pluginId}")
+    public ResponseEntity<?> getPluginHealth(@PathVariable String pluginId) {
+        try {
+            return ResponseEntity.ok(success(pluginManagerService.getPluginHealth(pluginId)));
+        } catch (Exception e) {
+            return ResponseEntity.ok(error("Get plugin health failed: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/audit/list")
+    public ResponseEntity<?> listAuditLogs(@RequestParam(name = "limit", defaultValue = "100") Integer limit,
+                                           @RequestParam(name = "pluginId", required = false) String pluginId,
+                                           @RequestParam(name = "action", required = false) String action) {
+        try {
+            return ResponseEntity.ok(success(pluginManagerService.listAuditLogs(limit, pluginId, action)));
+        } catch (Exception e) {
+            return ResponseEntity.ok(error("Query audit logs failed: " + e.getMessage()));
         }
     }
 
@@ -169,5 +234,17 @@ public class PluginAdminController {
         result.put("code", 500);
         result.put("message", message);
         return result;
+    }
+
+    @Data
+    public static class InstallRequest {
+        private String source;
+        private String jarPath;
+        private String url;
+    }
+
+    @Data
+    public static class ReconcileRequest {
+        private Boolean dryRun;
     }
 }

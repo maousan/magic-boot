@@ -16,3 +16,29 @@
 - ä¸å½±å“ç°æœ‰æ’ä»¶ç®¡ç†æ¥å£ã€‚
 - ä»…æ–°å¢ç«¯ç‚¹ï¼Œé»˜è®¤æ— ç ´åæ€§å½±å“ã€‚
 
+
+---
+
+## 2026-03-28 µÚ¶ş½×¶ÎÀ©Õ¹£¨P0 + P1£©
+
+### ĞÂÔö½Ó¿Ú
+- GET /plugin/admin/runtime/summary
+- GET /plugin/admin/runtime/{pluginId}
+- POST /plugin/admin/scan-new
+- POST /plugin/admin/sync
+- POST /plugin/admin/install/by-path
+- POST /plugin/admin/reconcile
+- POST /plugin/admin/enable/{pluginId}
+- POST /plugin/admin/disable/{pluginId}
+- GET /plugin/admin/health/{pluginId}
+- GET /plugin/admin/audit/list
+
+### ËµÃ÷
+- Í³Ò»±£³Ö `{code,message,data}` ·µ»Ø½á¹¹¡£
+- reconcile Ö§³Ö dryRun£¬²»Âä¿âÔ¤ÀÀ²îÒì¡£
+- Ô¤Ğ£Ñé½Ó¿ÚÓëÅúÁ¿½Ó¿Ú±£³Ö P2 ´ı°ì¡£
+
+## 2026-03-28 Â·ÓÉÈ¥ÆçÒå£¨ÆÆ»µĞÔ¸Ä¶¯£©
+- ÉÏ´«½Ó¿ÚÓÉ `POST /plugin/admin/install` ¸ÄÎª `POST /plugin/admin/upload`¡£
+- ¾É½Ó¿Ú `/plugin/admin/install` ÒÑÒÆ³ı£¬²»Ìá¹©¼æÈİ¡£
+- `/plugin/admin/install/by-path` ±£³Ö²»±ä¡£

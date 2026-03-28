@@ -1,0 +1,425 @@
+:root {
+	--bar-bg: #f3f3f3;
+	--border-color: #dcdfe6;
+	--active-bg: #ad60a7;
+	--primary: #409eff;
+	--get-color: #61affe;
+	--post-color: #49cc90;
+	--put-color: #fca130;
+	--delete-color: #f93e3e;
+	--bg-header: #b15da9;
+	--fn-color: #a29bfe;
+	--vue-color: #48c774;
+	--task-color: #ff8811;
+}
+
+body, html, #app {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	overflow: hidden;
+	font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.ide-container {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+}
+
+.ide-header {
+	height: 40px;
+	border-bottom: 1px solid var(--border-color);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 12px;
+	background: #474e93;
+	z-index: 1000;
+}
+
+.ide-main {
+	flex: 1;
+	display: flex;
+	overflow: hidden;
+	position: relative;
+}
+
+/* 活动栏 */
+.activity-bar {
+	width: 32px;
+	background: var(--bar-bg);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	flex-shrink: 0;
+}
+
+.act-btn {
+	width: 100%;
+	height: 48px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	color: #858585;
+	transition: 0.2s;
+}
+
+.act-btn:hover {
+	color: #000;
+}
+
+.act-btn.active {
+	color: #fff;
+	background: var(--active-bg);
+}
+
+.act-text {
+	font-size: 10px;
+	margin-top: 2px;
+	transform: scale(0.85);
+}
+
+/* 侧边面板 */
+.side-panel {
+	width: 240px;
+	background: #fff;
+	border-right: 1px solid var(--border-color);
+	border-left: 1px solid var(--border-color);
+	display: flex;
+	flex-direction: column;
+	transition: width 0.2s;
+	overflow: hidden;
+	flex-shrink: 0;
+}
+
+.side-panel.collapsed {
+	width: 0;
+	border: none;
+}
+
+.side-title {
+	height: 39px;
+	line-height: 39px;
+	padding: 0 10px;
+	background: #f3f3f3;
+	font-size: 11px;
+	font-weight: bold;
+	border-bottom: 1px solid var(--border-color);
+	color: #666;
+}
+
+.content-box {
+	flex: 1;
+	overflow: auto;
+	background: #fff;
+	position: relative;
+}
+
+/* 平铺列表样式 (右侧) */
+.flat-item {
+	padding: 8px 12px;
+	font-size: 13px;
+	color: #333;
+	cursor: pointer;
+	border-bottom: 1px solid #f0f0f0;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.flat-item:hover {
+	background-color: #f5f7fa;
+}
+
+/* 编辑区 */
+.editor-area {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	background: #fff;
+	border-right: 1px solid #dcdfe6;
+}
+
+.custom-tabs.el-tabs--card>.el-tabs__header {
+	margin: 0 !important;
+	background: #f3f3f3;
+	border-bottom: 1px solid var(--border-color) !important;
+}
+
+.custom-tabs .el-tabs__item {
+	height: 35px !important;
+	line-height: 35px !important;
+	font-size: 12px;
+}
+
+.modified-dot {
+	color: #f56c6c;
+	font-weight: bold;
+	margin-right: 4px;
+}
+
+.monaco-host {
+	flex: 1;
+	position: relative;
+	overflow: hidden;
+}
+
+.editor-instance {
+	position: absolute;
+	inset: 0;
+}
+
+/* --- 修改部分：拖拽条样式 --- */
+.resizer-v {
+	height: 4px;
+	cursor: ns-resize;
+	background-color: #f5f7fa;
+	border-top: 1px solid var(--border-color);
+	transition: background-color 0.2s;
+	z-index: 10;
+}
+
+.resizer-v:hover {
+	background-color: var(--primary);
+}
+
+.bottom-panel {
+	border-top: 0;
+	flex-shrink: 0;
+	overflow: hidden;
+}
+/* ----------------------- */
+.el-tabs--border-card>.el-tabs__header {
+	background-color: #f3f3f3
+}
+
+.el-tabs--card>.el-tabs__header .el-tabs__item.is-active {
+	border-bottom-color: #499dfa;
+}
+
+.el-tabs--top {
+	border-left: 0px;
+	border-radius: 0px;
+	border-top: 0px;
+	border-right: 0px;
+}
+
+/* 右键菜单 */
+.ctx-menu {
+	position: fixed;
+	z-index: 9999;
+	background: #fff;
+	border: 1px solid #ccc;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	padding: 4px 0;
+	min-width: 120px;
+	border-radius: 4px;
+}
+
+.menu-item {
+	padding: 8px 14px;
+	font-size: 12px;
+	color: #333;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.menu-item:hover {
+	background: var(--primary);
+	color: #fff;
+}
+
+.menu-sep {
+	height: 1px;
+	background: #eee;
+	margin: 4px 0;
+}
+
+.menu-item.danger {
+	color: #f56c6c;
+}
+
+.ide-header {
+	background-color: var(--bg-header) !important;
+	color: #fff;
+}
+
+.breadcrumb-nav {
+	flex: 1;
+	text-align: center;
+	font-size: 13px;
+	color: #ffffff;
+	margin: 0 20px;
+	padding: 4px 12px;
+	border-radius: 4px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.side-panel .content-box {
+	overflow: auto !important;
+}
+
+.el-tree {
+	min-width: 100%;
+	display: inline-block !important;
+}
+
+.custom-tree-node {
+	display: flex;
+	align-items: center;
+	width: 100%;
+	font-size: 13px;
+	padding-right: 12px;
+}
+
+.node-label {
+	white-space: nowrap;
+}
+
+.node-path {
+	color: #999;
+	font-size: 11px;
+	margin-left: 4px;
+}
+
+.method-tag {
+	font-size: 10px;
+	font-weight: bold;
+	padding: 1px 4px;
+	border-radius: 3px;
+	margin-right: 6px;
+	min-width: 45px;
+	display: inline-block;
+	text-align: center;
+	line-height: 1.2;
+	text-transform: uppercase;
+}
+
+.tag-get {
+	color: var(--get-color);
+	background: rgba(97, 175, 254, 0.1);
+	border: 1px solid var(--get-color);
+}
+
+.tag-post {
+	color: var(--post-color);
+	background: rgba(73, 204, 144, 0.1);
+	border: 1px solid var(--post-color);
+}
+
+.tag-put {
+	color: var(--put-color);
+	background: rgba(252, 161, 48, 0.1);
+	border: 1px solid var(--put-color);
+}
+
+.tag-delete {
+	color: var(--delete-color);
+	background: rgba(249, 62, 62, 0.1);
+	border: 1px solid var(--delete-color);
+}
+
+/* 函数、组件、任务标签样式 */
+.tag-fn {
+	color: var(--fn-color);
+	background: rgba(162, 155, 254, 0.1);
+	border: 1px solid var(--fn-color);
+}
+
+.tag-vue {
+	color: var(--vue-color);
+	background: rgba(72, 199, 116, 0.1);
+	border: 1px solid var(--vue-color);
+}
+
+.tag-task {
+	color: var(--task-color);
+	background: rgba(255, 136, 17, 0.1);
+	border: 1px solid var(--task-color);
+}
+
+.folder-icon {
+	color: #e6a23c;
+	margin-right: 4px;
+}
+
+.side-panel.collapsed {
+	width: 0;
+	padding: 0;
+	overflow: hidden;
+	border: none;
+}
+
+/* 左侧活动条文字图标样式 */
+.act-icon-text {
+	font-size: 12px;
+	font-weight: bold;
+	line-height: 1;
+	margin-bottom: 2px;
+}
+
+/* Cron 快捷面板样式 */
+.cron-quick-panel {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px;
+	padding: 5px;
+}
+
+.el-icon{
+	font-size: 16px!important;
+}
+
+.cron-item {
+	text-align: left;
+	justify-content: flex-start;
+	margin-left: 0px !important;
+}
+
+.tab-type-prefix {
+	font-weight: bold;
+	font-size: 11px;
+	margin-right: 4px;
+}
+.el-button--primary,.el-button--success {
+    --el-button-bg-color: rgb(173 96 167)!important;
+    --el-button-border-color: #fff!important;
+}
+
+/*  给左侧树（Tree）的 叶子节点（非目录节点）在选中时添加特定的颜色变化 */
+/* 只有当节点被选中 (.is-current) 且 内部不包含目录图标 (.folder-icon) 时触发 */
+.el-tree-node.is-current > .el-tree-node__content .custom-tree-node:not(:has(.folder-icon)) {
+    background-color: #ecf5ff; /* 选中的浅蓝色背景 */
+    color: var(--primary);    /* 文字变蓝色 */
+    border-radius: 4px;       /* 圆角 */
+    font-weight: bold;        /* 字体加粗 */
+}
+
+/* 调整选中行的高亮背景色，使其与文字颜色协调 */
+.el-tree-node.is-current > .el-tree-node__content {
+    background-color: #ecf5ff !important;
+}
+
+/* 保持 node-path 的颜色在选中时不至于太淡 */
+.el-tree-node.is-current .node-path {
+    color: var(--primary);
+    opacity: 0.7;
+}
+
+/** 提示框的样式 **/
+.el-message-box{
+	--el-messagebox-width: 320px!important;
+}
+.el-message-box__title {
+    color: #7d3e7a!important;
+    font-weight: bold!important;
+}
+

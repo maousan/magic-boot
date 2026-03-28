@@ -1,0 +1,146 @@
+body, html {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	font-family: 'Helvetica Neue', Helvetica, 'PingFang SC',
+		'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+}
+
+#app {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	background-color: #f0f2f5;
+}
+
+.header-bar {
+	background: #fff;
+	padding: 15px 20px;
+	box-shadow: 0 1px 4px rgba(0, 21, 41, .08);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	z-index: 10;
+}
+
+.nav-bar {
+	padding: 10px 20px;
+	background: #f5f7fa;
+	border-bottom: 1px solid #e4e7ed;
+	display: flex;
+	align-items: center;
+}
+
+.main-container {
+	flex: 1;
+	padding: 20px;
+	overflow-y: auto;
+}
+
+.grid-wrapper {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+	gap: 20px;
+}
+
+.grid-item {
+	background: #fff;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: all 0.3s;
+	border: 1px solid #ebeef5;
+	position: relative;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	height: 160px;
+}
+
+.grid-item:hover {
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	transform: translateY(-2px);
+	border-color: #409eff;
+}
+
+.item-thumb {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #fafafa;
+	color: #909399;
+	font-size: 40px;
+}
+
+.is-folder .item-thumb {
+	color: #e6a23c;
+	background: #fdf6ec;
+}
+
+.is-component .item-thumb {
+	color: #409eff;
+	background: #ecf5ff;
+}
+
+.item-info {
+	height: 40px;
+	padding: 0 10px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-top: 1px solid #f0f0f0;
+	background: #fff;
+}
+
+.item-name {
+	font-size: 13px;
+	color: #333;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	width: 100%;
+	text-align: center;
+}
+
+.empty-state {
+	display: flex;
+	justify-content: center;
+	margin-top: 100px;
+}
+
+.hover-actions {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 40px;
+	background: rgba(0, 0, 0, 0.6);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 0;
+	transition: opacity 0.2s;
+}
+
+.grid-item:hover .hover-actions {
+	opacity: 1;
+}
+
+.is-folder .hover-actions {
+	display: none;
+}
+
+/* 重命名输入框样式 */
+.rename-input .el-input__inner {
+	height: 26px;
+	line-height: 26px;
+	font-size: 12px;
+	text-align: center;
+	padding: 0 5px;
+}
+/* 补充一些按钮间距 */
+.action-group {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}

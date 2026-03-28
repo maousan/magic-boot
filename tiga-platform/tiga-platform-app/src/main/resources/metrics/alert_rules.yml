@@ -1,0 +1,43 @@
+groups:
+  - name: TigaGroovyEngineAlerts
+    rules:
+      # 1. 脚本平均耗时超过 500ms 告警
+      - alert: GroovyScriptExecutionSlow
+        expr: rate(tiga_groovy_execution_seconds_sum[1m]) / rate(tiga_groovy_execution_seconds_count[1m]) * 1000 > 500
+        for: 2m
+        labels:
+          severity: warning
+          team: devops
+        annotations:
+          summary: "脚本执行耗时过高: {{ $labels.scriptId }}"
+          description: "脚本 [{{ $labels.scriptId }}] 在过去 2 分钟内的平均执行耗时为 {{ $value | printf \"%.2f\" }}ms，超过阈值 500ms。"
+
+      # 2. 缓存命中率过低告警 (暗示可能存在频繁的重编译，压力过大)
+      - alert: GroovyCacheHitRateLow
+        expr: sum(rate(tiga_groovy_cache_hits_total[5m])) / (sum(rate(tiga_groovy_cache_hits_total[5m])) + sum(rate(tiga_groovy_cache_misses_total[5m]))) < 0.5
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "脚本引擎缓存命中率过低"
+          description: "当前脚本引擎缓存命中率仅为 {{ $value | humanizePercentage }}，存在大量重编译操作，可能导致 Metaspace 风险或 CPU 飙升。"
+
+      # 3. 脚本执行 QPS 突增告警
+      - alert: GroovyScriptQpsSpike
+        expr: sum by (scriptId) (rate(tiga_groovy_execution_seconds_count[1m])) > 100
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "脚本访问量突增: {{ $labels.scriptId }}"
+          description: "脚本 [{{ $labels.scriptId }}] 当前 QPS 为 {{ $value | printf \"%.2f\" }}，请检查是否存在异常调用或攻击。"
+
+      # 4. 脚本引擎实例宕机告警
+      - alert: GroovyEngineInstanceDown
+        expr: up{job="groovy-engine"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "脚本引擎实例离线"
+          description: "实例 {{ $labels.instance }} 已无法访问，监控端点已掉线。"

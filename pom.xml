@@ -27,6 +27,8 @@
         <module>magic-plugin-demo</module>
         <module>magic-plugin-api</module>
         <module>magic-script</module>
+        <module>tiga-engine</module>
+        <module>tiga-engine-spring</module>
     </modules>
 
     <properties>

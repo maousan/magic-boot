@@ -1,7 +1,6 @@
-### PF4J 插件系统测试脚本
+﻿### PF4J 插件系统测试脚本
 ### 使用 IDEA HTTP Client 执行测试
 
-### 变量配置
 @baseUrl = http://localhost:8089
 
 ### ================================
@@ -9,88 +8,148 @@
 ### ================================
 
 ### TC-1.1 扫描插件目录
-# @name 扫描插件
 POST {{baseUrl}}/plugin/admin/rescan
 
 ###
 
 ### TC-1.2 获取插件列表
-# @name 获取插件列表
 GET {{baseUrl}}/plugin/admin/list
 
 ###
 
-### TC-1.4 获取插件详情
-# @name 获取插件详情
+### TC-1.3 获取插件详情
 GET {{baseUrl}}/plugin/admin/info/demo-plugin
 
 ###
 
-### TC-1.5 停止插件
-# @name 停止插件
+### TC-1.4 停止插件
 POST {{baseUrl}}/plugin/admin/stop/demo-plugin
 
 ###
 
-### TC-1.6 启动插件
-# @name 启动插件
+### TC-1.5 启动插件
 POST {{baseUrl}}/plugin/admin/start/demo-plugin
 
 ###
 
-### TC-1.7 重载插件（热更新）
-# @name 重载插件
+### TC-1.6 重载插件
 POST {{baseUrl}}/plugin/admin/reload/demo-plugin
 
 ###
 
-### TC-1.8 卸载插件
-# @name 卸载插件
+### TC-1.7 卸载插件
 POST {{baseUrl}}/plugin/admin/uninstall/demo-plugin
 
 ###
 
-
 ### ================================
-### 模块 2: Demo 插件功能测试
-### ================================
-
-### TC-2.1 Hello API 测试
-# @name 测试 Hello API
-GET {{baseUrl}}/demo/hello?name=Claude
-
-###
-
-### TC-2.2 Hello API 默认参数
-# @name 测试 Hello API 默认参数
-GET {{baseUrl}}/demo/hello
-
-###
-
-### TC-2.3 插件信息 API
-# @name 获取插件信息
-GET {{baseUrl}}/demo/info
-
-###
-
-
-### ================================
-### 模块 4: 边界条件测试
+### 模块 2: 运行态与治理 API
 ### ================================
 
-### TC-4.2 操作已停止的插件
-# @name 操作已停止的插件
-POST {{baseUrl}}/plugin/admin/stop/demo-plugin
-
-###
-
-### TC-4.3 操作不存在的插件
-# @name 操作不存在的插件
-POST {{baseUrl}}/plugin/admin/start/non-existent-plugin
-
-###
-### TC-5.1 ��ʼ��ͬ���������
-# @name ��ʼ��ͬ��
+### TC-2.1 初始化同步插件数据
 POST {{baseUrl}}/plugin/admin/init-sync
+
+###
+
+### TC-2.2 运行态总览
+GET {{baseUrl}}/plugin/admin/runtime/summary
+
+###
+
+### TC-2.3 插件运行态详情
+GET {{baseUrl}}/plugin/admin/runtime/demo-plugin
+
+###
+
+### TC-2.4 扫描新插件
+POST {{baseUrl}}/plugin/admin/scan-new
+
+###
+
+### TC-2.5 同步插件入库
+POST {{baseUrl}}/plugin/admin/sync
+
+###
+
+### TC-2.6 插件对齐 DryRun
+POST {{baseUrl}}/plugin/admin/reconcile
+Content-Type: application/json
+
+{
+  "dryRun": true
+}
+
+###
+
+### TC-2.7 启用插件
+POST {{baseUrl}}/plugin/admin/enable/demo-plugin
+
+###
+
+### TC-2.8 禁用插件
+POST {{baseUrl}}/plugin/admin/disable/demo-plugin
+
+###
+
+### TC-2.9 插件健康检查
+GET {{baseUrl}}/plugin/admin/health/demo-plugin
+
+###
+
+### TC-2.10 审计日志查询
+GET {{baseUrl}}/plugin/admin/audit/list?limit=50&pluginId=demo-plugin&action=start
+
+###
+
+### ================================
+### 模块 3: 安装入口统一（install）
+### ================================
+
+### TC-3.1 统一安装 - 本地路径
+POST {{baseUrl}}/plugin/admin/install
+Content-Type: application/json
+
+{
+  "source": "LOCAL_PATH",
+  "jarPath": "D:/IdeaProjects/magic-boot/plugins/magic-plugin-demo.jar"
+}
+
+###
+
+### TC-3.2 统一安装 - 远程 URL
+POST {{baseUrl}}/plugin/admin/install
+Content-Type: application/json
+
+{
+  "source": "REMOTE_URL",
+  "url": "https://example.com/magic-plugin-demo.jar"
+}
+
+###
+
+### TC-3.3 旧接口应返回 404（已移除）
+POST {{baseUrl}}/plugin/admin/install/by-path
+Content-Type: application/json
+
+{
+  "jarPath": "D:/IdeaProjects/magic-boot/plugins/magic-plugin-demo.jar"
+}
+
+###
+
+### ================================
+### 模块 4: 上传安装（upload）
+### ================================
+
+### TC-4.1 上传并安装插件（仅文件上传）
+POST {{baseUrl}}/plugin/admin/upload
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="magic-plugin-demo.jar"
+Content-Type: application/java-archive
+
+< D:/IdeaProjects/magic-boot/plugins/magic-plugin-demo.jar
+--WebAppBoundary--
 
 ###

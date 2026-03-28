@@ -16,9 +16,17 @@ import org.ssssssss.magicboot.pf4j.mapper.PluginInfoMapper;
 import org.ssssssss.magicboot.pf4j.model.PluginStatus;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -78,6 +86,43 @@ public class PluginManagerService {
         return new ArrayList<>(mergedPlugins.values());
     }
 
+    public Map<String, Object> getRuntimeSummary() {
+        List<PluginWrapper> plugins = pluginManager.getPlugins();
+        Map<String, Long> stateCount = plugins.stream()
+                .collect(Collectors.groupingBy(wrapper -> wrapper.getPluginState().name(), Collectors.counting()));
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("total", plugins.size());
+        result.put("started", stateCount.getOrDefault(PluginState.STARTED.name(), 0L));
+        result.put("stopped", stateCount.getOrDefault(PluginState.STOPPED.name(), 0L));
+        result.put("disabled", stateCount.getOrDefault(PluginState.DISABLED.name(), 0L));
+        result.put("created", stateCount.getOrDefault(PluginState.CREATED.name(), 0L));
+        result.put("resolved", stateCount.getOrDefault(PluginState.RESOLVED.name(), 0L));
+        result.put("unresolved", 0L);
+        result.put("runtimeTime", LocalDateTime.now());
+        return result;
+    }
+
+    public Map<String, Object> getRuntimePluginInfo(String pluginId) {
+        PluginWrapper wrapper = pluginManager.getPlugin(pluginId);
+        if (wrapper == null) {
+            throw new RuntimeException("Plugin runtime not found: " + pluginId);
+        }
+        PluginDescriptor descriptor = wrapper.getDescriptor();
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("pluginId", descriptor.getPluginId());
+        result.put("version", descriptor.getVersion());
+        result.put("provider", descriptor.getProvider());
+        result.put("pluginClass", descriptor.getPluginClass());
+        result.put("runtimeState", wrapper.getPluginState().name());
+        result.put("pluginPath", wrapper.getPluginPath() == null ? "" : wrapper.getPluginPath().toString());
+        result.put("classLoader", wrapper.getPluginClassLoader() == null ? "" : wrapper.getPluginClassLoader().getClass().getName());
+        result.put("dependencies", descriptor.getDependencies());
+        result.put("lastError", "");
+        return result;
+    }
+
     /**
      * 扫描插件目录，返回未安装的新插件列表
      * 注意：此方法只扫描不加载，返回 JAR 文件路径列表
@@ -117,6 +162,72 @@ public class PluginManagerService {
         String pluginId = pluginManager.loadPlugin(path);
         PluginInfo info = savePluginToDatabase(pluginId, path);
         return toPluginMap(info);
+    }
+
+    /**
+     * 统一安装入口，通过 source 区分本地路径和远程 URL。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> installPluginBySource(String source, String jarPath, String url) {
+        if (source == null || source.isBlank()) {
+            throw new IllegalArgumentException("source 不能为空，支持 LOCAL_PATH 或 REMOTE_URL");
+        }
+
+        String normalized = source.trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "LOCAL_PATH" -> {
+                if (jarPath == null || jarPath.isBlank()) {
+                    throw new IllegalArgumentException("source=LOCAL_PATH 时 jarPath 不能为空");
+                }
+                yield loadAndInstallPlugin(jarPath);
+            }
+            case "REMOTE_URL" -> {
+                if (url == null || url.isBlank()) {
+                    throw new IllegalArgumentException("source=REMOTE_URL 时 url 不能为空");
+                }
+                yield installFromRemoteUrl(url);
+            }
+            default -> throw new IllegalArgumentException("source 非法，仅支持 LOCAL_PATH 或 REMOTE_URL");
+        };
+    }
+
+    /**
+     * 远程下载安装插件（基础 HTTP/HTTPS 能力）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> installFromRemoteUrl(String url) {
+        URI uri = parseAndValidateRemoteUri(url);
+        String fileName = resolveRemoteJarName(uri);
+
+        Path tempFile = null;
+        Path finalFile = null;
+        try {
+            Path pluginDir = ensurePluginDirectoryExists();
+            tempFile = pluginDir.resolve(fileName + ".download");
+            finalFile = pluginDir.resolve(fileName);
+
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(20))
+                    .build();
+            HttpRequest request = HttpRequest.newBuilder(uri)
+                    .timeout(Duration.ofSeconds(60))
+                    .GET()
+                    .build();
+            HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new RuntimeException("远程下载失败，HTTP 状态码：" + response.statusCode());
+            }
+
+            Files.write(tempFile, response.body());
+            Files.move(tempFile, finalFile, StandardCopyOption.REPLACE_EXISTING);
+            return loadAndInstallPlugin(finalFile.toString());
+        } catch (IllegalArgumentException e) {
+            cleanupDownloadedFiles(tempFile, finalFile);
+            throw e;
+        } catch (Exception e) {
+            cleanupDownloadedFiles(tempFile, finalFile);
+            throw new RuntimeException("远程下载安装失败：" + e.getMessage(), e);
+        }
     }
 
     /**
@@ -177,6 +288,96 @@ public class PluginManagerService {
         result.put("runtimeTotal", pluginManager.getPlugins().size());
         result.put("inserted", inserted);
         result.put("skipped", skipped);
+        return result;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> reconcilePlugins(boolean dryRun) {
+        List<PluginInfo> dbPlugins = pluginInfoMapper.selectList(new LambdaQueryWrapper<>());
+        Map<String, PluginInfo> dbByPluginId = dbPlugins.stream()
+                .collect(Collectors.toMap(PluginInfo::getPluginId, p -> p, (a, b) -> a, LinkedHashMap::new));
+
+        List<PluginWrapper> runtimePlugins = pluginManager.getPlugins();
+        Map<String, PluginWrapper> runtimeByPluginId = runtimePlugins.stream()
+                .collect(Collectors.toMap(PluginWrapper::getPluginId, p -> p, (a, b) -> a, LinkedHashMap::new));
+
+        Set<String> missingInDb = runtimeByPluginId.keySet().stream()
+                .filter(id -> !dbByPluginId.containsKey(id))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        Set<String> missingInRuntime = dbByPluginId.keySet().stream()
+                .filter(id -> !runtimeByPluginId.containsKey(id))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        List<String> missingInDir = dbPlugins.stream()
+                .filter(this::hasJarPath)
+                .filter(info -> !Files.exists(Paths.get(info.getJarPath())))
+                .map(PluginInfo::getPluginId)
+                .collect(Collectors.toList());
+
+        int fixedCount = 0;
+        List<String> fixedActions = new ArrayList<>();
+        List<String> failedActions = new ArrayList<>();
+
+        if (!dryRun) {
+            for (String pluginId : missingInDb) {
+                try {
+                    PluginInfo info = buildPluginInfoFromRuntime(runtimeByPluginId.get(pluginId));
+                    pluginInfoMapper.insert(info);
+                    fixedCount++;
+                    fixedActions.add("insert-db:" + pluginId);
+                } catch (Exception ex) {
+                    failedActions.add("insert-db:" + pluginId + ":" + ex.getMessage());
+                }
+            }
+
+            for (String pluginId : missingInRuntime) {
+                PluginInfo info = dbByPluginId.get(pluginId);
+                if (info == null || !hasJarPath(info)) {
+                    failedActions.add("load-runtime:" + pluginId + ":jarPath-empty");
+                    continue;
+                }
+                try {
+                    Path jarPath = Paths.get(info.getJarPath());
+                    if (!Files.exists(jarPath)) {
+                        failedActions.add("load-runtime:" + pluginId + ":jar-not-found");
+                        continue;
+                    }
+                    pluginManager.loadPlugin(jarPath);
+                    if (pluginProperties.isAutoStart()) {
+                        pluginManager.startPlugin(pluginId);
+                    }
+                    fixedCount++;
+                    fixedActions.add("load-runtime:" + pluginId);
+                } catch (Exception ex) {
+                    failedActions.add("load-runtime:" + pluginId + ":" + ex.getMessage());
+                }
+            }
+
+            for (String pluginId : missingInDir) {
+                try {
+                    PluginInfo info = dbByPluginId.get(pluginId);
+                    if (info != null && !PluginStatus.ERROR.name().equals(info.getStatus())) {
+                        info.setStatus(PluginStatus.ERROR.name());
+                        info.setUpdateTime(LocalDateTime.now());
+                        pluginInfoMapper.updateById(info);
+                        fixedCount++;
+                        fixedActions.add("mark-error:" + pluginId);
+                    }
+                } catch (Exception ex) {
+                    failedActions.add("mark-error:" + pluginId + ":" + ex.getMessage());
+                }
+            }
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("dryRun", dryRun);
+        result.put("missingInDb", new ArrayList<>(missingInDb));
+        result.put("missingInRuntime", new ArrayList<>(missingInRuntime));
+        result.put("missingInDir", missingInDir);
+        result.put("fixedCount", fixedCount);
+        result.put("fixedActions", fixedActions);
+        result.put("failedActions", failedActions);
         return result;
     }
 
@@ -344,6 +545,39 @@ public class PluginManagerService {
     /**
      * 重新扫描插件目录
      */
+    public Map<String, Object> enablePlugin(String pluginId) {
+        PluginWrapper wrapper = pluginManager.getPlugin(pluginId);
+        if (wrapper == null) {
+            throw new RuntimeException("Plugin not found: " + pluginId);
+        }
+        pluginManager.enablePlugin(pluginId);
+
+        PluginWrapper updated = pluginManager.getPlugin(pluginId);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("pluginId", pluginId);
+        result.put("runtimeState", updated == null ? "UNKNOWN" : updated.getPluginState().name());
+        result.put("note", "runtime-only enable");
+        return result;
+    }
+
+    public Map<String, Object> disablePlugin(String pluginId) {
+        PluginWrapper wrapper = pluginManager.getPlugin(pluginId);
+        if (wrapper == null) {
+            throw new RuntimeException("Plugin not found: " + pluginId);
+        }
+        if (wrapper.getPluginState() == PluginState.STARTED) {
+            pluginManager.stopPlugin(pluginId);
+        }
+        pluginManager.disablePlugin(pluginId);
+
+        PluginWrapper updated = pluginManager.getPlugin(pluginId);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("pluginId", pluginId);
+        result.put("runtimeState", updated == null ? "UNKNOWN" : updated.getPluginState().name());
+        result.put("note", "runtime-only disable");
+        return result;
+    }
+
     public List<String> rescanPlugins() {
         List<String> loadedPlugins = new ArrayList<>();
         List<Path> pluginJars = getPluginJars();
@@ -366,6 +600,75 @@ public class PluginManagerService {
     /**
      * 保存插件到数据库
      */
+    public Map<String, Object> getPluginHealth(String pluginId) {
+        PluginInfo dbInfo = getPluginInfoByPluginId(pluginId);
+        PluginWrapper runtime = pluginManager.getPlugin(pluginId);
+
+        boolean inDb = dbInfo != null;
+        boolean inRuntime = runtime != null;
+        String jarPath = inDb
+                ? Optional.ofNullable(dbInfo.getJarPath()).orElse("")
+                : (runtime != null && runtime.getPluginPath() != null ? runtime.getPluginPath().toString() : "");
+        boolean jarExists = !jarPath.isBlank() && Files.exists(Paths.get(jarPath));
+
+        String health;
+        if (inRuntime && jarExists) {
+            health = "UP";
+        } else if (inDb || inRuntime) {
+            health = "WARN";
+        } else {
+            health = "DOWN";
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("pluginId", pluginId);
+        result.put("health", health);
+        result.put("inDb", inDb);
+        result.put("inRuntime", inRuntime);
+        result.put("runtimeState", runtime == null ? "NOT_LOADED" : runtime.getPluginState().name());
+        result.put("jarPath", jarPath);
+        result.put("jarExists", jarExists);
+        result.put("checkedAt", LocalDateTime.now());
+        return result;
+    }
+
+    public List<Map<String, Object>> listAuditLogs(int limit, String pluginId, String action) {
+        int safeLimit = Math.max(1, Math.min(limit, 500));
+        List<String> candidates = List.of("logs/all.log", "logs/error.log");
+        Deque<Map<String, Object>> deque = new ArrayDeque<>();
+
+        for (String file : candidates) {
+            Path logPath = Paths.get(file);
+            if (!Files.exists(logPath)) {
+                continue;
+            }
+            try {
+                List<String> lines = Files.readAllLines(logPath, StandardCharsets.UTF_8);
+                for (String line : lines) {
+                    if (!isAuditLine(line)) {
+                        continue;
+                    }
+                    if (pluginId != null && !pluginId.isBlank() && !line.contains(pluginId)) {
+                        continue;
+                    }
+                    if (action != null && !action.isBlank() && !line.toLowerCase(Locale.ROOT).contains(action.toLowerCase(Locale.ROOT))) {
+                        continue;
+                    }
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("source", file);
+                    item.put("content", line);
+                    deque.addLast(item);
+                    while (deque.size() > safeLimit) {
+                        deque.removeFirst();
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Read audit log failed: {}", file, e);
+            }
+        }
+        return new ArrayList<>(deque);
+    }
+
     private PluginInfo savePluginToDatabase(String pluginId, Path jarPath) {
         PluginWrapper wrapper = pluginManager.getPlugin(pluginId);
         PluginDescriptor descriptor = wrapper.getDescriptor();
@@ -435,6 +738,52 @@ public class PluginManagerService {
         return result;
     }
 
+    private Path ensurePluginDirectoryExists() throws IOException {
+        Path pluginPath = Paths.get(pluginProperties.getDir()).toAbsolutePath();
+        if (!Files.exists(pluginPath)) {
+            Files.createDirectories(pluginPath);
+        }
+        return pluginPath;
+    }
+
+    private URI parseAndValidateRemoteUri(String url) {
+        try {
+            URI uri = new URI(url.trim());
+            String scheme = uri.getScheme();
+            if (scheme == null || (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme))) {
+                throw new IllegalArgumentException("url 必须是 http 或 https 协议");
+            }
+            return uri;
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("url 格式不正确");
+        }
+    }
+
+    private String resolveRemoteJarName(URI uri) {
+        String path = uri.getPath();
+        if (path == null || path.isBlank()) {
+            throw new IllegalArgumentException("远程 URL 缺少文件路径");
+        }
+        String fileName = Paths.get(path).getFileName().toString();
+        if (fileName.isBlank() || !fileName.toLowerCase(Locale.ROOT).endsWith(".jar")) {
+            throw new IllegalArgumentException("远程 URL 必须以 .jar 结尾");
+        }
+        return fileName;
+    }
+
+    private void cleanupDownloadedFiles(Path tempFile, Path finalFile) {
+        try {
+            if (tempFile != null) {
+                Files.deleteIfExists(tempFile);
+            }
+            if (finalFile != null) {
+                Files.deleteIfExists(finalFile);
+            }
+        } catch (IOException ex) {
+            log.warn("清理下载文件失败", ex);
+        }
+    }
+
     /**
      * 转换为 Map
      */
@@ -501,5 +850,27 @@ public class PluginManagerService {
             case DISABLED -> PluginStatus.DISABLED;
             default -> PluginStatus.CREATED;
         };
+    }
+
+    private boolean hasJarPath(PluginInfo info) {
+        return info.getJarPath() != null && !info.getJarPath().isBlank();
+    }
+
+    private boolean isAuditLine(String line) {
+        if (line == null || line.isBlank()) {
+            return false;
+        }
+        String lower = line.toLowerCase(Locale.ROOT);
+        return lower.contains("plugin")
+                || lower.contains("install")
+                || lower.contains("uninstall")
+                || lower.contains("start plugin")
+                || lower.contains("stop plugin")
+                || lower.contains("reload")
+                || lower.contains("rescan")
+                || lower.contains("init-sync")
+                || lower.contains("sync")
+                || lower.contains("enable")
+                || lower.contains("disable");
     }
 }
