@@ -306,3 +306,4 @@ plugin:
   dir: ./plugins/           # 插件目录
   auto-load: true            # 启动时自动加载插件
   auto-start: true           # 加载后自动启动插件
+  init-sync-on-startup: true # 启动后将运行态插件增量同步到数据库

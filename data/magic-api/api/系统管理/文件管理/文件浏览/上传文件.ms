@@ -5,16 +5,16 @@
   "groupId" : "filemgr001",
   "name" : "上传文件",
   "createTime" : null,
-  "updateTime" : null,
+  "updateTime" : 1774532112235,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/upload",
   "method" : "POST",
   "parameters" : [ {
     "name" : "uploadPath",
     "value" : "/",
-    "description" : "上传目标路径",
+    "description" : "Upload target directory",
     "required" : false,
     "dataType" : "String",
     "type" : null,
@@ -26,7 +26,7 @@
   }, {
     "name" : "storageKey",
     "value" : null,
-    "description" : "存储源标识（可选）",
+    "description" : "Storage key",
     "required" : false,
     "dataType" : "String",
     "type" : null,
@@ -41,7 +41,7 @@
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : null,
-  "description" : "上传文件到指定路径",
+  "description" : "Upload file to target path",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
 }
@@ -50,30 +50,30 @@ import cn.hutool.core.util.StrUtil
 import request
 import file
 
-// 获取路径参数
 if(StrUtil.isBlank(uploadPath)){
     uploadPath = '/'
 }
 
-// 确保路径以 / 结尾
 if(!uploadPath.endsWith('/')){
     uploadPath = uploadPath + '/'
 }
 
-// 获取上传的文件
 var uploadFile = request.getFile('file')
 if(uploadFile == null || uploadFile.isEmpty()){
     exit 0, '请选择要上传的文件'
 }
 
-// 选择存储源
 var fileModule = file
 if(StrUtil.isNotBlank(storageKey)){
     fileModule = file.use(storageKey)
 }
 
-// 使用 file 模块上传文件
-var result = fileModule.upload(uploadPath, uploadFile)
+var originalFilename = uploadFile.getOriginalFilename()
+if(StrUtil.isBlank(originalFilename)){
+    originalFilename = 'upload.bin'
+}
+
+var result = fileModule.upload(uploadPath, uploadFile.getInputStream(), originalFilename)
 
 if(result == null){
     exit 0, '上传失败'

@@ -304,7 +304,7 @@ public class MagicFileController extends MagicController implements MagicExcepti
         basePath.setLabel("存储路径");
         basePath.setType("text");
         basePath.setRequired(true);
-        basePath.setPlaceholder("例如: D:/mb/upload/");
+        basePath.setPlaceholder("upload/");
         fields.add(basePath);
 
         StorageType.StorageTypeField domain = new StorageType.StorageTypeField();

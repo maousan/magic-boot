@@ -15,7 +15,8 @@ export default {
                 type: '存储类型：local(本地)、s3(Amazon S3)、minio(MinIO)'
             },
             type: '类型',
-            basePath: '存储路径',
+            basePath: '基础路径',
+            storagePath: '存储路径',
             domain: '访问域名',
             endpoint: 'Endpoint URL',
             bucket: 'Bucket 名称',

@@ -5,7 +5,7 @@
   "groupId" : "filemgr001",
   "name" : "获取文件列表",
   "createTime" : null,
-  "updateTime" : 1774507219862,
+  "updateTime" : 1774508295498,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -25,7 +25,7 @@
     "children" : null
   }, {
     "name" : "parentPath",
-    "value" : "/111",
+    "value" : "/",
     "description" : "目录路径（兼容参数）",
     "required" : false,
     "dataType" : "String",
@@ -52,7 +52,7 @@
   "requestBody" : "",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": {\n        \"total\": 1,\n        \"list\": [\n            {\n                \"id\": \"03c9c17fef1148bab7e8e302c7da1f03\",\n                \"storageKey\": \"local\",\n                \"filePath\": \"/111/2222/\",\n                \"parentId\": \"8041547fc4434022b9b6931bebc44940\",\n                \"fileName\": \"2222\",\n                \"fileType\": \"DIR\",\n                \"fileSize\": 0,\n                \"contentType\": null,\n                \"fileExt\": null,\n                \"url\": null,\n                \"md5\": null,\n                \"createTime\": \"2026-03-26 09:31:50\",\n                \"createBy\": \"system\",\n                \"hasChild\": 0\n            }\n        ]\n    },\n    \"timestamp\": 1774507216628,\n    \"executeTime\": 13\n}",
+  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": {\n        \"total\": 0,\n        \"list\": []\n    },\n    \"timestamp\": 1774508292220,\n    \"executeTime\": 7\n}",
   "description" : "获取指定目录下的直属文件列表",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : {
@@ -137,7 +137,7 @@
           "expression" : "",
           "children" : [ {
             "name" : "id",
-            "value" : "8041547fc4434022b9b6931bebc44940",
+            "value" : "03c9c17fef1148bab7e8e302c7da1f03",
             "description" : "",
             "required" : false,
             "dataType" : "String",
@@ -161,7 +161,7 @@
             "children" : [ ]
           }, {
             "name" : "filePath",
-            "value" : "/111/",
+            "value" : "/111/2222/",
             "description" : "",
             "required" : false,
             "dataType" : "String",
@@ -173,10 +173,10 @@
             "children" : [ ]
           }, {
             "name" : "parentId",
-            "value" : "null",
+            "value" : "8041547fc4434022b9b6931bebc44940",
             "description" : "",
             "required" : false,
-            "dataType" : "Object",
+            "dataType" : "String",
             "type" : null,
             "defaultValue" : null,
             "validateType" : "",
@@ -185,7 +185,7 @@
             "children" : [ ]
           }, {
             "name" : "fileName",
-            "value" : "111",
+            "value" : "2222",
             "description" : "",
             "required" : false,
             "dataType" : "String",
@@ -269,7 +269,7 @@
             "children" : [ ]
           }, {
             "name" : "createTime",
-            "value" : "2026-03-26 09:30:45",
+            "value" : "2026-03-26 09:31:50",
             "description" : "",
             "required" : false,
             "dataType" : "String",
@@ -293,7 +293,7 @@
             "children" : [ ]
           }, {
             "name" : "hasChild",
-            "value" : "1",
+            "value" : "0",
             "description" : "",
             "required" : false,
             "dataType" : "Integer",
@@ -308,7 +308,7 @@
       } ]
     }, {
       "name" : "timestamp",
-      "value" : "1774492544150",
+      "value" : "1774507953670",
       "description" : "",
       "required" : false,
       "dataType" : "Long",
@@ -320,7 +320,7 @@
       "children" : [ ]
     }, {
       "name" : "executeTime",
-      "value" : "37",
+      "value" : "13",
       "description" : "",
       "required" : false,
       "dataType" : "Integer",
@@ -346,6 +346,7 @@ if (StrUtil.isBlank(resolvedStorageKey)) {
 }
 
 var resolvedParentId = null
+var parentPathNotFound = false
 
 if(StrUtil.isNotBlank(parentId)){
     resolvedParentId = parentId
@@ -371,6 +372,17 @@ if(StrUtil.isNotBlank(parentId)){
         parentPath: normalizedDirPath
     })
     resolvedParentId = parent != null ? parent.id : null
+
+    if(!"/".equals(normalizedDirPath) && resolvedParentId == null){
+        parentPathNotFound = true
+    }
+}
+
+if(parentPathNotFound){
+    return {
+        total: 0,
+        list: []
+    }
 }
 
 let sql = """

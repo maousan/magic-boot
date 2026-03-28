@@ -64,6 +64,12 @@ public class MagicDynamicFileClient {
      */
     public synchronized void put(String id, String key, String name, FileStorageService client, Boolean isDefault) {
         String normalizedKey = key == null ? "" : key;
+        FileStorageService oldClient = clients.remove(normalizedKey);
+        if (oldClient != null) {
+            defaultFlags.remove(normalizedKey);
+            destroyClientQuietly(normalizedKey, oldClient);
+            logger.info("replace storage platform, old platform removed first: {}", StringUtils.hasText(normalizedKey) ? normalizedKey : "default");
+        }
         put(id, normalizedKey, name, client);
         boolean markedDefault = Boolean.TRUE.equals(isDefault);
         if (markedDefault) {
@@ -343,6 +349,7 @@ public class MagicDynamicFileClient {
         storageInfoMap.remove(key);
         refreshDefaultKey();
         if (client != null) {
+            destroyClientQuietly(key, client);
             logger.info("删除文件存储配置: {}", key);
         }
     }
@@ -396,5 +403,13 @@ public class MagicDynamicFileClient {
             return;
         }
         defaultKey = clients.keySet().stream().findFirst().orElse(null);
+    }
+
+    private void destroyClientQuietly(String key, FileStorageService client) {
+        try {
+            client.destroy();
+        } catch (Exception e) {
+            logger.warn("destroy storage platform client failed, key={}, error={}", key, e.getMessage());
+        }
     }
 }

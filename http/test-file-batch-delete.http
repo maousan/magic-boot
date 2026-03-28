@@ -1,0 +1,48 @@
+### 批量删除接口测试（DELETE + Body）
+@baseUrl = http://localhost:8089
+
+### TC-1 批量删除（推荐：fileIds）
+DELETE {{baseUrl}}/system/file/browse/batch-delete
+Content-Type: application/json
+
+{
+  "fileIds": [
+    "replace-with-id-1",
+    "replace-with-id-2",
+    "replace-with-id-3"
+  ],
+  "storageKey": "local"
+}
+
+> {%
+client.test("批量删除(fileIds)", function() {
+  client.assert(response.status === 200, "HTTP状态码应为200");
+  client.assert(response.body.total !== undefined, "应返回total");
+  client.assert(response.body.deletedCount !== undefined, "应返回deletedCount");
+  client.assert(response.body.failedCount !== undefined, "应返回failedCount");
+  client.assert(response.body.notFoundCount !== undefined, "应返回notFoundCount");
+  client.assert(Array.isArray(response.body.deleted), "deleted应为数组");
+  client.assert(Array.isArray(response.body.failed), "failed应为数组");
+  client.assert(Array.isArray(response.body.notFound), "notFound应为数组");
+});
+%}
+
+###
+
+### TC-2 批量删除（filePaths）
+DELETE {{baseUrl}}/system/file/browse/batch-delete
+Content-Type: application/json
+
+{
+  "filePaths": [
+    "/batch/batch-file-1.txt",
+    "/batch/batch-file-2.txt"
+  ],
+  "storageKey": "local"
+}
+
+> {%
+client.test("批量删除(filePaths)", function() {
+  client.assert(response.status === 200, "HTTP状态码应为200");
+});
+%}

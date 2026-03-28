@@ -67,6 +67,7 @@ public class FileModule {
         this.storageKey = storageKey;
     }
 
+    @Comment("使用指定存储平台")
     public FileModule use(String key) {
         FileStorageService service = magicDynamicFileClient.getClient(key);
         FileModule module = new FileModule(service);

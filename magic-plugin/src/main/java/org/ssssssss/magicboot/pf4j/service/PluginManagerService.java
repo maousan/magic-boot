@@ -51,9 +51,31 @@ public class PluginManagerService {
      */
     public List<Map<String, Object>> listAllPlugins() {
         List<PluginInfo> dbPlugins = pluginInfoMapper.selectList(new LambdaQueryWrapper<>());
-        return dbPlugins.stream()
+        Map<String, Map<String, Object>> mergedPlugins = new LinkedHashMap<>();
+
+        // 1. 先放入数据库记录
+        dbPlugins.stream()
                 .map(this::toPluginMap)
-                .collect(Collectors.toList());
+                .forEach(item -> mergedPlugins.put((String) item.get("pluginId"), item));
+
+        // 2. 合并 PF4J 运行态插件，避免“已运行但列表不可见”
+        pluginManager.getPlugins().forEach(wrapper -> {
+            String pluginId = wrapper.getPluginId();
+            Map<String, Object> runtimePlugin = toRuntimePluginMap(wrapper);
+            Map<String, Object> dbPlugin = mergedPlugins.get(pluginId);
+            if (dbPlugin == null) {
+                mergedPlugins.put(pluginId, runtimePlugin);
+            } else {
+                dbPlugin.put("runtimeState", runtimePlugin.get("runtimeState"));
+                // 数据库未维护状态时，回退到运行态状态展示
+                if (dbPlugin.get("statusEnum") == null) {
+                    dbPlugin.put("statusEnum", runtimePlugin.get("statusEnum"));
+                    dbPlugin.put("status", runtimePlugin.get("status"));
+                }
+            }
+        });
+
+        return new ArrayList<>(mergedPlugins.values());
     }
 
     /**
@@ -122,6 +144,40 @@ public class PluginManagerService {
         }
 
         return newPlugins;
+    }
+
+    /**
+     * 启动后将 PF4J 运行态插件增量同步到数据库
+     * 仅补录缺失记录，不覆盖已有记录
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> initMissingPluginsFromRuntime() {
+        List<PluginInfo> dbPlugins = pluginInfoMapper.selectList(new LambdaQueryWrapper<>());
+        Set<String> dbPluginIds = dbPlugins.stream()
+                .map(PluginInfo::getPluginId)
+                .collect(Collectors.toSet());
+
+        int inserted = 0;
+        int skipped = 0;
+
+        for (PluginWrapper wrapper : pluginManager.getPlugins()) {
+            String pluginId = wrapper.getPluginId();
+            if (dbPluginIds.contains(pluginId)) {
+                skipped++;
+                continue;
+            }
+            PluginInfo info = buildPluginInfoFromRuntime(wrapper);
+            pluginInfoMapper.insert(info);
+            dbPluginIds.add(pluginId);
+            inserted++;
+            log.info("启动同步补录插件到数据库: {} -> {}", pluginId, info.getJarPath());
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("runtimeTotal", pluginManager.getPlugins().size());
+        result.put("inserted", inserted);
+        result.put("skipped", skipped);
+        return result;
     }
 
     /**
@@ -330,6 +386,27 @@ public class PluginManagerService {
         return info;
     }
 
+    private PluginInfo buildPluginInfoFromRuntime(PluginWrapper wrapper) {
+        PluginDescriptor descriptor = wrapper.getDescriptor();
+        PluginStatus status = mapRuntimeState(wrapper.getPluginState());
+
+        PluginInfo info = new PluginInfo();
+        info.setPluginId(descriptor.getPluginId());
+        info.setPluginName(descriptor.getPluginId());
+        info.setVersion(descriptor.getVersion());
+        info.setDescription("");
+        info.setAuthor(descriptor.getProvider());
+        info.setPluginClass(descriptor.getPluginClass());
+        info.setStatus(status.name());
+        Path pluginPath = wrapper.getPluginPath();
+        info.setJarPath(pluginPath == null ? "" : pluginPath.toString());
+        info.setCreateTime(LocalDateTime.now());
+        info.setUpdateTime(LocalDateTime.now());
+        info.setDependencies(descriptor.getDependencies() == null ? "" : descriptor.getDependencies().toString());
+        info.setProvider(descriptor.getProvider());
+        return info;
+    }
+
     /**
      * 获取插件信息
      */
@@ -387,5 +464,42 @@ public class PluginManagerService {
         }
 
         return map;
+    }
+
+    /**
+     * 将 PF4J 运行时插件转换为列表展示结构（用于未入库插件）
+     */
+    private Map<String, Object> toRuntimePluginMap(PluginWrapper wrapper) {
+        PluginDescriptor descriptor = wrapper.getDescriptor();
+        PluginStatus status = mapRuntimeState(wrapper.getPluginState());
+
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("pluginId", descriptor.getPluginId());
+        map.put("pluginName", descriptor.getPluginId());
+        map.put("version", descriptor.getVersion());
+        map.put("description", "");
+        map.put("author", descriptor.getProvider());
+        map.put("pluginClass", descriptor.getPluginClass());
+        map.put("status", status.toZh());
+        map.put("statusEnum", status.name());
+        map.put("jarPath", "");
+        map.put("createTime", null);
+        map.put("updateTime", null);
+        map.put("dependencies", descriptor.getDependencies());
+        map.put("provider", descriptor.getProvider());
+        map.put("runtimeState", wrapper.getPluginState().name());
+        return map;
+    }
+
+    private PluginStatus mapRuntimeState(PluginState state) {
+        if (state == null) {
+            return PluginStatus.CREATED;
+        }
+        return switch (state) {
+            case STARTED -> PluginStatus.STARTED;
+            case STOPPED -> PluginStatus.STOPPED;
+            case DISABLED -> PluginStatus.DISABLED;
+            default -> PluginStatus.CREATED;
+        };
     }
 }

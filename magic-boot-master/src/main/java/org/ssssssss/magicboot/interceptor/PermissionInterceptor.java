@@ -75,7 +75,7 @@ public class PermissionInterceptor implements RequestInterceptor, HandlerInterce
     }
 
     /**
-     * 检查是否为 GET 请求
+     * 检查是否为 禁止演示环境 请求
      */
     private boolean isDemoDeny(ApiInfo info) {
         String demoDeny = Objects.toString(info.getOptionValue("demo_deny"), "");

@@ -80,6 +80,9 @@
         <!-- PF4J 插件框架 -->
         <pf4j.version>3.13.0</pf4j.version>
         <pf4j-spring.version>0.10.0</pf4j-spring.version>
+
+        <!-- SQL 引擎 -->
+        <calcite.version>1.36.0</calcite.version>
     </properties>
 
     <dependencyManagement>
@@ -358,6 +361,22 @@
                 <artifactId>x-file-storage-spring</artifactId>
                 <version>${x-file-storage.version}</version>
             </dependency>
+
+            <!-- sql 引擎 -->
+            <!-- Calcite 核心引擎，包含SQL解析器、优化器 -->
+            <dependency>
+                <groupId>org.apache.calcite</groupId>
+                <artifactId>calcite-core</artifactId>
+                <version>${calcite.version}</version>
+            </dependency>
+
+            <!-- Calcite 的 linq4j 库，提供内存数据处理和 Enumerable API -->
+            <dependency>
+                <groupId>org.apache.calcite</groupId>
+                <artifactId>calcite-linq4j</artifactId>
+                <version>${calcite.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 

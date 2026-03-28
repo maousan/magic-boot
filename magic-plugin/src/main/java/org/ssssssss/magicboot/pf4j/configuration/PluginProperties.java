@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
  *   dir: D:/mb/plugins/
  *   auto-load: true
  *   auto-start: true
+ *   init-sync-on-startup: true
  *   enabled: true
  * </pre>
  */
@@ -41,4 +42,9 @@ public class PluginProperties {
      * 仅当 autoLoad 为 true 时生效
      */
     private boolean autoStart = true;
+
+    /**
+     * 是否在启动后将运行态插件增量同步到数据库
+     */
+    private boolean initSyncOnStartup = true;
 }

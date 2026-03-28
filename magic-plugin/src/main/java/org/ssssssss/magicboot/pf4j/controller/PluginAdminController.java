@@ -142,6 +142,20 @@ public class PluginAdminController {
         }
     }
 
+    /**
+     * 手动触发运行态插件增量同步到数据库
+     */
+    @PostMapping("/init-sync")
+    public ResponseEntity<?> initSyncPlugins() {
+        try {
+//            StpUtil.checkLogin();
+            Map<String, Object> result = pluginManagerService.initMissingPluginsFromRuntime();
+            return ResponseEntity.ok(success(result));
+        } catch (Exception e) {
+            return ResponseEntity.ok(error("初始化插件同步失败：" + e.getMessage()));
+        }
+    }
+
     private Map<String, Object> success(Object data) {
         Map<String, Object> result = new HashMap<>();
         result.put("code", 200);

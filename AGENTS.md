@@ -1,11 +1,3 @@
-## 开发环境
-
-- Windows 开发环境
-
-## AGENT行为
-
-- 使用中文回复
-
 ## 构建与运行命令
 
 ```bash
@@ -43,9 +35,6 @@
 ### magic-api 集成
 
 - API 脚本位于 `data/magic-api/`（`.ms` 文件）
-- Web 管理界面：`/magic/web`（admin/admin123456）
-- SpringDoc：`/v3/api-docs/magic-api/openapi.json`
-- Swagger UI：`/swagger-ui.html`
 
 ### PF4J 插件系统
 
@@ -63,24 +52,6 @@
 
 - 开关：`extend.redis.enabled`
 
-### WebSocket
-
-- 日志流端点：`/log`
-
-## 配置
-
-主配置文件：`magic-boot-master/src/main/resources/application.yml`
-
-关键项：
-
-- 服务端口：`8089`
-- 上传目录：`./upload/`
-- 插件目录：`./plugins/`
-- magic-api 资源位置：`data/magic-api`
-- Redis 开关：`extend.redis.enabled`
-
-Profiles：`dev`（默认）、`demo`、`online`
-
 ## 开发规则
 
 - 修改代码后不需要主动编译，用户会自行编译测试
@@ -94,4 +65,11 @@ Profiles：`dev`（默认）、`demo`、`online`
 
 ## 其他
 
+- 使用中文回复
+- 新增特性或功能前，必须生成计划文档，保存到项目文件夹`.claude/plans`
+- 功能调整或者功能重构，必须生成变更日志文档
 - 新增特性或功能后，需生成里程碑文档
+- 源码文件统一保存为 UTF-8 无 BOM，行尾为 CRLF（Windows）
+
+## File Encoding & Line Endings
+- All newly created or modified files must use UTF-8 encoding without BOM and Windows (CRLF) line endings.

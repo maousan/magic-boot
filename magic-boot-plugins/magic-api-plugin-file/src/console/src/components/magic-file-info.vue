@@ -25,7 +25,11 @@
             <template v-if="info.type === 'local'">
                 <div class="magic-form-row">
                     <label>{{ $i("file.form.basePath") }}</label>
-                    <magic-input v-model:value="properties.basePath" placeholder="D:/mb/upload/" />
+                    <magic-input v-model:value="properties.basePath" placeholder="/" />
+                </div>
+                <div class="magic-form-row">
+                  <label>{{ $i("file.form.storagePath") }}</label>
+                  <magic-input v-model:value="properties.storagePath" placeholder="upload/" />
                 </div>
                 <div class="magic-form-row">
                     <label>{{ $i("file.form.domain") }}</label>
@@ -101,7 +105,8 @@ const initProperties = () => {
 const handleTypeChange = (type) => {
     if (type === "local") {
         properties.value = {
-            basePath: "D:/mb/upload/",
+            basePath: "/",
+            storagePath: "./upload",
             domain: "http://localhost:8089",
         };
     } else if (type === "s3") {

@@ -1,0 +1,72 @@
+﻿@baseUrl = http://localhost:8089
+@jobId = 0b605de92ec34e76b3340c565c31f791
+
+### TC-1 暂停任务
+POST {{baseUrl}}/system/job/{{jobId}}/pause
+Content-Type: application/json
+
+{}
+
+> {%
+client.test("暂停任务", function() {
+  client.assert(response.status === 200, "HTTP状态码应为200");
+  client.assert(response.body.code === 200, "业务码应为200");
+});
+%}
+
+###
+
+### TC-2 恢复任务
+POST {{baseUrl}}/system/job/{{jobId}}/resume
+Content-Type: application/json
+
+{}
+
+> {%
+client.test("恢复任务", function() {
+  client.assert(response.status === 200, "HTTP状态码应为200");
+  client.assert(response.body.code === 200, "业务码应为200");
+});
+%}
+
+###
+
+### TC-3 立即执行任务
+POST {{baseUrl}}/system/job/{{jobId}}/trigger
+Content-Type: application/json
+
+{}
+
+> {%
+client.test("立即执行任务", function() {
+  client.assert(response.status === 200, "HTTP状态码应为200");
+  client.assert(response.body.code === 200, "业务码应为200");
+});
+%}
+
+###
+
+### TC-4 查询任务历史
+GET {{baseUrl}}/system/job/{{jobId}}/history?page=1&size=10
+
+> {%
+client.test("查询任务历史", function() {
+  client.assert(response.status === 200, "HTTP状态码应为200");
+  client.assert(response.body.code === 200, "业务码应为200");
+  client.assert(Array.isArray(response.body.data), "data应为数组");
+});
+%}
+
+###
+
+### TC-5 查询任务状态
+GET {{baseUrl}}/system/job/{{jobId}}/state
+
+> {%
+client.test("查询任务状态", function() {
+  client.assert(response.status === 200, "HTTP状态码应为200");
+  client.assert(response.body.code === 200, "业务码应为200");
+  client.assert(response.body.data.exists !== undefined, "应返回exists字段");
+  client.assert(response.body.data.paused !== undefined, "应返回paused字段");
+});
+%}

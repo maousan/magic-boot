@@ -89,3 +89,8 @@ POST {{baseUrl}}/plugin/admin/stop/demo-plugin
 POST {{baseUrl}}/plugin/admin/start/non-existent-plugin
 
 ###
+### TC-5.1 初始化同步插件数据
+# @name 初始化同步
+POST {{baseUrl}}/plugin/admin/init-sync
+
+###
