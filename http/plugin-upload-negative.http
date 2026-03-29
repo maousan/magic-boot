@@ -1,0 +1,41 @@
+### Plugin Upload ZIP - Negative Cases
+
+@baseUrl = http://localhost:8089
+@wrongTypeFile = D:/IdeaProjects/magic-boot/plugins/magic-plugin-demo.jar
+@badZipFile = D:/IdeaProjects/magic-boot/plugins/bad-plugin.zip
+
+### TC-NEG-01 upload non-zip file when zip-only enabled
+POST {{baseUrl}}/plugin/admin/upload
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="magic-plugin-demo.jar"
+Content-Type: application/java-archive
+
+< {{wrongTypeFile}}
+--WebAppBoundary--
+
+### Expected:
+### 1) code = 500
+### 2) errorCode = PLUGIN_UPLOAD_INVALID_TYPE
+
+###
+
+### TC-NEG-02 upload broken zip (missing Manifest or checksum mismatch)
+POST {{baseUrl}}/plugin/admin/upload
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="bad-plugin.zip"
+Content-Type: application/zip
+
+< {{badZipFile}}
+--WebAppBoundary--
+
+### Expected:
+### 1) code = 500
+### 2) errorCode in:
+###    - PLUGIN_UPLOAD_ZIP_STRUCTURE_INVALID
+###    - PLUGIN_MANIFEST_INVALID
+###    - PLUGIN_CHECKSUM_MISMATCH
+###    - PLUGIN_SIGNATURE_INVALID

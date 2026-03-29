@@ -15,6 +15,14 @@ CREATE TABLE `magic_plugin`
     `jar_path`     varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci  NULL DEFAULT NULL,
     `dependencies` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci  NULL DEFAULT NULL,
     `provider`     varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci  NULL DEFAULT NULL,
+    `package_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci   NULL DEFAULT NULL,
+    `package_checksum` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
+    `manifest_version` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
+    `manifest_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL,
+    `requires_magic_boot` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
+    `permissions` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL,
+    `install_source` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
+    `install_time` datetime NULL DEFAULT NULL,
     `create_time`  datetime                                                       NULL DEFAULT NULL,
     `update_time`  datetime                                                       NULL DEFAULT NULL,
     PRIMARY KEY (`id`) USING BTREE,
@@ -25,7 +33,7 @@ CREATE TABLE `magic_plugin`
   ROW_FORMAT = Dynamic;
 
 
--- 插件配置表
+-- 鎻掍欢閰嶇疆琛?
 DROP TABLE IF EXISTS `magic_plugin_config`;
 CREATE TABLE magic_plugin_config
 (
@@ -35,7 +43,7 @@ CREATE TABLE magic_plugin_config
     config_value text
 );
 
--- 插件日志表
+-- 鎻掍欢鏃ュ織琛?
 DROP TABLE IF EXISTS `magic_plugin_log`;
 CREATE TABLE magic_plugin_log
 (

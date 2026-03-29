@@ -1,4 +1,4 @@
-﻿### PF4J 插件系统测试脚本
+### PF4J 插件系统测试脚本
 ### 使用 IDEA HTTP Client 执行测试
 
 @baseUrl = http://localhost:8089
@@ -127,16 +127,6 @@ Content-Type: application/json
 
 ###
 
-### TC-3.3 旧接口应返回 404（已移除）
-POST {{baseUrl}}/plugin/admin/install/by-path
-Content-Type: application/json
-
-{
-  "jarPath": "D:/IdeaProjects/magic-boot/plugins/magic-plugin-demo.jar"
-}
-
-###
-
 ### ================================
 ### 模块 4: 上传安装（upload）
 ### ================================
@@ -146,10 +136,10 @@ POST {{baseUrl}}/plugin/admin/upload
 Content-Type: multipart/form-data; boundary=WebAppBoundary
 
 --WebAppBoundary
-Content-Disposition: form-data; name="file"; filename="magic-plugin-demo.jar"
-Content-Type: application/java-archive
+Content-Disposition: form-data; name="file"; filename="magic-plugin-demo.zip"
+Content-Type: application/zip
 
-< D:/IdeaProjects/magic-boot/plugins/magic-plugin-demo.jar
+< D:/IdeaProjects/magic-boot/plugins/magic-plugin-demo.zip
 --WebAppBoundary--
 
 ###

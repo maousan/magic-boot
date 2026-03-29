@@ -1,0 +1,19 @@
+### Plugin Upload ZIP - Positive Cases
+
+@baseUrl = http://localhost:8089
+@zipFile = D:/IdeaProjects/magic-boot/plugins/magic-plugin-demo.zip
+
+### TC-ZIP-01 upload valid ZIP package
+POST {{baseUrl}}/plugin/admin/upload
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="magic-plugin-demo.zip"
+Content-Type: application/zip
+
+< {{zipFile}}
+--WebAppBoundary--
+
+### Expected:
+### 1) code = 200
+### 2) errorCode = SUCCESS

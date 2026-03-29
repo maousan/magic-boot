@@ -5,17 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * 插件系统配置属性
- *
- * <p>在 application.yml 中配置示例：
- * <pre>
- * plugin:
- *   dir: D:/mb/plugins/
- *   auto-load: true
- *   auto-start: true
- *   init-sync-on-startup: true
- *   enabled: true
- * </pre>
+ * PF4J plugin system properties.
  */
 @Data
 @Component
@@ -23,28 +13,58 @@ import org.springframework.stereotype.Component;
 public class PluginProperties {
 
     /**
-     * 是否启用插件系统
+     * Enable plugin subsystem.
      */
     private boolean enabled = true;
 
     /**
-     * 插件目录
+     * Plugin directory.
      */
     private String dir = "./plugins/";
 
     /**
-     * 是否在应用启动时自动加载插件目录中的所有插件
+     * Auto load plugins on startup.
      */
     private boolean autoLoad = true;
 
     /**
-     * 是否在加载插件后自动启动
-     * 仅当 autoLoad 为 true 时生效
+     * Auto start plugins after loading.
      */
     private boolean autoStart = true;
 
     /**
-     * 是否在启动后将运行态插件增量同步到数据库
+     * Sync runtime plugins into DB after startup.
      */
     private boolean initSyncOnStartup = true;
+
+    /**
+     * Runtime magic-boot version, used by requiresMagicBoot check.
+     */
+    private String runtimeVersion = "";
+
+    /**
+     * Whether upload API only accepts ZIP package.
+     */
+    private boolean uploadZipOnly = true;
+
+    /**
+     * Whether ZIP signature validation is mandatory.
+     */
+    private boolean signatureRequired = true;
+
+    /**
+     * Whether to enforce signature validation in upload flow.
+     * false means signature check is skipped (for compatibility / gray rollout).
+     */
+    private boolean signatureForceVerify = true;
+
+    /**
+     * Signature algorithm, e.g. SHA256withRSA.
+     */
+    private String signatureAlgorithm = "SHA256withRSA";
+
+    /**
+     * Signature public key (PEM or Base64 X509).
+     */
+    private String signaturePublicKey = "";
 }

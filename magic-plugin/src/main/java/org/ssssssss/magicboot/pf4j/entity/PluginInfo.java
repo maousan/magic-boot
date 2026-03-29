@@ -9,75 +9,111 @@ import org.ssssssss.magicboot.pf4j.model.PluginStatus;
 import java.time.LocalDateTime;
 
 /**
- * 插件信息实体
+ * 鎻掍欢淇℃伅瀹炰綋
  */
 @Data
 @TableName("magic_plugin")
 public class PluginInfo {
 
     /**
-     * 主键 ID
+     * 涓婚敭 ID
      */
     @TableId(type = IdType.ASSIGN_UUID)
     private String id;
 
     /**
-     * 插件 ID
+     * 鎻掍欢 ID
      */
     private String pluginId;
 
     /**
-     * 插件名称
+     * 鎻掍欢鍚嶇О
      */
     private String pluginName;
 
     /**
-     * 插件版本
+     * 鎻掍欢鐗堟湰
      */
     private String version;
 
     /**
-     * 插件描述
+     * 鎻掍欢鎻忚堪
      */
     private String description;
 
     /**
-     * 插件作者
+     * 鎻掍欢浣滆€?
      */
     private String author;
 
     /**
-     * 插件类
+     * 鎻掍欢绫?
      */
     private String pluginClass;
 
     /**
-     * 插件状态
+     * 鎻掍欢鐘舵€?
      */
     private String status;
 
     /**
-     * JAR 文件路径
+     * JAR 鏂囦欢璺緞
      */
     private String jarPath;
 
     /**
-     * 创建时间
+     * 鍒涘缓鏃堕棿
      */
     private LocalDateTime createTime;
 
     /**
-     * 更新时间
+     * 鏇存柊鏃堕棿
      */
     private LocalDateTime updateTime;
 
     /**
-     * 插件依赖
+     * 鎻掍欢渚濊禆
      */
     private String dependencies;
 
     /**
-     * 插件提供者
-     */
+     * 鎻掍欢鎻愪緵鑰?     */
     private String provider;
+
+    /**
+     * 瀹夎鍖呯被鍨嬶細ZIP / LEGACY_JAR
+     */
+    private String packageType;
+
+    /**
+     * 瀹夎鍖呮牎楠屽拰锛堥€氬父涓?entryJar sha256锛?     */
+    private String packageChecksum;
+
+    /**
+     * Manifest 鐗堟湰
+     */
+    private String manifestVersion;
+
+    /**
+     * Manifest 鍘熷 JSON
+     */
+    private String manifestJson;
+
+    /**
+     * Manifest 瑕佹眰鐨?magic-boot 鐗堟湰
+     */
+    private String requiresMagicBoot;
+
+    /**
+     * Manifest 鏉冮檺澹版槑锛圝SON锛?     */
+    private String permissions;
+
+    /**
+     * 瀹夎鏉ユ簮锛圲PLOAD_ZIP / UPLOAD_JAR / LOCAL_PATH / REMOTE_URL锛?     */
+    private String installSource;
+
+    /**
+     * 瀹夎鏃堕棿
+     */
+    private LocalDateTime installTime;
 }

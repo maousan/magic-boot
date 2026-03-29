@@ -2,36 +2,35 @@
 
 ## 变更类型
 
-功能调整 / 规范升级
+功能调整 / 安全治理增强
 
-## 变更背景
+## 实际落地内容
 
-现有插件上传入口仅支持 JAR 直传，缺乏包结构规范和平台治理元数据，不利于安全与运维审计。
+- `/plugin/admin/upload` 从“接受 JAR”调整为“仅接受 ZIP”
+- 新增 `ZipPluginInstaller`，实现 ZIP 包处理与治理校验
+- 强制校验 ZIP 包内 `Manifest.json`
+- 强制校验 `entryJar` 存在且为 `.jar`
+- 强制校验 `checksumSha256`
+- 增加 `Manifest.pluginId/version` 与 `plugin.properties` 一致性校验
+- 支持 `requiresMagicBoot` 与运行时版本比较（通过 `plugin.runtimeVersion` 配置）
+- 上传示例与路由测试改为 ZIP 输入
 
-## 变更内容
+## 影响文件
 
-- 上传格式由“支持 JAR 直传”调整为“仅支持 ZIP 包”
-- ZIP 包必须包含 `Manifest.json` 与核心插件 JAR
-- 新增服务端校验链路：结构、Schema、完整性、一致性、兼容性
-- 增加 Manifest 治理字段落库能力
+- `magic-plugin/src/main/java/org/ssssssss/magicboot/pf4j/service/PluginManagerService.java`
+- `magic-plugin/src/main/java/org/ssssssss/magicboot/pf4j/service/ZipPluginInstaller.java`
+- `magic-plugin/src/main/java/org/ssssssss/magicboot/pf4j/configuration/PluginProperties.java`
+- `magic-plugin/src/test/java/org/ssssssss/magicboot/pf4j/service/ZipPluginInstallerTest.java`
+- `magic-plugin/src/test/java/org/ssssssss/magicboot/pf4j/service/PluginManagerServiceTest.java`
+- `magic-plugin/src/test/java/org/ssssssss/magicboot/pf4j/controller/PluginAdminControllerRouteTest.java`
+- `http/test-plugin-api.http`
 
 ## 兼容性说明
 
-- 历史已安装插件记录保持兼容（标记为 `LEGACY_JAR`）
 - 新上传入口不再接受 `.jar`
+- 历史已安装插件的运行与管理能力不受本次上传入口调整影响
 
-## 安全与治理收益
+## 风险与缓解
 
-- 避免非规范包直接安装
-- 提升完整性校验能力（checksum）
-- 为后续签名强校验预留标准字段
-
-## 风险说明
-
-- 发布侧需要切换为 ZIP 打包规范
-- 初期可能出现 Manifest 与插件内部描述不一致导致安装失败
-
-## 风险缓解
-
-- 通过一致性校验给出明确错误码
-- 输出安装失败阶段和原因，降低定位成本
+- 风险：发布侧仍按旧 JAR 直传会失败
+- 缓解：返回明确错误信息，HTTP 示例已更新为 ZIP 上传

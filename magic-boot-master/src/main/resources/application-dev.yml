@@ -12,10 +12,11 @@ spring:
 
 # 上传路径
 upload:
-  dir: ./uploads/
+  dir: uploads/
 
 # 插件路径
 plugin:
-  dir: ./plugins/
+  dir: plugins/
   auto-load: true
-  auto-start: true
+  auto-start: false
+  signature-force-verify: false

@@ -48,7 +48,7 @@ class PluginAdminControllerRouteTest {
     @Test
     @DisplayName("upload route should be available")
     void uploadRoute_shouldBeAvailable() throws Exception {
-        MockMultipartFile file = new MockMultipartFile("file", "demo.jar", "application/java-archive", new byte[]{1, 2, 3});
+        MockMultipartFile file = new MockMultipartFile("file", "demo.zip", "application/zip", new byte[]{1, 2, 3});
         when(pluginManagerService.installPlugin(any())).thenReturn(new PluginInfo());
         mockMvc.perform(multipart("/plugin/admin/upload").file(file))
                 .andExpect(status().isOk());

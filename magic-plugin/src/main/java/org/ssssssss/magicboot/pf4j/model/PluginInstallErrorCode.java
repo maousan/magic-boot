@@ -1,0 +1,16 @@
+package org.ssssssss.magicboot.pf4j.model;
+
+/**
+ * 闁挎瑨顕ら惍渚婄窗閹绘帊娆㈢€瑰顥?娑撳﹣绱跺▽鑽ゆ倞
+ */
+public enum PluginInstallErrorCode {
+    SUCCESS,
+    PLUGIN_UPLOAD_INVALID_TYPE,
+    PLUGIN_UPLOAD_ZIP_STRUCTURE_INVALID,
+    PLUGIN_MANIFEST_INVALID,
+    PLUGIN_CHECKSUM_MISMATCH,
+    PLUGIN_SIGNATURE_INVALID,
+    PLUGIN_DESCRIPTOR_MISMATCH,
+    PLUGIN_VERSION_INCOMPATIBLE,
+    PLUGIN_INSTALL_FAILED
+}

@@ -13,6 +13,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.ssssssss.magicboot.pf4j.configuration.PluginProperties;
 import org.ssssssss.magicboot.pf4j.entity.PluginInfo;
 import org.ssssssss.magicboot.pf4j.mapper.PluginInfoMapper;
+import org.ssssssss.magicboot.pf4j.model.PluginInstallErrorCode;
+import org.ssssssss.magicboot.pf4j.model.PluginInstallException;
 import org.ssssssss.magicboot.pf4j.model.PluginStatus;
 
 import java.io.IOException;
@@ -32,7 +34,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 插件管理核心服务
+
  */
 @Slf4j
 @Service
@@ -42,6 +44,7 @@ public class PluginManagerService {
     private final PluginManager pluginManager;
     private final PluginInfoMapper pluginInfoMapper;
     private final PluginProperties pluginProperties;
+    private final ZipPluginInstaller zipPluginInstaller;
 
     public PluginManagerService(PluginManager pluginManager,
                                 PluginInfoMapper pluginInfoMapper,
@@ -49,24 +52,25 @@ public class PluginManagerService {
         this.pluginManager = pluginManager;
         this.pluginInfoMapper = pluginInfoMapper;
         this.pluginProperties = pluginProperties;
+        this.zipPluginInstaller = new ZipPluginInstaller(pluginProperties);
     }
 
-    // ==================== 查询方法 ====================
+    // ====================
 
     /**
-     * 获取所有已安装的插件列表
-     * 注意：此方法只负责查询，不会触发任何加载操作
+
+
      */
     public List<Map<String, Object>> listAllPlugins() {
         List<PluginInfo> dbPlugins = pluginInfoMapper.selectList(new LambdaQueryWrapper<>());
         Map<String, Map<String, Object>> mergedPlugins = new LinkedHashMap<>();
 
-        // 1. 先放入数据库记录
+
         dbPlugins.stream()
                 .map(this::toPluginMap)
                 .forEach(item -> mergedPlugins.put((String) item.get("pluginId"), item));
 
-        // 2. 合并 PF4J 运行态插件，避免“已运行但列表不可见”
+
         pluginManager.getPlugins().forEach(wrapper -> {
             String pluginId = wrapper.getPluginId();
             Map<String, Object> runtimePlugin = toRuntimePluginMap(wrapper);
@@ -75,7 +79,7 @@ public class PluginManagerService {
                 mergedPlugins.put(pluginId, runtimePlugin);
             } else {
                 dbPlugin.put("runtimeState", runtimePlugin.get("runtimeState"));
-                // 数据库未维护状态时，回退到运行态状态展示
+
                 if (dbPlugin.get("statusEnum") == null) {
                     dbPlugin.put("statusEnum", runtimePlugin.get("statusEnum"));
                     dbPlugin.put("status", runtimePlugin.get("status"));
@@ -124,8 +128,8 @@ public class PluginManagerService {
     }
 
     /**
-     * 扫描插件目录，返回未安装的新插件列表
-     * 注意：此方法只扫描不加载，返回 JAR 文件路径列表
+
+
      */
     public List<String> scanNewPlugins() {
         List<String> newPlugins = new ArrayList<>();
@@ -137,7 +141,7 @@ public class PluginManagerService {
         List<Path> pluginJars = getPluginJars();
         for (Path jarPath : pluginJars) {
             try {
-                // 临时加载以获取 pluginId，然后立即卸载
+
                 String pluginId = pluginManager.loadPlugin(jarPath);
                 pluginManager.unloadPlugin(pluginId);
 
@@ -145,7 +149,7 @@ public class PluginManagerService {
                     newPlugins.add(jarPath.toString());
                 }
             } catch (Exception e) {
-                log.warn("扫描插件失败：{}", jarPath, e);
+                log.warn("Scan plugin failed: {}", jarPath, e);
             }
         }
 
@@ -153,8 +157,8 @@ public class PluginManagerService {
     }
 
     /**
-     * 加载并安装插件
-     * @param jarPath JAR 文件路径
+
+
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> loadAndInstallPlugin(String jarPath) {
@@ -165,34 +169,34 @@ public class PluginManagerService {
     }
 
     /**
-     * 统一安装入口，通过 source 区分本地路径和远程 URL。
+
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> installPluginBySource(String source, String jarPath, String url) {
         if (source == null || source.isBlank()) {
-            throw new IllegalArgumentException("source 不能为空，支持 LOCAL_PATH 或 REMOTE_URL");
+            throw new IllegalArgumentException("source cannot be blank, supported values: LOCAL_PATH or REMOTE_URL");
         }
 
         String normalized = source.trim().toUpperCase(Locale.ROOT);
         return switch (normalized) {
             case "LOCAL_PATH" -> {
                 if (jarPath == null || jarPath.isBlank()) {
-                    throw new IllegalArgumentException("source=LOCAL_PATH 时 jarPath 不能为空");
+                    throw new IllegalArgumentException("source=LOCAL_PATH requires jarPath");
                 }
                 yield loadAndInstallPlugin(jarPath);
             }
             case "REMOTE_URL" -> {
                 if (url == null || url.isBlank()) {
-                    throw new IllegalArgumentException("source=REMOTE_URL 时 url 不能为空");
+                    throw new IllegalArgumentException("source=REMOTE_URL requires url");
                 }
                 yield installFromRemoteUrl(url);
             }
-            default -> throw new IllegalArgumentException("source 非法，仅支持 LOCAL_PATH 或 REMOTE_URL");
+            default -> throw new IllegalArgumentException("invalid source, only LOCAL_PATH or REMOTE_URL is supported");
         };
     }
 
     /**
-     * 远程下载安装插件（基础 HTTP/HTTPS 能力）。
+
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> installFromRemoteUrl(String url) {
@@ -215,7 +219,7 @@ public class PluginManagerService {
                     .build();
             HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new RuntimeException("远程下载失败，HTTP 状态码：" + response.statusCode());
+                throw new RuntimeException("Remote download failed, HTTP status: " + response.statusCode());
             }
 
             Files.write(tempFile, response.body());
@@ -226,13 +230,13 @@ public class PluginManagerService {
             throw e;
         } catch (Exception e) {
             cleanupDownloadedFiles(tempFile, finalFile);
-            throw new RuntimeException("远程下载安装失败：" + e.getMessage(), e);
+            throw new RuntimeException("Remote download install failed: " + e.getMessage(), e);
         }
     }
 
     /**
-     * 同步插件：扫描目录并安装所有新插件
-     * @return 新安装的插件列表
+
+
      */
     public List<Map<String, Object>> syncPlugins() {
         List<Map<String, Object>> newPlugins = new ArrayList<>();
@@ -250,7 +254,7 @@ public class PluginManagerService {
                     newPlugins.add(toPluginMap(info));
                 }
             } catch (Exception e) {
-                log.warn("加载插件失败：{}", jarPath, e);
+                log.warn("Load plugin failed: {}", jarPath, e);
             }
         }
 
@@ -258,8 +262,8 @@ public class PluginManagerService {
     }
 
     /**
-     * 启动后将 PF4J 运行态插件增量同步到数据库
-     * 仅补录缺失记录，不覆盖已有记录
+
+
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> initMissingPluginsFromRuntime() {
@@ -281,7 +285,7 @@ public class PluginManagerService {
             pluginInfoMapper.insert(info);
             dbPluginIds.add(pluginId);
             inserted++;
-            log.info("启动同步补录插件到数据库: {} -> {}", pluginId, info.getJarPath());
+            log.info("Startup sync inserted plugin record: {} -> {}", pluginId, info.getJarPath());
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
@@ -382,123 +386,124 @@ public class PluginManagerService {
     }
 
     /**
-     * 获取插件详细信息
+
      */
     public Map<String, Object> getPluginInfo(String pluginId) {
         PluginInfo info = pluginInfoMapper.selectOne(new LambdaQueryWrapper<PluginInfo>()
                 .eq(PluginInfo::getPluginId, pluginId));
         if (info == null) {
-            throw new RuntimeException("插件不存在：" + pluginId);
+            throw new RuntimeException("Plugin not found: " + pluginId);
         }
         return toPluginMap(info);
     }
 
-    // ==================== 安装/卸载方法 ====================
+    // ====================
 
     /**
-     * 安装插件
+
      */
     @Transactional(rollbackFor = Exception.class)
     public PluginInfo installPlugin(MultipartFile file) throws IOException {
-        // 确保插件目录存在
-        Path pluginPath = Paths.get(pluginProperties.getDir()).toAbsolutePath();
-        if (!Files.exists(pluginPath)) {
-            Files.createDirectories(pluginPath);
+        if (pluginProperties.isUploadZipOnly()) {
+            ZipPluginInstaller.InstallPackage prepared = zipPluginInstaller.prepare(file);
+            InstallGovernanceMeta governance = InstallGovernanceMeta.forZipUpload(prepared);
+            return installLoadedPlugin(prepared.jarPath(), prepared.pluginId(), prepared.version(), governance);
         }
 
-        // 保存 JAR 文件
-        String jarName = file.getOriginalFilename();
-        if (!jarName.endsWith(".jar")) {
-            throw new IllegalArgumentException("只能安装 JAR 格式的插件");
+        String originalName = Optional.ofNullable(file == null ? null : file.getOriginalFilename()).orElse("");
+        String lowerName = originalName.toLowerCase(Locale.ROOT);
+        if (lowerName.endsWith(".zip")) {
+            ZipPluginInstaller.InstallPackage prepared = zipPluginInstaller.prepare(file);
+            InstallGovernanceMeta governance = InstallGovernanceMeta.forZipUpload(prepared);
+            return installLoadedPlugin(prepared.jarPath(), prepared.pluginId(), prepared.version(), governance);
+        }
+        if (!lowerName.endsWith(".jar")) {
+            throw new PluginInstallException(PluginInstallErrorCode.PLUGIN_UPLOAD_INVALID_TYPE, "Only ZIP or JAR plugin packages are supported");
+        }
+        if (file == null || file.isEmpty()) {
+            throw new PluginInstallException(PluginInstallErrorCode.PLUGIN_MANIFEST_INVALID, "Upload file is required");
         }
 
-        Path jarPath = pluginPath.resolve(jarName);
-        file.transferTo(jarPath.toFile());
+        Path pluginDir = ensurePluginDirectoryExists();
+        String safeJarName = sanitizeUploadedJarName(originalName);
+        Path targetJar = resolveNonConflictingTargetPath(pluginDir, safeJarName);
+        file.transferTo(targetJar.toFile());
 
-        // 加载插件
-        String loadedPluginId = pluginManager.loadPlugin(jarPath);
-
-        // 保存到数据库
-        PluginInfo pluginInfo = savePluginToDatabase(loadedPluginId, jarPath);
-
-        log.info("插件安装成功：{}", pluginInfo.getPluginId());
-        return pluginInfo;
+        InstallGovernanceMeta governance = InstallGovernanceMeta.forLegacyJarUpload();
+        return installLoadedPlugin(targetJar, null, null, governance);
     }
 
-    /**
-     * 卸载插件
-     */
     @Transactional(rollbackFor = Exception.class)
     public void uninstallPlugin(String pluginId) {
         PluginInfo info = getPluginInfoByPluginId(pluginId);
 
         if (info == null) {
-            throw new RuntimeException("插件不存在：" + pluginId);
+            throw new RuntimeException("Plugin not found: " + pluginId);
         }
 
-        // 停止插件
+
         PluginWrapper wrapper = pluginManager.getPlugin(pluginId);
         PluginState state = (wrapper != null) ? wrapper.getPluginState() : PluginState.CREATED;
         if (state == PluginState.STARTED) {
             pluginManager.stopPlugin(pluginId);
         }
 
-        // 卸载插件
+
         pluginManager.unloadPlugin(pluginId);
 
-        // 删除 JAR 文件
+
         try {
             Files.deleteIfExists(Paths.get(info.getJarPath()));
         } catch (IOException e) {
-            log.warn("删除插件文件失败：{}", info.getJarPath(), e);
+            log.warn("Failed to delete plugin file: {}", info.getJarPath(), e);
         }
 
-        // 删除数据库记录
+
         pluginInfoMapper.deleteById(info.getId());
-        log.info("插件卸载成功：{}", pluginId);
+        log.info("Plugin uninstalled successfully: {}", pluginId);
     }
 
-    // ==================== 生命周期控制方法 ====================
+    // ====================
 
     /**
-     * 启动插件
+
      */
     public void startPlugin(String pluginId) {
         PluginInfo info = getPluginInfoByPluginId(pluginId);
         if (info == null) {
-            throw new RuntimeException("插件不存在：" + pluginId);
+            throw new RuntimeException("Plugin not found: " + pluginId);
         }
 
         PluginWrapper wrapper = pluginManager.getPlugin(pluginId);
         PluginState state = (wrapper != null) ? wrapper.getPluginState() : PluginState.CREATED;
         if (state == PluginState.STARTED) {
-            throw new RuntimeException("插件已启动：" + pluginId);
+            throw new RuntimeException("Plugin already started: " + pluginId);
         }
 
         PluginState newState = pluginManager.startPlugin(pluginId);
         if (newState != PluginState.STARTED) {
-            throw new RuntimeException("插件启动失败：" + newState);
+            throw new RuntimeException("Plugin start failed: " + newState);
         }
 
         info.setStatus(PluginStatus.STARTED.name());
         info.setUpdateTime(LocalDateTime.now());
         pluginInfoMapper.updateById(info);
-        log.info("插件启动成功：{}", pluginId);
+        log.info("Plugin started successfully: {}", pluginId);
     }
 
     /**
-     * 停止插件
+
      */
     public void stopPlugin(String pluginId) {
         PluginInfo info = getPluginInfoByPluginId(pluginId);
         if (info == null) {
-            throw new RuntimeException("插件不存在：" + pluginId);
+            throw new RuntimeException("Plugin not found: " + pluginId);
         }
 
         PluginWrapper wrapper = pluginManager.getPlugin(pluginId);
         PluginState state = (wrapper != null) ? wrapper.getPluginState() : PluginState.CREATED;
         if (state == PluginState.STOPPED || state == PluginState.CREATED) {
-            throw new RuntimeException("插件已停止：" + pluginId);
+            throw new RuntimeException("Plugin already stopped: " + pluginId);
         }
 
         pluginManager.stopPlugin(pluginId);
@@ -506,44 +511,44 @@ public class PluginManagerService {
         info.setStatus(PluginStatus.STOPPED.name());
         info.setUpdateTime(LocalDateTime.now());
         pluginInfoMapper.updateById(info);
-        log.info("插件停止成功：{}", pluginId);
+        log.info("Plugin stopped successfully: {}", pluginId);
     }
 
     /**
-     * 重新加载插件
+
      */
     @Transactional(rollbackFor = Exception.class)
     public void reloadPlugin(String pluginId) {
         PluginInfo info = getPluginInfoByPluginId(pluginId);
         if (info == null) {
-            throw new RuntimeException("插件不存在：" + pluginId);
+            throw new RuntimeException("Plugin not found: " + pluginId);
         }
 
-        // 停止插件
+
         PluginWrapper wrapper = pluginManager.getPlugin(pluginId);
         PluginState state = (wrapper != null) ? wrapper.getPluginState() : PluginState.CREATED;
         if (state == PluginState.STARTED) {
             pluginManager.stopPlugin(pluginId);
         }
 
-        // 卸载插件
+
         pluginManager.unloadPlugin(pluginId);
 
-        // 重新加载
+
         Path jarPath = Paths.get(info.getJarPath());
         pluginManager.loadPlugin(jarPath);
 
-        // 启动插件
+
         pluginManager.startPlugin(pluginId);
 
         info.setStatus(PluginStatus.STARTED.name());
         info.setUpdateTime(LocalDateTime.now());
         pluginInfoMapper.updateById(info);
-        log.info("插件重新加载成功：{}", pluginId);
+        log.info("Plugin reloaded successfully: {}", pluginId);
     }
 
     /**
-     * 重新扫描插件目录
+
      */
     public Map<String, Object> enablePlugin(String pluginId) {
         PluginWrapper wrapper = pluginManager.getPlugin(pluginId);
@@ -587,18 +592,18 @@ public class PluginManagerService {
                 pluginManager.loadPlugin(jarPath);
                 loadedPlugins.add(jarPath.getFileName().toString());
             } catch (Exception e) {
-                log.warn("加载插件失败：{}", jarPath, e);
+                log.warn("Load plugin failed: {}", jarPath, e);
             }
         }
 
-        log.info("重新扫描插件完成，加载 {} 个插件", loadedPlugins.size());
+        log.info("Rescan completed, loaded {} plugins", loadedPlugins.size());
         return loadedPlugins;
     }
 
-    // ==================== 私有辅助方法 ====================
+    // ====================
 
     /**
-     * 保存插件到数据库
+
      */
     public Map<String, Object> getPluginHealth(String pluginId) {
         PluginInfo dbInfo = getPluginInfoByPluginId(pluginId);
@@ -670,6 +675,10 @@ public class PluginManagerService {
     }
 
     private PluginInfo savePluginToDatabase(String pluginId, Path jarPath) {
+        return savePluginToDatabase(pluginId, jarPath, InstallGovernanceMeta.none());
+    }
+
+    private PluginInfo savePluginToDatabase(String pluginId, Path jarPath, InstallGovernanceMeta governance) {
         PluginWrapper wrapper = pluginManager.getPlugin(pluginId);
         PluginDescriptor descriptor = wrapper.getDescriptor();
 
@@ -684,6 +693,16 @@ public class PluginManagerService {
         info.setJarPath(jarPath.toString());
         info.setCreateTime(LocalDateTime.now());
         info.setUpdateTime(LocalDateTime.now());
+        info.setDependencies(descriptor.getDependencies() == null ? "" : descriptor.getDependencies().toString());
+        info.setProvider(descriptor.getProvider());
+        info.setPackageType(governance.packageType);
+        info.setPackageChecksum(governance.packageChecksum);
+        info.setManifestVersion(governance.manifestVersion);
+        info.setManifestJson(governance.manifestJson);
+        info.setRequiresMagicBoot(governance.requiresMagicBoot);
+        info.setPermissions(governance.permissions);
+        info.setInstallSource(governance.installSource);
+        info.setInstallTime(governance.installTime);
 
         pluginInfoMapper.insert(info);
         return info;
@@ -711,7 +730,7 @@ public class PluginManagerService {
     }
 
     /**
-     * 获取插件信息
+
      */
     private PluginInfo getPluginInfoByPluginId(String pluginId) {
         return pluginInfoMapper.selectOne(new LambdaQueryWrapper<PluginInfo>()
@@ -719,7 +738,7 @@ public class PluginManagerService {
     }
 
     /**
-     * 获取所有插件 JAR 文件
+
      */
     private List<Path> getPluginJars() {
         List<Path> result = new ArrayList<>();
@@ -731,7 +750,7 @@ public class PluginManagerService {
                         .filter(path -> path.toString().endsWith(".jar"))
                         .forEach(result::add);
             } catch (IOException e) {
-                log.error("获取插件目录失败", e);
+                log.error("Failed to read plugin directory", e);
             }
         }
 
@@ -746,27 +765,102 @@ public class PluginManagerService {
         return pluginPath;
     }
 
+    private String sanitizeUploadedJarName(String fileName) {
+        String fallback = "upload-" + System.currentTimeMillis() + ".jar";
+        if (fileName == null || fileName.isBlank()) {
+            return fallback;
+        }
+        String candidate = Paths.get(fileName).getFileName().toString();
+        String safe = candidate.replaceAll("[^a-zA-Z0-9._-]", "_");
+        if (!safe.toLowerCase(Locale.ROOT).endsWith(".jar")) {
+            safe = safe + ".jar";
+        }
+        return safe.isBlank() ? fallback : safe;
+    }
+
+    private Path resolveNonConflictingTargetPath(Path parent, String fileName) {
+        String candidate = (fileName == null || fileName.isBlank()) ? ("upload-" + System.currentTimeMillis() + ".jar") : fileName;
+        int dot = candidate.lastIndexOf('.');
+        String base = dot > 0 ? candidate.substring(0, dot) : candidate;
+        String ext = dot > 0 ? candidate.substring(dot) : "";
+        Path target = parent.resolve(candidate);
+        int index = 1;
+        while (Files.exists(target)) {
+            target = parent.resolve(base + "-" + index + ext);
+            index++;
+        }
+        return target;
+    }
+
+    private PluginInfo installLoadedPlugin(Path jarPath,
+                                           String expectedPluginId,
+                                           String expectedVersion,
+                                           InstallGovernanceMeta governance) throws IOException {
+        String loadedPluginId = null;
+        try {
+            loadedPluginId = pluginManager.loadPlugin(jarPath);
+            PluginWrapper wrapper = pluginManager.getPlugin(loadedPluginId);
+            if (wrapper == null || wrapper.getDescriptor() == null) {
+                throw new PluginInstallException(PluginInstallErrorCode.PLUGIN_INSTALL_FAILED, "Plugin descriptor not found after loading");
+            }
+            PluginDescriptor descriptor = wrapper.getDescriptor();
+            if (expectedPluginId != null && expectedVersion != null) {
+                if (!Objects.equals(expectedPluginId, descriptor.getPluginId())
+                        || !Objects.equals(expectedVersion, descriptor.getVersion())) {
+                    throw new PluginInstallException(PluginInstallErrorCode.PLUGIN_DESCRIPTOR_MISMATCH,
+                            "Manifest pluginId/version mismatch with plugin.properties");
+                }
+            }
+
+            PluginInfo pluginInfo = savePluginToDatabase(loadedPluginId, jarPath, governance);
+            log.info("Plugin installed successfully: {}, source={}, type={}",
+                    pluginInfo.getPluginId(), governance.installSource, governance.packageType);
+            return pluginInfo;
+        } catch (Exception ex) {
+            if (loadedPluginId != null) {
+                try {
+                    pluginManager.unloadPlugin(loadedPluginId);
+                } catch (Exception unloadEx) {
+                    log.warn("Failed to unload plugin after install error: {}", loadedPluginId, unloadEx);
+                }
+            }
+            try {
+                Files.deleteIfExists(jarPath);
+            } catch (IOException deleteEx) {
+                log.warn("Failed to delete plugin file after install error: {}", jarPath, deleteEx);
+            }
+            if (ex instanceof IOException ioEx) {
+                throw ioEx;
+            }
+            if (ex instanceof PluginInstallException pluginInstallException) {
+                throw pluginInstallException;
+            }
+            throw new PluginInstallException(PluginInstallErrorCode.PLUGIN_INSTALL_FAILED,
+                    "Plugin install failed: " + ex.getMessage(), ex);
+        }
+    }
+
     private URI parseAndValidateRemoteUri(String url) {
         try {
             URI uri = new URI(url.trim());
             String scheme = uri.getScheme();
             if (scheme == null || (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme))) {
-                throw new IllegalArgumentException("url 必须是 http 或 https 协议");
+                throw new IllegalArgumentException("url must use http or https scheme");
             }
             return uri;
         } catch (URISyntaxException e) {
-            throw new IllegalArgumentException("url 格式不正确");
+            throw new IllegalArgumentException("url format is invalid");
         }
     }
 
     private String resolveRemoteJarName(URI uri) {
         String path = uri.getPath();
         if (path == null || path.isBlank()) {
-            throw new IllegalArgumentException("远程 URL 缺少文件路径");
+            throw new IllegalArgumentException("Remote URL path is empty");
         }
         String fileName = Paths.get(path).getFileName().toString();
         if (fileName.isBlank() || !fileName.toLowerCase(Locale.ROOT).endsWith(".jar")) {
-            throw new IllegalArgumentException("远程 URL 必须以 .jar 结尾");
+            throw new IllegalArgumentException("Remote URL must end with .jar");
         }
         return fileName;
     }
@@ -780,12 +874,12 @@ public class PluginManagerService {
                 Files.deleteIfExists(finalFile);
             }
         } catch (IOException ex) {
-            log.warn("清理下载文件失败", ex);
+            log.warn("Failed to cleanup downloaded files", ex);
         }
     }
 
     /**
-     * 转换为 Map
+
      */
     private Map<String, Object> toPluginMap(PluginInfo info) {
         Map<String, Object> map = new LinkedHashMap<>();
@@ -802,8 +896,16 @@ public class PluginManagerService {
         map.put("updateTime", info.getUpdateTime());
         map.put("dependencies", info.getDependencies());
         map.put("provider", info.getProvider());
+        map.put("packageType", info.getPackageType());
+        map.put("packageChecksum", info.getPackageChecksum());
+        map.put("manifestVersion", info.getManifestVersion());
+        map.put("manifestJson", info.getManifestJson());
+        map.put("requiresMagicBoot", info.getRequiresMagicBoot());
+        map.put("permissions", info.getPermissions());
+        map.put("installSource", info.getInstallSource());
+        map.put("installTime", info.getInstallTime());
 
-        // 获取 PF4J 运行时状态
+
         try {
             PluginWrapper runtimeWrapper = pluginManager.getPlugin(info.getPluginId());
             PluginState runtimeState = (runtimeWrapper != null) ? runtimeWrapper.getPluginState() : PluginState.CREATED;
@@ -816,7 +918,7 @@ public class PluginManagerService {
     }
 
     /**
-     * 将 PF4J 运行时插件转换为列表展示结构（用于未入库插件）
+
      */
     private Map<String, Object> toRuntimePluginMap(PluginWrapper wrapper) {
         PluginDescriptor descriptor = wrapper.getDescriptor();
@@ -836,6 +938,14 @@ public class PluginManagerService {
         map.put("updateTime", null);
         map.put("dependencies", descriptor.getDependencies());
         map.put("provider", descriptor.getProvider());
+        map.put("packageType", null);
+        map.put("packageChecksum", null);
+        map.put("manifestVersion", null);
+        map.put("manifestJson", null);
+        map.put("requiresMagicBoot", null);
+        map.put("permissions", null);
+        map.put("installSource", null);
+        map.put("installTime", null);
         map.put("runtimeState", wrapper.getPluginState().name());
         return map;
     }
@@ -872,5 +982,73 @@ public class PluginManagerService {
                 || lower.contains("sync")
                 || lower.contains("enable")
                 || lower.contains("disable");
+    }
+
+    private static final class InstallGovernanceMeta {
+        private final String packageType;
+        private final String packageChecksum;
+        private final String manifestVersion;
+        private final String manifestJson;
+        private final String requiresMagicBoot;
+        private final String permissions;
+        private final String installSource;
+        private final LocalDateTime installTime;
+
+        private InstallGovernanceMeta(String packageType,
+                                      String packageChecksum,
+                                      String manifestVersion,
+                                      String manifestJson,
+                                      String requiresMagicBoot,
+                                      String permissions,
+                                      String installSource,
+                                      LocalDateTime installTime) {
+            this.packageType = packageType;
+            this.packageChecksum = packageChecksum;
+            this.manifestVersion = manifestVersion;
+            this.manifestJson = manifestJson;
+            this.requiresMagicBoot = requiresMagicBoot;
+            this.permissions = permissions;
+            this.installSource = installSource;
+            this.installTime = installTime;
+        }
+
+        private static InstallGovernanceMeta forZipUpload(ZipPluginInstaller.InstallPackage prepared) {
+            return new InstallGovernanceMeta(
+                    "ZIP",
+                    prepared.packageChecksum(),
+                    prepared.manifestVersion(),
+                    prepared.manifestJson(),
+                    prepared.requiresMagicBoot(),
+                    prepared.permissionsJson(),
+                    "UPLOAD_ZIP",
+                    LocalDateTime.now()
+            );
+        }
+
+        private static InstallGovernanceMeta forLegacyJarUpload() {
+            return new InstallGovernanceMeta(
+                    "LEGACY_JAR",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    "UPLOAD_JAR",
+                    LocalDateTime.now()
+            );
+        }
+
+        private static InstallGovernanceMeta none() {
+            return new InstallGovernanceMeta(
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+        }
     }
 }

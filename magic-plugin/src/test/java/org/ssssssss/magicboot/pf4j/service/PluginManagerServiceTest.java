@@ -3,7 +3,6 @@ package org.ssssssss.magicboot.pf4j.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,12 +13,16 @@ import org.pf4j.PluginDescriptor;
 import org.pf4j.PluginManager;
 import org.pf4j.PluginState;
 import org.pf4j.PluginWrapper;
+import org.springframework.mock.web.MockMultipartFile;
 import org.ssssssss.magicboot.pf4j.configuration.PluginProperties;
 import org.ssssssss.magicboot.pf4j.entity.PluginInfo;
 import org.ssssssss.magicboot.pf4j.mapper.PluginInfoMapper;
+import org.ssssssss.magicboot.pf4j.model.PluginInstallErrorCode;
+import org.ssssssss.magicboot.pf4j.model.PluginInstallException;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -28,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -68,7 +72,6 @@ class PluginManagerServiceTest {
     }
 
     @Test
-    @DisplayName("listAllPlugins 运行态存在但数据库不存在时应返回运行态插件")
     void listAllPlugins_whenOnlyRuntimePluginExists_shouldReturnRuntimePlugin() {
         when(pluginInfoMapper.selectList(any(LambdaQueryWrapper.class))).thenReturn(Collections.emptyList());
         when(pluginManager.getPlugins()).thenReturn(List.of(pluginWrapper));
@@ -90,7 +93,6 @@ class PluginManagerServiceTest {
     }
 
     @Test
-    @DisplayName("initMissingPluginsFromRuntime DB缺失插件时应补录")
     void initMissingPluginsFromRuntime_whenPluginMissingInDb_shouldInsert() {
         when(pluginInfoMapper.selectList(any(LambdaQueryWrapper.class))).thenReturn(Collections.emptyList());
         when(pluginManager.getPlugins()).thenReturn(List.of(pluginWrapper));
@@ -118,7 +120,6 @@ class PluginManagerServiceTest {
     }
 
     @Test
-    @DisplayName("initMissingPluginsFromRuntime DB已存在插件时应跳过")
     void initMissingPluginsFromRuntime_whenPluginExistsInDb_shouldSkipInsert() {
         PluginInfo dbPlugin = new PluginInfo();
         dbPlugin.setPluginId("demo-plugin");
@@ -136,7 +137,6 @@ class PluginManagerServiceTest {
     }
 
     @Test
-    @DisplayName("getRuntimeSummary 应返回状态统计")
     void getRuntimeSummary_shouldReturnCounts() {
         PluginWrapper wrapper2 = mock(PluginWrapper.class);
         when(pluginManager.getPlugins()).thenReturn(List.of(pluginWrapper, wrapper2));
@@ -151,7 +151,6 @@ class PluginManagerServiceTest {
     }
 
     @Test
-    @DisplayName("reconcilePlugins dryRun模式不应落库")
     void reconcilePlugins_whenDryRunShouldNotMutate() {
         when(pluginInfoMapper.selectList(any(LambdaQueryWrapper.class))).thenReturn(Collections.emptyList());
         when(pluginManager.getPlugins()).thenReturn(List.of(pluginWrapper));
@@ -166,7 +165,6 @@ class PluginManagerServiceTest {
     }
 
     @Test
-    @DisplayName("reconcilePlugins 执行模式应补录 missingInDb")
     void reconcilePlugins_whenApplyShouldInsertMissingDb() {
         when(pluginInfoMapper.selectList(any(LambdaQueryWrapper.class))).thenReturn(Collections.emptyList());
         when(pluginManager.getPlugins()).thenReturn(List.of(pluginWrapper));
@@ -187,7 +185,6 @@ class PluginManagerServiceTest {
     }
 
     @Test
-    @DisplayName("installPluginBySource LOCAL_PATH 应分发到本地安装")
     void installPluginBySource_whenLocalPath_shouldDispatch() {
         PluginManagerService spyService = spy(service);
         Map<String, Object> expected = Map.of("pluginId", "demo-plugin");
@@ -200,7 +197,6 @@ class PluginManagerServiceTest {
     }
 
     @Test
-    @DisplayName("installFromRemoteUrl 非 http/https 协议应失败")
     void installFromRemoteUrl_whenNonHttp_shouldFail() {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> service.installFromRemoteUrl("ftp://example.com/demo.jar"));
@@ -208,7 +204,6 @@ class PluginManagerServiceTest {
     }
 
     @Test
-    @DisplayName("installFromRemoteUrl 下载成功后应调用安装")
     void installFromRemoteUrl_whenSuccess_shouldInstall(@TempDir Path tempDir) throws IOException {
         when(pluginProperties.getDir()).thenReturn(tempDir.toString());
         PluginManagerService spyService = spy(service);
@@ -238,7 +233,6 @@ class PluginManagerServiceTest {
     }
 
     @Test
-    @DisplayName("installFromRemoteUrl 下载失败应抛错")
     void installFromRemoteUrl_whenDownloadFailed_shouldThrow(@TempDir Path tempDir) throws IOException {
         when(pluginProperties.getDir()).thenReturn(tempDir.toString());
 
@@ -254,7 +248,7 @@ class PluginManagerServiceTest {
         try {
             String url = "http://localhost:" + server.getAddress().getPort() + "/demo.jar";
             RuntimeException ex = assertThrows(RuntimeException.class, () -> service.installFromRemoteUrl(url));
-            assertTrue(ex.getMessage().contains("下载"));
+            assertTrue(ex.getMessage().toLowerCase().contains("failed"));
             assertTrue(Files.list(tempDir).findAny().isEmpty());
         } finally {
             server.stop(0);
@@ -262,7 +256,6 @@ class PluginManagerServiceTest {
     }
 
     @Test
-    @DisplayName("installFromRemoteUrl 加载失败时应清理临时与目标文件")
     void installFromRemoteUrl_whenLoadFailed_shouldCleanup(@TempDir Path tempDir) throws IOException {
         when(pluginProperties.getDir()).thenReturn(tempDir.toString());
         PluginManagerService spyService = spy(service);
@@ -280,11 +273,71 @@ class PluginManagerServiceTest {
         try {
             String url = "http://localhost:" + server.getAddress().getPort() + "/demo.jar";
             RuntimeException ex = assertThrows(RuntimeException.class, () -> spyService.installFromRemoteUrl(url));
-            assertTrue(ex.getMessage().contains("远程下载安装失败"));
+            assertTrue(ex.getMessage().toLowerCase().contains("failed"));
             assertFalse(Files.exists(tempDir.resolve("demo.jar.download")));
             assertFalse(Files.exists(tempDir.resolve("demo.jar")));
         } finally {
             server.stop(0);
         }
+    }
+
+    @Test
+    void installPlugin_whenZipOnlyDisabledAndJarUploaded_shouldInstallLegacyJar(@TempDir Path tempDir) throws Exception {
+        when(pluginProperties.isUploadZipOnly()).thenReturn(false);
+        when(pluginProperties.getDir()).thenReturn(tempDir.toString());
+        when(pluginManager.loadPlugin(any(Path.class))).thenReturn("demo-plugin");
+        when(pluginManager.getPlugin("demo-plugin")).thenReturn(pluginWrapper);
+        when(pluginWrapper.getDescriptor()).thenReturn(pluginDescriptor);
+        when(pluginDescriptor.getPluginId()).thenReturn("demo-plugin");
+        when(pluginDescriptor.getVersion()).thenReturn("1.0.0");
+        when(pluginDescriptor.getProvider()).thenReturn("MagicBoot Team");
+        when(pluginDescriptor.getPluginClass()).thenReturn("org.ssssssss.magicboot.demo.DemoPlugin");
+        when(pluginDescriptor.getDependencies()).thenReturn(null);
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "demo-plugin.jar",
+                "application/java-archive",
+                new byte[]{1, 2, 3}
+        );
+
+        PluginInfo result = service.installPlugin(file);
+
+        assertEquals("demo-plugin", result.getPluginId());
+        assertEquals("LEGACY_JAR", result.getPackageType());
+        assertEquals("UPLOAD_JAR", result.getInstallSource());
+        verify(pluginInfoMapper, times(1)).insert(any(PluginInfo.class));
+    }
+
+    @Test
+    void installPlugin_whenZipOnlyDisabledAndInvalidFileType_shouldFail() {
+        when(pluginProperties.isUploadZipOnly()).thenReturn(false);
+        MockMultipartFile file = new MockMultipartFile("file", "bad.txt", "text/plain", new byte[]{1});
+
+        PluginInstallException ex = assertThrows(PluginInstallException.class, () -> service.installPlugin(file));
+        assertEquals(PluginInstallErrorCode.PLUGIN_UPLOAD_INVALID_TYPE, ex.getErrorCode());
+    }
+
+    @Test
+    void installPlugin_whenLegacyJarInstallFails_shouldNotOverwriteExistingJar(@TempDir Path tempDir) throws Exception {
+        when(pluginProperties.isUploadZipOnly()).thenReturn(false);
+        when(pluginProperties.getDir()).thenReturn(tempDir.toString());
+        when(pluginManager.loadPlugin(any(Path.class))).thenThrow(new RuntimeException("load failed"));
+
+        Path existingJar = tempDir.resolve("demo-plugin.jar");
+        byte[] original = "original-jar".getBytes(StandardCharsets.UTF_8);
+        Files.write(existingJar, original);
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "demo-plugin.jar",
+                "application/java-archive",
+                "new-upload".getBytes(StandardCharsets.UTF_8)
+        );
+
+        assertThrows(PluginInstallException.class, () -> service.installPlugin(file));
+
+        assertTrue(Files.exists(existingJar));
+        assertArrayEquals(original, Files.readAllBytes(existingJar));
     }
 }

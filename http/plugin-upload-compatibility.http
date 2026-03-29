@@ -1,0 +1,37 @@
+### Plugin Upload Compatibility Cases
+
+@baseUrl = http://localhost:8089
+@incompatibleZipFile = D:/IdeaProjects/magic-boot/plugins/demo-plugin-incompatible.zip
+@descriptorMismatchZipFile = D:/IdeaProjects/magic-boot/plugins/demo-plugin-mismatch.zip
+
+### TC-COMP-01 runtime version incompatible
+POST {{baseUrl}}/plugin/admin/upload
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="demo-plugin-incompatible.zip"
+Content-Type: application/zip
+
+< {{incompatibleZipFile}}
+--WebAppBoundary--
+
+### Expected:
+### 1) code = 500
+### 2) errorCode = PLUGIN_VERSION_INCOMPATIBLE
+
+###
+
+### TC-COMP-02 manifest and plugin.properties mismatch
+POST {{baseUrl}}/plugin/admin/upload
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="demo-plugin-mismatch.zip"
+Content-Type: application/zip
+
+< {{descriptorMismatchZipFile}}
+--WebAppBoundary--
+
+### Expected:
+### 1) code = 500
+### 2) errorCode = PLUGIN_DESCRIPTOR_MISMATCH

@@ -6,6 +6,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.ssssssss.magicboot.pf4j.model.PluginInstallErrorCode;
+import org.ssssssss.magicboot.pf4j.model.PluginInstallException;
 import org.ssssssss.magicboot.pf4j.service.PluginManagerService;
 
 import java.io.IOException;
@@ -64,12 +66,14 @@ public class PluginAdminController {
         try {
             pluginManagerService.installPlugin(file);
             return ResponseEntity.ok(success("Upload and install success"));
+        } catch (PluginInstallException e) {
+            return ResponseEntity.ok(error(e.getErrorCode(), "Install failed: " + e.getMessage()));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.ok(error("Install failed: invalid params, " + e.getMessage()));
+            return ResponseEntity.ok(error(PluginInstallErrorCode.PLUGIN_MANIFEST_INVALID, "Install failed: invalid params, " + e.getMessage()));
         } catch (IOException e) {
-            return ResponseEntity.ok(error("Install failed: upload io error, " + e.getMessage()));
+            return ResponseEntity.ok(error(PluginInstallErrorCode.PLUGIN_INSTALL_FAILED, "Install failed: upload io error, " + e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.ok(error("Install failed: upload install error, " + e.getMessage()));
+            return ResponseEntity.ok(error(PluginInstallErrorCode.PLUGIN_INSTALL_FAILED, "Install failed: upload install error, " + e.getMessage()));
         }
     }
 
@@ -86,9 +90,9 @@ public class PluginAdminController {
             );
             return ResponseEntity.ok(success(result));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.ok(error("Install failed: invalid params, " + e.getMessage()));
+            return ResponseEntity.ok(error(PluginInstallErrorCode.PLUGIN_INSTALL_FAILED, "Install failed: invalid params, " + e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.ok(error("Install failed: " + e.getMessage()));
+            return ResponseEntity.ok(error(PluginInstallErrorCode.PLUGIN_INSTALL_FAILED, "Install failed: " + e.getMessage()));
         }
     }
 
@@ -224,14 +228,20 @@ public class PluginAdminController {
     private Map<String, Object> success(Object data) {
         Map<String, Object> result = new HashMap<>();
         result.put("code", 200);
+        result.put("errorCode", PluginInstallErrorCode.SUCCESS.name());
         result.put("message", "success");
         result.put("data", data);
         return result;
     }
 
     private Map<String, Object> error(String message) {
+        return error(PluginInstallErrorCode.PLUGIN_INSTALL_FAILED, message);
+    }
+
+    private Map<String, Object> error(PluginInstallErrorCode errorCode, String message) {
         Map<String, Object> result = new HashMap<>();
         result.put("code", 500);
+        result.put("errorCode", errorCode.name());
         result.put("message", message);
         return result;
     }
