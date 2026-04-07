@@ -68,6 +68,25 @@ const menu = body
 
 let menuId = menu.id
 
+var inferCategory = (path) => {
+    if(path == null){
+        return null
+    }
+    if(path == '/profile' || path.startsWith('/profile/')){
+        return 'settings'
+    }
+    if(path == '/app-center' || path.startsWith('/app-center/')){
+        return 'app-center'
+    }
+    if(path == '/business' || path.startsWith('/business/')){
+        return 'business'
+    }
+    if(path == '/system' || path.startsWith('/system/') || path == '/dashboard' || path.startsWith('/dashboard/') || path == '/security' || path.startsWith('/security/')){
+        return 'system'
+    }
+    return null
+}
+
 if (menu.meta) {
     menu.meta['title'] = menu.title
 } else {
@@ -99,6 +118,13 @@ if (!menu.name) {
 }
 if (!menu.path) {
     menu.path = `/${menu.name}`
+}
+
+if (!menu.category && menu.pid && menu.pid !== '0') {
+    menu.category = db.selectValue("select category from sys_menu where id = #{menu.pid} and is_del = 0 limit 1")
+}
+if (!menu.category) {
+    menu.category = inferCategory(menu.path) || 'system'
 }
 
 if(body.permission){

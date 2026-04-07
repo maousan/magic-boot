@@ -119,11 +119,9 @@
     <logger name="org.springframework.context.support.PostProcessorRegistrationDelegate" level="error"/>
 
     <root level="INFO">
-        <springProfile name="dev">
-            <appender-ref ref="CONSOLE" />
-            <appender-ref ref="ASYNC_ALL" />
-            <appender-ref ref="ASYNC_ERROR"/>
-        </springProfile>
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="ASYNC_ALL" />
+        <appender-ref ref="ASYNC_ERROR"/>
         <springProfile name="prod">
             <appender-ref ref="CONSOLE"/>
             <appender-ref ref="ASYNC_ALL" />

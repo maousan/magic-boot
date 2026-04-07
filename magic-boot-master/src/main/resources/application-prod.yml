@@ -1,11 +1,19 @@
-
-server:
-  port: 8089
-
 spring:
   datasource:
-    username: magic
-    password: Magic@2026
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://192.168.2.90/magic-boot?useSSL=false&zeroDateTimeBehavior=convertToNull&useUnicode=true&characterEncoding=UTF8&autoReconnect=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai}
+  flyway:
+    locations: classpath:db/migration,classpath:db/seed/prod
+  config:
+    import:
+      - optional:classpath:application.yml
 
+# 上传路径
 upload:
-  dir: /Users/lvjinze/mb/
+  dir: uploads/
+
+# 插件路径
+plugin:
+  dir: plugins/
+  auto-load: true
+  auto-start: true
+  signature-force-verify: true

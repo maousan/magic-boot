@@ -1,10 +1,8 @@
-server:
-  port: 8089
-
 spring:
   datasource:
-    username: magic
-    password: Magic@2026
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://192.168.2.90/magic-boot?useSSL=false&zeroDateTimeBehavior=convertToNull&useUnicode=true&characterEncoding=UTF8&autoReconnect=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai}
+  flyway:
+    locations: classpath:db/migration,classpath:db/seed/prod,classpath:db/seed/dev
 
   config:
     import:

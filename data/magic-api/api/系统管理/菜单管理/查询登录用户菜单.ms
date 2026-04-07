@@ -5,7 +5,7 @@
   "groupId" : "67b2ce258e24491194b74992958c74aa",
   "name" : "查询登录用户菜单",
   "createTime" : null,
-  "updateTime" : 1774692644398,
+  "updateTime" : 1774942761370,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -582,7 +582,8 @@ var menus = db.select("""
         sm.icon,
         sm.keep_alive,
         sm.meta,
-        sm.type
+        sm.type,
+        sm.category
     from sys_menu sm left join sys_dynamic_component sdc on sdc.id = sm.component_id
     where 1=1
     ?{userId != '1',
@@ -591,7 +592,9 @@ var menus = db.select("""
                 select role_id from sys_user_role where user_id = #{userId}
             )
         )
-    } and sm.is_del = 0 and sm.type != 'button' and sm.status = 1 order by sm.sort
+    }
+    ?{type != null, and sm.type = #{type}}
+    and sm.is_del = 0 and sm.type != 'button' and sm.status = 1 order by sm.sort
 """)
 
 for(menu in menus){
@@ -610,6 +613,9 @@ nodes.each((key, node) => {
         // nodes[node.pid].redirect = "noRedirect";
         // nodes[node.pid].component = "BasicLayout";
         // nodes[node.pid].alwaysShow = true;
+        if(!node.category){
+            node.category = nodes[node.pid].category || inferCategory(node.path)
+        }
         if(!nodes[node.pid].children){
             nodes[node.pid].children = []
         }
@@ -619,6 +625,9 @@ nodes.each((key, node) => {
 var layoutMenus = []
 nodes.each((key, node) => {
     if(node.pid === '0') {
+        if(!node.category){
+            node.category = inferCategory(node.path)
+        }
         // if(node.component != 'BasicLayout'){
         //     node = {
         //         icon: node.icon,

@@ -26,9 +26,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.LinkedHashMap;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -282,6 +286,40 @@ class PluginManagerServiceTest {
     }
 
     @Test
+    void installFromRemoteUrl_whenExistingJarPresentAndLoadFailed_shouldKeepExistingJar(@TempDir Path tempDir) throws IOException {
+        when(pluginProperties.getDir()).thenReturn(tempDir.toString());
+        PluginManagerService spyService = spy(service);
+        doThrow(new RuntimeException("mock load failed")).when(spyService).loadAndInstallPlugin(anyString());
+
+        Path existingJar = tempDir.resolve("demo.jar");
+        byte[] original = "original-remote-jar".getBytes(StandardCharsets.UTF_8);
+        Files.write(existingJar, original);
+
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/demo.jar", exchange -> {
+            byte[] body = new byte[]{7, 8, 9};
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+
+        try {
+            String url = "http://localhost:" + server.getAddress().getPort() + "/demo.jar";
+            RuntimeException ex = assertThrows(RuntimeException.class, () -> spyService.installFromRemoteUrl(url));
+            assertTrue(ex.getMessage().toLowerCase().contains("failed"));
+
+            assertTrue(Files.exists(existingJar));
+            assertArrayEquals(original, Files.readAllBytes(existingJar));
+            assertFalse(Files.exists(tempDir.resolve("demo-1.jar")));
+            assertFalse(Files.exists(tempDir.resolve("demo.jar.download")));
+            assertFalse(Files.exists(tempDir.resolve("demo-1.jar.download")));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     void installPlugin_whenZipOnlyDisabledAndJarUploaded_shouldInstallLegacyJar(@TempDir Path tempDir) throws Exception {
         when(pluginProperties.isUploadZipOnly()).thenReturn(false);
         when(pluginProperties.getDir()).thenReturn(tempDir.toString());
@@ -298,7 +336,10 @@ class PluginManagerServiceTest {
                 "file",
                 "demo-plugin.jar",
                 "application/java-archive",
-                new byte[]{1, 2, 3}
+                createJarWithPluginPropertiesBytes(Map.of(
+                        "plugin.name", "Demo Plugin From Properties",
+                        "plugin.provider", "Properties Team"
+                ))
         );
 
         PluginInfo result = service.installPlugin(file);
@@ -306,7 +347,14 @@ class PluginManagerServiceTest {
         assertEquals("demo-plugin", result.getPluginId());
         assertEquals("LEGACY_JAR", result.getPackageType());
         assertEquals("UPLOAD_JAR", result.getInstallSource());
-        verify(pluginInfoMapper, times(1)).insert(any(PluginInfo.class));
+        ArgumentCaptor<PluginInfo> captor = ArgumentCaptor.forClass(PluginInfo.class);
+        verify(pluginInfoMapper, times(1)).insert(captor.capture());
+        PluginInfo inserted = captor.getValue();
+        assertEquals("Demo Plugin From Properties", inserted.getPluginName());
+        assertEquals("Properties Team", inserted.getAuthor());
+        assertEquals("MagicBoot Team", inserted.getProvider());
+        assertEquals("org.ssssssss.magicboot.demo.DemoPlugin", inserted.getPluginClass());
+        assertEquals("1.0.0", inserted.getVersion());
     }
 
     @Test
@@ -339,5 +387,47 @@ class PluginManagerServiceTest {
 
         assertTrue(Files.exists(existingJar));
         assertArrayEquals(original, Files.readAllBytes(existingJar));
+    }
+
+    @Test
+    void initMissingPluginsFromRuntime_whenPluginPropertiesMissing_shouldFallbackDescriptor(@TempDir Path tempDir) throws IOException {
+        Path missingJar = tempDir.resolve("missing-demo.jar");
+
+        when(pluginInfoMapper.selectList(any(LambdaQueryWrapper.class))).thenReturn(Collections.emptyList());
+        when(pluginManager.getPlugins()).thenReturn(List.of(pluginWrapper));
+        when(pluginWrapper.getPluginId()).thenReturn("demo-plugin");
+        when(pluginWrapper.getPluginState()).thenReturn(PluginState.STARTED);
+        when(pluginWrapper.getPluginPath()).thenReturn(missingJar);
+        when(pluginWrapper.getDescriptor()).thenReturn(pluginDescriptor);
+        when(pluginDescriptor.getPluginId()).thenReturn("demo-plugin");
+        when(pluginDescriptor.getVersion()).thenReturn("1.0.0");
+        when(pluginDescriptor.getProvider()).thenReturn("MagicBoot Team");
+        when(pluginDescriptor.getPluginClass()).thenReturn("org.ssssssss.magicboot.demo.DemoPlugin");
+        when(pluginDescriptor.getDependencies()).thenReturn(null);
+
+        service.initMissingPluginsFromRuntime();
+
+        ArgumentCaptor<PluginInfo> captor = ArgumentCaptor.forClass(PluginInfo.class);
+        verify(pluginInfoMapper, times(1)).insert(captor.capture());
+        PluginInfo inserted = captor.getValue();
+        assertEquals("demo-plugin", inserted.getPluginName());
+        assertEquals("MagicBoot Team", inserted.getAuthor());
+        assertEquals("MagicBoot Team", inserted.getProvider());
+        assertEquals("org.ssssssss.magicboot.demo.DemoPlugin", inserted.getPluginClass());
+        assertEquals("1.0.0", inserted.getVersion());
+    }
+
+    private byte[] createJarWithPluginPropertiesBytes(Map<String, String> props) throws IOException {
+        Path tempJar = Files.createTempFile("plugin-props-", ".jar");
+        try (JarOutputStream jar = new JarOutputStream(Files.newOutputStream(tempJar))) {
+            jar.putNextEntry(new JarEntry("plugin.properties"));
+            Properties properties = new Properties();
+            properties.putAll(new LinkedHashMap<>(props));
+            properties.store(jar, null);
+            jar.closeEntry();
+        }
+        byte[] bytes = Files.readAllBytes(tempJar);
+        Files.deleteIfExists(tempJar);
+        return bytes;
     }
 }

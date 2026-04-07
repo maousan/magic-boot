@@ -1,5 +1,5 @@
 server:
-  port: 8081
+  port: 8089
   compression:
     enabled: true
     min-response-size: 128
@@ -48,7 +48,6 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     type: com.alibaba.druid.pool.DruidDataSource
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://192.168.2.90/magic-boot?useSSL=false&zeroDateTimeBehavior=convertToNull&useUnicode=true&characterEncoding=UTF8&autoReconnect=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai}
     username: ${SPRING_DATASOURCE_USERNAME:magic}
     password: ${SPRING_DATASOURCE_PASSWORD:Magic@2026}
     druid:
@@ -89,6 +88,15 @@ spring:
         url-pattern: /*
         # 忽略过滤格式
         exclusions: "*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*"
+  flyway:
+    enabled: false
+    locations: classpath:db/migration,classpath:db/seed/prod
+    baseline-on-migrate: true
+    baseline-version: "20260329.005"
+    validate-on-migrate: true
+    url: ${SPRING_FLYWAY_URL:${spring.datasource.url}}
+    user: ${SPRING_FLYWAY_USER:${spring.datasource.username}}
+    password: ${SPRING_FLYWAY_PASSWORD:${spring.datasource.password}}
 
 magic-api:
   web: /magic/web
@@ -211,6 +219,7 @@ forest:
   log-request: true            # 打开/关闭Forest请求日志（默认为 true）
   log-response-status: true    # 打开/关闭Forest响应状态日志（默认为 true）
   log-response-content: true   # 打开/关闭Forest响应内容日志（默认为 false）
+#  log-response-headers: true   # 打开/关闭Forest响应头日志
   async-mode: platform         # [自v1.5.27版本起可用] 异步模式（默认为 platform）
 
 

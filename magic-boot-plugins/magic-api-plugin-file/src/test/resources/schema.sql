@@ -1,4 +1,4 @@
-﻿CREATE TABLE IF NOT EXISTS sys_file (
+CREATE TABLE IF NOT EXISTS sys_file (
   id varchar(36) PRIMARY KEY,
   storage_key varchar(50) NOT NULL,
   file_path varchar(500) NOT NULL,

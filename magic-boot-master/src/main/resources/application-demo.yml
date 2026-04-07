@@ -1,7 +1,3 @@
-
-server:
-  port: 8089
-
 spring:
   datasource:
     username: magic
@@ -13,4 +9,4 @@ upload:
 
 # 插件路径
 plugin:
-  dir: ./plugins/
+  dir: ./plugins

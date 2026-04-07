@@ -171,7 +171,7 @@ class FileOperationEventTest {
         // 验证 Service 被调用
         verify(sysFileService, times(1)).createDirectory(
                 eq("local"),
-                eq("/test/new-dir/"),
+                eq("/test/"),
                 eq("new-dir"),
                 eq("test-user")
         );
@@ -183,7 +183,7 @@ class FileOperationEventTest {
     @DisplayName("12. 监听器处理删除事件")
     void testHandleDeleteEvent() {
         // 模拟 deleteByPath 返回
-        when(sysFileService.deleteByPath(anyString(), anyString()))
+        when(sysFileService.deleteByPath(any(), anyString(), anyString()))
                 .thenReturn(true);
 
         // 创建删除事件
@@ -198,6 +198,7 @@ class FileOperationEventTest {
 
         // 验证 Service 被调用
         verify(sysFileService, times(1)).deleteByPath(
+                isNull(),
                 eq("/test/delete-me.txt"),
                 eq("test-user")
         );
@@ -209,7 +210,7 @@ class FileOperationEventTest {
     @DisplayName("13. 监听器处理删除不存在的文件")
     void testHandleDeleteEventNotFound() {
         // 模拟 deleteByPath 返回 false
-        when(sysFileService.deleteByPath(anyString(), anyString()))
+        when(sysFileService.deleteByPath(any(), anyString(), anyString()))
                 .thenReturn(false);
 
         // 创建删除事件
@@ -224,6 +225,7 @@ class FileOperationEventTest {
 
         // 验证 Service 被调用
         verify(sysFileService, times(1)).deleteByPath(
+                isNull(),
                 eq("/test/non-existent.txt"),
                 eq("test-user")
         );

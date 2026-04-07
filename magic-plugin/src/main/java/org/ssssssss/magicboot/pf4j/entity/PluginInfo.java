@@ -4,116 +4,119 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
-import org.ssssssss.magicboot.pf4j.model.PluginStatus;
 
 import java.time.LocalDateTime;
 
 /**
- * 鎻掍欢淇℃伅瀹炰綋
+ * 插件信息实体
  */
 @Data
 @TableName("magic_plugin")
 public class PluginInfo {
 
     /**
-     * 涓婚敭 ID
+     * 主键 ID
      */
     @TableId(type = IdType.ASSIGN_UUID)
     private String id;
 
     /**
-     * 鎻掍欢 ID
+     * 插件 ID
      */
     private String pluginId;
 
     /**
-     * 鎻掍欢鍚嶇О
+     * 插件名称
      */
     private String pluginName;
 
     /**
-     * 鎻掍欢鐗堟湰
+     * 插件版本
      */
     private String version;
 
     /**
-     * 鎻掍欢鎻忚堪
+     * 插件描述
      */
     private String description;
 
     /**
-     * 鎻掍欢浣滆€?
+     * 插件作者
      */
     private String author;
 
     /**
-     * 鎻掍欢绫?
+     * 插件主类
      */
     private String pluginClass;
 
     /**
-     * 鎻掍欢鐘舵€?
+     * 插件状态
      */
     private String status;
 
     /**
-     * JAR 鏂囦欢璺緞
+     * JAR 文件路径
      */
     private String jarPath;
 
     /**
-     * 鍒涘缓鏃堕棿
+     * 创建时间
      */
     private LocalDateTime createTime;
 
     /**
-     * 鏇存柊鏃堕棿
+     * 更新时间
      */
     private LocalDateTime updateTime;
 
     /**
-     * 鎻掍欢渚濊禆
+     * 插件依赖
      */
     private String dependencies;
 
     /**
-     * 鎻掍欢鎻愪緵鑰?     */
+     * 插件提供方
+     */
     private String provider;
 
     /**
-     * 瀹夎鍖呯被鍨嬶細ZIP / LEGACY_JAR
+     * 包类型：ZIP / LEGACY_JAR
      */
     private String packageType;
 
     /**
-     * 瀹夎鍖呮牎楠屽拰锛堥€氬父涓?entryJar sha256锛?     */
+     * 包校验值（ZIP 场景为 entryJar 的 SHA-256）
+     */
     private String packageChecksum;
 
     /**
-     * Manifest 鐗堟湰
+     * Manifest 版本
      */
     private String manifestVersion;
 
     /**
-     * Manifest 鍘熷 JSON
+     * Manifest 原始 JSON
      */
     private String manifestJson;
 
     /**
-     * Manifest 瑕佹眰鐨?magic-boot 鐗堟湰
+     * Manifest 声明的 magic-boot 版本要求
      */
     private String requiresMagicBoot;
 
     /**
-     * Manifest 鏉冮檺澹版槑锛圝SON锛?     */
+     * Manifest 权限信息 JSON
+     */
     private String permissions;
 
     /**
-     * 瀹夎鏉ユ簮锛圲PLOAD_ZIP / UPLOAD_JAR / LOCAL_PATH / REMOTE_URL锛?     */
+     * 安装来源：UPLOAD_ZIP / UPLOAD_JAR / LOCAL_PATH / REMOTE_URL
+     */
     private String installSource;
 
     /**
-     * 瀹夎鏃堕棿
+     * 安装时间
      */
     private LocalDateTime installTime;
 }

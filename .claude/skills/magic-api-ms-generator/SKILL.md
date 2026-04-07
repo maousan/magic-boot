@@ -14,18 +14,6 @@ compatibility:
 
 **所有查询接口（列表、分页、树结构）必须采用 MyBatis 动态 SQL 语法！**
 
-### 支持的 MyBatis 标签
-
-| 标签 | 用途 | 示例 |
-|-----|------|------|
-| `<if>` | 条件判断 | `<if test="name != null">...</if>` |
-| `<elseif>` | 否则如果 | `<elseif test="type == 1">...</elseif>` |
-| `<else>` | 否则 | `<else>...</else>` |
-| `<where>` | WHERE 子句 | `<where>and ...</where>` |
-| `<foreach>` | 循环遍历 | `<foreach collection="ids" item="id">...</foreach>` |
-| `<trim>` | 前后缀处理 | `<trim prefix="(" suffix=")">...</trim>` |
-| `<set>` | UPDATE SET | `<set>field = #{value}</set>` |
-
 ### 标准查询模板
 
 ```javascript

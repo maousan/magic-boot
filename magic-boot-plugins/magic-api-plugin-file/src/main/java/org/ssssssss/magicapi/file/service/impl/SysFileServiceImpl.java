@@ -184,12 +184,11 @@ public class SysFileServiceImpl extends ServiceImpl<SysFileMapper, SysFile> impl
 
     @Override
     public boolean deleteByPath(String storageKey, String filePath, String updateBy) {
-        SysFile sysFile = findByPath(storageKey, filePath);
-        if (sysFile == null) {
-            return false;
-        }
-        sysFile.setIsDeleted(1);
-        return updateById(sysFile);
+        return update(new LambdaUpdateWrapper<SysFile>()
+                .eq(SysFile::getStorageKey, storageKey)
+                .eq(SysFile::getFilePath, filePath)
+                .eq(SysFile::getIsDeleted, 0)
+                .set(SysFile::getIsDeleted, 1));
     }
 
     @Override

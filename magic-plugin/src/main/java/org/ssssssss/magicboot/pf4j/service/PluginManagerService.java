@@ -18,6 +18,8 @@ import org.ssssssss.magicboot.pf4j.model.PluginInstallException;
 import org.ssssssss.magicboot.pf4j.model.PluginStatus;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
@@ -27,10 +29,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 
 /**
@@ -116,6 +119,7 @@ public class PluginManagerService {
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("pluginId", descriptor.getPluginId());
+        result.put("description", descriptor.getPluginDescription());
         result.put("version", descriptor.getVersion());
         result.put("provider", descriptor.getProvider());
         result.put("pluginClass", descriptor.getPluginClass());
@@ -207,8 +211,8 @@ public class PluginManagerService {
         Path finalFile = null;
         try {
             Path pluginDir = ensurePluginDirectoryExists();
-            tempFile = pluginDir.resolve(fileName + ".download");
-            finalFile = pluginDir.resolve(fileName);
+            tempFile = resolveNonConflictingTargetPath(pluginDir, fileName + ".download");
+            finalFile = resolveNonConflictingTargetPath(pluginDir, fileName);
 
             HttpClient client = HttpClient.newBuilder()
                     .connectTimeout(Duration.ofSeconds(20))
@@ -223,7 +227,7 @@ public class PluginManagerService {
             }
 
             Files.write(tempFile, response.body());
-            Files.move(tempFile, finalFile, StandardCopyOption.REPLACE_EXISTING);
+            Files.move(tempFile, finalFile);
             return loadAndInstallPlugin(finalFile.toString());
         } catch (IllegalArgumentException e) {
             cleanupDownloadedFiles(tempFile, finalFile);
@@ -407,7 +411,7 @@ public class PluginManagerService {
         if (pluginProperties.isUploadZipOnly()) {
             ZipPluginInstaller.InstallPackage prepared = zipPluginInstaller.prepare(file);
             InstallGovernanceMeta governance = InstallGovernanceMeta.forZipUpload(prepared);
-            return installLoadedPlugin(prepared.jarPath(), prepared.pluginId(), prepared.version(), governance);
+            return installLoadedPlugin(prepared.jarPath(), prepared.pluginId(), prepared.version(), governance, true);
         }
 
         String originalName = Optional.ofNullable(file == null ? null : file.getOriginalFilename()).orElse("");
@@ -415,7 +419,7 @@ public class PluginManagerService {
         if (lowerName.endsWith(".zip")) {
             ZipPluginInstaller.InstallPackage prepared = zipPluginInstaller.prepare(file);
             InstallGovernanceMeta governance = InstallGovernanceMeta.forZipUpload(prepared);
-            return installLoadedPlugin(prepared.jarPath(), prepared.pluginId(), prepared.version(), governance);
+            return installLoadedPlugin(prepared.jarPath(), prepared.pluginId(), prepared.version(), governance, true);
         }
         if (!lowerName.endsWith(".jar")) {
             throw new PluginInstallException(PluginInstallErrorCode.PLUGIN_UPLOAD_INVALID_TYPE, "Only ZIP or JAR plugin packages are supported");
@@ -430,7 +434,7 @@ public class PluginManagerService {
         file.transferTo(targetJar.toFile());
 
         InstallGovernanceMeta governance = InstallGovernanceMeta.forLegacyJarUpload();
-        return installLoadedPlugin(targetJar, null, null, governance);
+        return installLoadedPlugin(targetJar, null, null, governance, true);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -681,13 +685,14 @@ public class PluginManagerService {
     private PluginInfo savePluginToDatabase(String pluginId, Path jarPath, InstallGovernanceMeta governance) {
         PluginWrapper wrapper = pluginManager.getPlugin(pluginId);
         PluginDescriptor descriptor = wrapper.getDescriptor();
+        PluginMetadata metadata = resolvePluginMetadata(descriptor, jarPath);
 
         PluginInfo info = new PluginInfo();
         info.setPluginId(descriptor.getPluginId());
-        info.setPluginName(descriptor.getPluginId());
+        info.setPluginName(metadata.pluginName());
         info.setVersion(descriptor.getVersion());
-        info.setDescription("");
-        info.setAuthor(descriptor.getProvider());
+        info.setDescription(descriptor.getPluginDescription());
+        info.setAuthor(metadata.author());
         info.setPluginClass(descriptor.getPluginClass());
         info.setStatus(PluginStatus.CREATED.name());
         info.setJarPath(jarPath.toString());
@@ -711,21 +716,22 @@ public class PluginManagerService {
     private PluginInfo buildPluginInfoFromRuntime(PluginWrapper wrapper) {
         PluginDescriptor descriptor = wrapper.getDescriptor();
         PluginStatus status = mapRuntimeState(wrapper.getPluginState());
+        Path pluginPath = wrapper.getPluginPath();
+        PluginMetadata metadata = resolvePluginMetadata(descriptor, pluginPath);
 
         PluginInfo info = new PluginInfo();
         info.setPluginId(descriptor.getPluginId());
-        info.setPluginName(descriptor.getPluginId());
+        info.setPluginName(metadata.pluginName());
         info.setVersion(descriptor.getVersion());
-        info.setDescription("");
-        info.setAuthor(descriptor.getProvider());
+        info.setDescription(descriptor.getPluginDescription());
+        info.setProvider(descriptor.getProvider());
         info.setPluginClass(descriptor.getPluginClass());
         info.setStatus(status.name());
-        Path pluginPath = wrapper.getPluginPath();
         info.setJarPath(pluginPath == null ? "" : pluginPath.toString());
         info.setCreateTime(LocalDateTime.now());
         info.setUpdateTime(LocalDateTime.now());
         info.setDependencies(descriptor.getDependencies() == null ? "" : descriptor.getDependencies().toString());
-        info.setProvider(descriptor.getProvider());
+        info.setAuthor(metadata.author());
         return info;
     }
 
@@ -795,7 +801,8 @@ public class PluginManagerService {
     private PluginInfo installLoadedPlugin(Path jarPath,
                                            String expectedPluginId,
                                            String expectedVersion,
-                                           InstallGovernanceMeta governance) throws IOException {
+                                           InstallGovernanceMeta governance,
+                                           boolean cleanupJarOnFailure) throws IOException {
         String loadedPluginId = null;
         try {
             loadedPluginId = pluginManager.loadPlugin(jarPath);
@@ -824,10 +831,12 @@ public class PluginManagerService {
                     log.warn("Failed to unload plugin after install error: {}", loadedPluginId, unloadEx);
                 }
             }
-            try {
-                Files.deleteIfExists(jarPath);
-            } catch (IOException deleteEx) {
-                log.warn("Failed to delete plugin file after install error: {}", jarPath, deleteEx);
+            if (cleanupJarOnFailure) {
+                try {
+                    Files.deleteIfExists(jarPath);
+                } catch (IOException deleteEx) {
+                    log.warn("Failed to delete plugin file after install error: {}", jarPath, deleteEx);
+                }
             }
             if (ex instanceof IOException ioEx) {
                 throw ioEx;
@@ -984,6 +993,57 @@ public class PluginManagerService {
                 || lower.contains("disable");
     }
 
+    private PluginMetadata resolvePluginMetadata(PluginDescriptor descriptor, Path jarPath) {
+        PluginPropertiesMetadata properties = readPluginProperties(jarPath);
+        String pluginName = firstNonBlank(properties.pluginName(), descriptor.getPluginId());
+        String author = firstNonBlank(properties.author(), descriptor.getProvider());
+        return new PluginMetadata(pluginName, author);
+    }
+
+    private PluginPropertiesMetadata readPluginProperties(Path jarPath) {
+        if (jarPath == null || !Files.exists(jarPath) || Files.isDirectory(jarPath)) {
+            return PluginPropertiesMetadata.empty();
+        }
+
+        List<String> candidates = List.of(
+                "plugin.properties",
+                "META-INF/plugin.properties",
+                "BOOT-INF/classes/plugin.properties"
+        );
+        try (JarFile jarFile = new JarFile(jarPath.toFile())) {
+            for (String candidate : candidates) {
+                JarEntry entry = jarFile.getJarEntry(candidate);
+                if (entry == null || entry.isDirectory()) {
+                    continue;
+                }
+                Properties properties = new Properties();
+                try (InputStream inputStream = jarFile.getInputStream(entry);
+                     InputStreamReader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8)) {
+                    properties.load(reader);
+                }
+                return new PluginPropertiesMetadata(
+                        trimToNull(properties.getProperty("plugin.name")),
+                        trimToNull(properties.getProperty("plugin.provider"))
+                );
+            }
+        } catch (Exception ex) {
+            log.debug("Read plugin.properties failed from jar: {}", jarPath, ex);
+        }
+        return PluginPropertiesMetadata.empty();
+    }
+
+    private String firstNonBlank(String first, String fallback) {
+        return (first != null && !first.isBlank()) ? first : Optional.ofNullable(fallback).orElse("");
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
     private static final class InstallGovernanceMeta {
         private final String packageType;
         private final String packageChecksum;
@@ -1050,5 +1110,20 @@ public class PluginManagerService {
                     null
             );
         }
+    }
+
+    private record PluginPropertiesMetadata(
+            String pluginName,
+            String author
+    ) {
+        private static PluginPropertiesMetadata empty() {
+            return new PluginPropertiesMetadata(null, null);
+        }
+    }
+
+    private record PluginMetadata(
+            String pluginName,
+            String author
+    ) {
     }
 }

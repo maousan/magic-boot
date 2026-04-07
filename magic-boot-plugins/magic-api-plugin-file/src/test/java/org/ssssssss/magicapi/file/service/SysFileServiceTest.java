@@ -125,8 +125,10 @@ class SysFileServiceTest {
     @Order(11)
     @DisplayName("11. 根据父路径查询子文件列表")
     void testListByParentPath() {
-        // 先创建几个测试文件
         String parentPath = "/test-list-" + System.currentTimeMillis() + "/";
+        String dirName = parentPath.substring(1, parentPath.length() - 1);
+        sysFileService.createDirectory(TEST_STORAGE_KEY, "/", dirName, "test-user");
+        // 先创建几个测试文件
         for (int i = 0; i < 3; i++) {
             sysFileService.saveFileRecord(
                     TEST_STORAGE_KEY, parentPath + "file" + i + ".txt",
@@ -211,14 +213,14 @@ class SysFileServiceTest {
         );
 
         // 确认存在
-        assertTrue(sysFileService.existsByPath(filePath), "文件应存在");
+        assertTrue(sysFileService.existsByPath(TEST_STORAGE_KEY, filePath), "文件应存在");
 
         // 删除
-        boolean deleted = sysFileService.deleteByPath(filePath, "test-user");
+        boolean deleted = sysFileService.deleteByPath(TEST_STORAGE_KEY, filePath, "test-user");
         assertTrue(deleted, "删除应成功");
 
         // 确认已删除（逻辑删除后不应能查到）
-        assertFalse(sysFileService.existsByPath(filePath), "文件不应存在");
+        assertFalse(sysFileService.existsByPath(TEST_STORAGE_KEY, filePath), "文件不应存在");
 
         System.out.println("✅ 逻辑删除成功: " + filePath);
     }

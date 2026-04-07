@@ -4,11 +4,11 @@
   "name" : "个人中心",
   "type" : "api",
   "parentId" : "0",
-  "path" : "/system/user",
+  "path" : "/user",
   "createTime" : 1710123456789,
-  "updateTime" : 1710123456789,
+  "updateTime" : 1774849848968,
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "paths" : [ ],
   "options" : [ ]
 }
