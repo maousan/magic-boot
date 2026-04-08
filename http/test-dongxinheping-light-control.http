@@ -1,0 +1,67 @@
+### 东信和平亮灯控制接口测试
+@baseUrl = http://127.0.0.1:8090
+
+### 1. 成功-自动亮灯（mode=1）
+POST {{baseUrl}}/api/light/control
+Content-Type: application/json
+
+{
+  "waveNo": "WV-LIGHT-0001",
+  "userId": "USER-LIGHT-01",
+  "mode": 1,
+  "color": "GREEN",
+  "duration": "inf"
+}
+
+### 2. 成功-手动灭灯（mode=4）
+POST {{baseUrl}}/api/light/control
+Content-Type: application/json
+
+{
+  "waveNo": "WV-LIGHT-0002",
+  "userId": "USER-LIGHT-02",
+  "mode": 4
+}
+
+### 3. 参数错误-mode非法（预期400）
+POST {{baseUrl}}/api/light/control
+Content-Type: application/json
+
+{
+  "waveNo": "WV-LIGHT-0003",
+  "userId": "USER-LIGHT-03",
+  "mode": 9
+}
+
+### 4. 参数错误-color非法（预期400）
+POST {{baseUrl}}/api/light/control
+Content-Type: application/json
+
+{
+  "waveNo": "WV-LIGHT-0004",
+  "userId": "USER-LIGHT-04",
+  "mode": 1,
+  "color": "WHITE",
+  "duration": "inf"
+}
+
+### 5. 参数错误-duration非法（预期400）
+POST {{baseUrl}}/api/light/control
+Content-Type: application/json
+
+{
+  "waveNo": "WV-LIGHT-0005",
+  "userId": "USER-LIGHT-05",
+  "mode": 2,
+  "color": "GREEN",
+  "duration": "99m"
+}
+
+### 6. 参数错误-缺少waveNo（预期400）
+POST {{baseUrl}}/api/light/control
+Content-Type: application/json
+
+{
+  "userId": "USER-LIGHT-06",
+  "mode": 1
+}

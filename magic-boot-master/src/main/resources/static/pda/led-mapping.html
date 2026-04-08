@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>库位-巷道灯绑定</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #f2f4f7;
+      color: #1f2937;
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.4;
+    }
+    .page {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 12px;
+    }
+    .title {
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      font-size: 22px;
+      font-weight: 700;
+      color: #0f172a;
+      background: #fff;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+    }
+    .entry-link {
+      display: inline-block;
+      margin: 0 0 10px;
+      color: #1d4ed8;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .entry-link:active { opacity: 0.85; }
+    .panel {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #cbd5e1;
+    }
+    .tab-btn {
+      appearance: none;
+      flex: 1;
+      height: 42px;
+      border: 1px solid transparent;
+      border-bottom: 0;
+      border-radius: 8px 8px 0 0;
+      background: transparent;
+      color: #475569;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: -1px;
+    }
+    .tab-btn.active {
+      border-color: #cbd5e1;
+      background: #fff;
+      color: #1d4ed8;
+      font-weight: 700;
+    }
+    .form-pane { display: none; }
+    .form-pane.active { display: block; }
+    .row { margin-bottom: 10px; }
+    .row:last-child { margin-bottom: 0; }
+    .label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      color: #374151;
+      font-weight: 600;
+    }
+    .input-wrap { position: relative; }
+    .input {
+      width: 100%;
+      height: 46px;
+      border: 1px solid #cfd6df;
+      border-radius: 8px;
+      padding: 0 44px 0 12px;
+      font-size: 16px;
+      background: #fff;
+      color: #111827;
+      outline: none;
+    }
+    .input:focus {
+      border-color: #1d4ed8;
+      box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.12);
+    }
+    .clear-btn {
+      position: absolute;
+      right: 6px;
+      top: 5px;
+      width: 36px;
+      height: 36px;
+      line-height: 36px;
+      border: 0;
+      border-radius: 18px;
+      background: #e5e7eb;
+      color: #334155;
+      font-size: 20px;
+      font-weight: 700;
+      display: none;
+      cursor: pointer;
+      padding: 0;
+    }
+    .clear-btn:active { background: #cbd5e1; }
+    .btn {
+      width: 100%;
+      height: 48px;
+      border: 0;
+      border-radius: 8px;
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      background: #1d4ed8;
+      cursor: pointer;
+    }
+    .btn.danger { background: #b91c1c; }
+    .btn:disabled {
+      opacity: 0.62;
+      cursor: not-allowed;
+    }
+    .tip {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 8px;
+    }
+    .status {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      font-size: 14px;
+      color: #374151;
+      margin-bottom: 10px;
+      min-height: 44px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .status.success {
+      border-color: #86efac;
+      background: #f0fdf4;
+      color: #166534;
+    }
+    .status.error {
+      border-color: #fca5a5;
+      background: #fef2f2;
+      color: #991b1b;
+    }
+    @media (max-width: 360px) {
+      .title { font-size: 20px; }
+      .btn, .tab-btn { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <a class="entry-link" href="./mapping-entry.html">&lt; 返回入口导航</a>
+    <h1 class="title">库位-巷道灯绑定</h1>
+
+    <div class="panel">
+      <div class="tabs">
+        <button class="tab-btn active" id="tabCreate" type="button">创建绑定</button>
+        <button class="tab-btn" id="tabDelete" type="button">删除绑定</button>
+      </div>
+
+      <div class="form-pane active" id="createPanel">
+        <div class="row">
+          <label class="label" for="createLotNo">库位码 lotNo</label>
+          <div class="input-wrap">
+            <input class="input" id="createLotNo" type="text" autocomplete="off" placeholder="请扫码或输入 lotNo" />
+            <button class="clear-btn" type="button" data-target="createLotNo" aria-label="clear">&times;</button>
+          </div>
+        </div>
+        <div class="row">
+          <label class="label" for="createLedId">巷道灯 ledId</label>
+          <div class="input-wrap">
+            <input class="input" id="createLedId" type="text" autocomplete="off" placeholder="请扫码或输入 ledId" />
+            <button class="clear-btn" type="button" data-target="createLedId" aria-label="clear">&times;</button>
+          </div>
+        </div>
+        <button class="btn" id="createBtn" type="button">提交创建</button>
+        <div class="tip">提示：输入框扫码后按回车可直接提交当前 Tab。</div>
+      </div>
+
+      <div class="form-pane" id="deletePanel">
+        <div class="row">
+          <label class="label" for="deleteLotNo">库位码 lotNo</label>
+          <div class="input-wrap">
+            <input class="input" id="deleteLotNo" type="text" autocomplete="off" placeholder="请扫码或输入 lotNo" />
+            <button class="clear-btn" type="button" data-target="deleteLotNo" aria-label="clear">&times;</button>
+          </div>
+        </div>
+        <button class="btn danger" id="deleteBtn" type="button">提交删除</button>
+        <div class="tip">提示：删除通过 lotNo 定位绑定记录。</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2 style="margin:0 0 10px;font-size:18px;color:#111827;">操作状态</h2>
+      <div class="status" id="statusBar">就绪，等待操作。</div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var activeForm = "create";
+      var isSubmitting = false;
+
+      var createLotNoEl = document.getElementById("createLotNo");
+      var createLedIdEl = document.getElementById("createLedId");
+      var deleteLotNoEl = document.getElementById("deleteLotNo");
+      var createBtnEl = document.getElementById("createBtn");
+      var deleteBtnEl = document.getElementById("deleteBtn");
+      var statusBarEl = document.getElementById("statusBar");
+      var tabCreateEl = document.getElementById("tabCreate");
+      var tabDeleteEl = document.getElementById("tabDelete");
+      var createPanelEl = document.getElementById("createPanel");
+      var deletePanelEl = document.getElementById("deletePanel");
+      var clearBtnEls = document.getElementsByClassName("clear-btn");
+
+      function trim(value) {
+        if (value == null) return "";
+        return String(value).replace(/^\s+|\s+$/g, "");
+      }
+
+      function setStatus(type, text) {
+        statusBarEl.className = "status" + (type ? " " + type : "");
+        statusBarEl.innerHTML = text;
+      }
+
+      function getClearBtn(targetId) {
+        var i;
+        for (i = 0; i < clearBtnEls.length; i++) {
+          if (clearBtnEls[i].getAttribute("data-target") === targetId) return clearBtnEls[i];
+        }
+        return null;
+      }
+
+      function toggleClearBtn(inputEl) {
+        if (!inputEl || !inputEl.id) return;
+        var btn = getClearBtn(inputEl.id);
+        if (!btn) return;
+        btn.style.display = trim(inputEl.value) ? "block" : "none";
+      }
+
+      function bindClearFeature(inputEl) {
+        if (!inputEl) return;
+        inputEl.oninput = function () { toggleClearBtn(inputEl); };
+        inputEl.onkeyup = function () { toggleClearBtn(inputEl); };
+        inputEl.onchange = function () { toggleClearBtn(inputEl); };
+        toggleClearBtn(inputEl);
+      }
+
+      function setBusy(flag) {
+        isSubmitting = !!flag;
+        createBtnEl.disabled = isSubmitting;
+        deleteBtnEl.disabled = isSubmitting;
+      }
+
+      function parseJsonSafely(text) {
+        if (!text) return null;
+        try { return JSON.parse(text); } catch (e) { return null; }
+      }
+
+      function request(method, url, payload, callback) {
+        var xhr = new XMLHttpRequest();
+        var startedAt = new Date().getTime();
+        xhr.open(method, url, true);
+        xhr.timeout = 15000;
+        if (method === "POST") xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+
+        xhr.onreadystatechange = function () {
+          if (xhr.readyState !== 4) return;
+          var elapsed = new Date().getTime() - startedAt;
+          var bodyText = xhr.responseText || "";
+          var bodyJson = parseJsonSafely(bodyText);
+          callback(null, {
+            method: method,
+            url: url,
+            request: payload,
+            status: xhr.status,
+            elapsedMs: elapsed,
+            bodyText: bodyText,
+            bodyJson: bodyJson
+          });
+        };
+        xhr.onerror = function () { callback(new Error("网络异常，请检查服务是否可用")); };
+        xhr.ontimeout = function () { callback(new Error("请求超时(15s)")); };
+        if (method === "POST") xhr.send(JSON.stringify(payload));
+        else xhr.send();
+      }
+
+      function handleApiResponse(err, result) {
+        setBusy(false);
+        if (err) {
+          setStatus("error", "请求失败：" + err.message);
+          return;
+        }
+        var bodyJson = result.bodyJson;
+        var code = bodyJson && bodyJson.code;
+        var message = bodyJson && bodyJson.message;
+        var data = bodyJson && bodyJson.data;
+        var isHttpOk = result.status >= 200 && result.status < 300;
+        var isApiOk = bodyJson ? Number(code) === 200 : false;
+        var success = isHttpOk && isApiOk;
+        var deleteNotFound = success && activeForm === "delete" && Number(data) === 0;
+        if (deleteNotFound) {
+          setStatus("error", "删除失败：库位码不存在");
+          return;
+        }
+        if (success) {
+          setStatus("success", "操作成功：" + (message || "success"));
+        } else {
+          var errorText = "操作失败";
+          if (message) errorText += "：" + message;
+          else if (!isHttpOk) errorText += "：HTTP " + result.status;
+          setStatus("error", errorText);
+        }
+
+        if (success && activeForm === "create") {
+          createLotNoEl.value = "";
+          createLedIdEl.value = "";
+          toggleClearBtn(createLotNoEl);
+          toggleClearBtn(createLedIdEl);
+          createLotNoEl.focus();
+        }
+      }
+
+      function createMapping() {
+        if (isSubmitting) return;
+        var lotNo = trim(createLotNoEl.value);
+        var ledId = trim(createLedIdEl.value);
+        if (!lotNo) { setStatus("error", "创建失败：lotNo 不能为空"); createLotNoEl.focus(); return; }
+        if (!ledId) { setStatus("error", "创建失败：ledId 不能为空"); createLedIdEl.focus(); return; }
+        var payload = { lotNo: lotNo, ledId: ledId };
+        setBusy(true);
+        setStatus("", "创建中，请稍候...");
+        request("POST", "/api/location/led-mapping", payload, handleApiResponse);
+      }
+
+      function deleteMapping() {
+        if (isSubmitting) return;
+        var lotNo = trim(deleteLotNoEl.value);
+        if (!lotNo) { setStatus("error", "删除失败：lotNo 不能为空"); deleteLotNoEl.focus(); return; }
+        var url = "/api/location/led-mapping?lotNo=" + encodeURIComponent(lotNo);
+        setBusy(true);
+        setStatus("", "删除中，请稍候...");
+        request("DELETE", url, { lotNo: lotNo }, handleApiResponse);
+      }
+
+      function switchTab(tabName) {
+        activeForm = tabName;
+        if (tabName === "delete") {
+          tabCreateEl.className = "tab-btn";
+          tabDeleteEl.className = "tab-btn active";
+          createPanelEl.className = "form-pane";
+          deletePanelEl.className = "form-pane active";
+          deleteLotNoEl.focus();
+        } else {
+          tabCreateEl.className = "tab-btn active";
+          tabDeleteEl.className = "tab-btn";
+          createPanelEl.className = "form-pane active";
+          deletePanelEl.className = "form-pane";
+          createLotNoEl.focus();
+        }
+      }
+
+      function bindEnterSubmit(inputEl, formName) {
+        inputEl.onfocus = function () { activeForm = formName; };
+        inputEl.onkeydown = function (event) {
+          var e = event || window.event;
+          var keyCode = e.which || e.keyCode;
+          if (keyCode !== 13) return;
+          if (e.preventDefault) e.preventDefault();
+          else e.returnValue = false;
+          if (formName === "create" && inputEl && inputEl.id === "createLotNo") {
+            if (createLedIdEl && createLedIdEl.focus) {
+              createLedIdEl.focus();
+            }
+            return;
+          }
+          if (formName === "create") createMapping();
+          else deleteMapping();
+        };
+      }
+
+      function bindClearButtons() {
+        var i;
+        for (i = 0; i < clearBtnEls.length; i++) {
+          clearBtnEls[i].onclick = (function (btnRef) {
+            return function () {
+              var targetId = btnRef.getAttribute("data-target");
+              var inputEl = document.getElementById(targetId);
+              if (!inputEl) return;
+              inputEl.value = "";
+              toggleClearBtn(inputEl);
+              inputEl.focus();
+            };
+          })(clearBtnEls[i]);
+        }
+      }
+
+      createBtnEl.onclick = function () { switchTab("create"); createMapping(); };
+      deleteBtnEl.onclick = function () { switchTab("delete"); deleteMapping(); };
+      tabCreateEl.onclick = function () { switchTab("create"); };
+      tabDeleteEl.onclick = function () { switchTab("delete"); };
+
+      bindEnterSubmit(createLotNoEl, "create");
+      bindEnterSubmit(createLedIdEl, "create");
+      bindEnterSubmit(deleteLotNoEl, "delete");
+      bindClearFeature(createLotNoEl);
+      bindClearFeature(createLedIdEl);
+      bindClearFeature(deleteLotNoEl);
+      bindClearButtons();
+
+      document.onkeydown = function (event) {
+        var e = event || window.event;
+        var keyCode = e.which || e.keyCode;
+        if (keyCode !== 13) return;
+        var target = e.target || e.srcElement;
+        if (target && target.tagName && String(target.tagName).toLowerCase() === "input") return;
+        if (activeForm === "delete") deleteMapping();
+        else createMapping();
+      };
+
+      switchTab("create");
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,259 @@
+### 东信和平拣货完成接口测试
+@baseUrl = http://127.0.0.1:8090
+
+### 0. 前置：先上传主单（成功）
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV-COMPLETE-0001",
+  "userId": "USER-COMPLETE-01",
+  "userName": "测试员",
+  "updateTime": 1648195200000,
+  "details": [
+    {
+      "id": "U001",
+      "materialCode": "MAT001",
+      "batchNo": "B20260325",
+      "locationCode": "A-01-02",
+      "planQuantity": 100,
+      "actualQuantity": 0,
+      "status": 0
+    },
+    {
+      "id": "U002",
+      "materialCode": "MAT002",
+      "batchNo": "B20260326",
+      "locationCode": "A-01-03",
+      "planQuantity": 50,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}
+
+### 1. 拣货完成-成功（批量）
+POST {{baseUrl}}/api/light/picking/complete
+Content-Type: application/json
+
+{
+  "waveNo": "WV-COMPLETE-0001",
+  "userId": "USER-COMPLETE-01",
+  "details": [
+    {
+      "materialCode": "MAT001",
+      "batchNo": "B20260325",
+      "locationCode": "A-01-02",
+      "planQuantity": 100,
+      "actualQuantity": 100,
+      "updateTime": 1648195200000
+    },
+    {
+      "materialCode": "MAT002",
+      "batchNo": "B20260326",
+      "locationCode": "A-01-03",
+      "planQuantity": 50,
+      "actualQuantity": 50,
+      "updateTime": 1648195260000
+    }
+  ]
+}
+
+### 1.1 同库位全部拣完后触发灭灯（locationCode=A-02-01）
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV-COMPLETE-0002",
+  "userId": "USER-COMPLETE-02",
+  "userName": "测试员2",
+  "updateTime": 1648195200000,
+  "details": [
+    {
+      "id": "U101",
+      "materialCode": "MAT101",
+      "batchNo": "B20260327",
+      "locationCode": "A-02-01",
+      "planQuantity": 10,
+      "actualQuantity": 0,
+      "status": 0
+    },
+    {
+      "id": "U102",
+      "materialCode": "MAT102",
+      "batchNo": "B20260327",
+      "locationCode": "A-02-01",
+      "planQuantity": 20,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}
+
+### 1.2 仅完成同库位其中一个物料（此时不应灭灯）
+POST {{baseUrl}}/api/light/picking/complete
+Content-Type: application/json
+
+{
+  "waveNo": "WV-COMPLETE-0002",
+  "userId": "USER-COMPLETE-02",
+  "details": [
+    {
+      "materialCode": "MAT101",
+      "batchNo": "B20260327",
+      "locationCode": "A-02-01",
+      "planQuantity": 10,
+      "actualQuantity": 10,
+      "updateTime": 1648195205000
+    }
+  ]
+}
+
+### 1.3 完成同库位最后一个物料（应触发灭灯）
+POST {{baseUrl}}/api/light/picking/complete
+Content-Type: application/json
+
+{
+  "waveNo": "WV-COMPLETE-0002",
+  "userId": "USER-COMPLETE-02",
+  "details": [
+    {
+      "materialCode": "MAT102",
+      "batchNo": "B20260327",
+      "locationCode": "A-02-01",
+      "planQuantity": 20,
+      "actualQuantity": 20,
+      "updateTime": 1648195210000
+    }
+  ]
+}
+
+### 2. 参数错误-details为空（预期400）
+POST {{baseUrl}}/api/light/picking/complete
+Content-Type: application/json
+
+{
+  "waveNo": "WV-COMPLETE-0001",
+  "userId": "USER-COMPLETE-01",
+  "details": []
+}
+
+### 3. 参数错误-负数数量（预期400）
+POST {{baseUrl}}/api/light/picking/complete
+Content-Type: application/json
+
+{
+  "waveNo": "WV-COMPLETE-0001",
+  "userId": "USER-COMPLETE-01",
+  "details": [
+    {
+      "materialCode": "MAT001",
+      "batchNo": "B20260325",
+      "locationCode": "A-01-02",
+      "planQuantity": 100,
+      "actualQuantity": -1,
+      "updateTime": 1648195200000
+    }
+  ]
+}
+
+### 4. 业务错误-主单不存在（预期400）
+POST {{baseUrl}}/api/light/picking/complete
+Content-Type: application/json
+
+{
+  "waveNo": "WV-NOT-EXIST",
+  "userId": "USER-NOT-EXIST",
+  "details": [
+    {
+      "materialCode": "MAT001",
+      "batchNo": "B20260325",
+      "locationCode": "A-01-02",
+      "planQuantity": 100,
+      "actualQuantity": 100,
+      "updateTime": 1648195200000
+    }
+  ]
+}
+
+### 5. 多人同波次同库位场景-准备甲用户数据
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV-MULTI-0001",
+  "userId": "USER-A",
+  "userName": "甲",
+  "updateTime": 1648195200000,
+  "details": [
+    {
+      "id": "MA-001",
+      "materialCode": "MAT-A1",
+      "batchNo": "B-MULTI-01",
+      "locationCode": "A-03-01",
+      "planQuantity": 10,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}
+
+### 6. 多人同波次同库位场景-准备乙用户数据（与甲重叠库位）
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV-MULTI-0001",
+  "userId": "USER-B",
+  "userName": "乙",
+  "updateTime": 1648195201000,
+  "details": [
+    {
+      "id": "MB-001",
+      "materialCode": "MAT-B1",
+      "batchNo": "B-MULTI-01",
+      "locationCode": "A-03-01",
+      "planQuantity": 20,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}
+
+### 7. 甲先完成（乙未完成）-不应灭灯，应异步亮灯 BLUE
+POST {{baseUrl}}/api/light/picking/complete
+Content-Type: application/json
+
+{
+  "waveNo": "WV-MULTI-0001",
+  "userId": "USER-A",
+  "details": [
+    {
+      "materialCode": "MAT-A1",
+      "batchNo": "B-MULTI-01",
+      "locationCode": "A-03-01",
+      "planQuantity": 10,
+      "actualQuantity": 10,
+      "updateTime": 1648195202000
+    }
+  ]
+}
+
+### 8. 乙再完成（同库位全部完成）-应异步灭灯
+POST {{baseUrl}}/api/light/picking/complete
+Content-Type: application/json
+
+{
+  "waveNo": "WV-MULTI-0001",
+  "userId": "USER-B",
+  "details": [
+    {
+      "materialCode": "MAT-B1",
+      "batchNo": "B-MULTI-01",
+      "locationCode": "A-03-01",
+      "planQuantity": 20,
+      "actualQuantity": 20,
+      "updateTime": 1648195203000
+    }
+  ]
+}

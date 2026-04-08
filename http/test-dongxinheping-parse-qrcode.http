@@ -1,0 +1,8 @@
+### 东信和平 解析外箱二维码接口测试
+@baseUrl = http://127.0.0.1:8090
+
+### 1. 标准二维码字符串（双引号开头）
+GET {{baseUrl}}/api/location/parse-qrcode?raw=%22OrdNo%22%3A%222025122365-1%2B01%22%3B%22Lot%22%3A%2220260113_2025122365-1%2B01(1)_YS12_YS-JK-001_002%22%3B%22Qty%22%3A%22170%22
+
+### 2. 普通库位码（非双引号开头）应按 Lot 直接返回
+GET {{baseUrl}}/api/location/parse-qrcode?raw=A1-11-01-01-01

@@ -1,0 +1,131 @@
+### 东信和平亮灯接口测试
+### 基础地址（按 application-dongxingheping.yml）
+@baseUrl = http://127.0.0.1:8090
+
+### 1. 拣货数据上传-成功
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV202603250001",
+  "userId": "USER001",
+  "userName": "张三",
+  "updateTime": 1648195200000,
+  "details": [
+    {
+      "id": "DTL001",
+      "materialCode": "MAT001",
+      "batchNo": "B20260325",
+      "locationCode": "A-01-02",
+      "planQuantity": 100,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}
+
+### 2. 拣货完成-成功
+POST {{baseUrl}}/api/light/picking/complete
+Content-Type: application/json
+
+{
+  "waveNo": "WV202603250001",
+  "userId": "USER001",
+  "details": [
+    {
+      "materialCode": "MAT001",
+      "batchNo": "B20260325",
+      "locationCode": "A-01-02",
+      "planQuantity": 100,
+      "actualQuantity": 100,
+      "updateTime": 1648195200000
+    }
+  ]
+}
+
+### 3. 亮灯灭灯控制-成功
+POST {{baseUrl}}/api/light/control
+Content-Type: application/json
+
+{
+  "waveNo": "WV202603250001",
+  "userId": "USER001",
+  "mode": 1,
+  "color": "GREEN",
+  "duration": "inf"
+}
+
+### 4. 灭灯控制-成功
+POST {{baseUrl}}/api/light/control/off
+Content-Type: application/json
+
+{
+  "waveNo": "WV202603250001",
+  "userId": "USER001",
+  "mode": 1
+}
+
+### 5. 参数错误-缺少waveNo
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "userId": "USER001",
+  "updateTime": 1648195200000,
+  "details": [
+    {
+      "id": "DTL001",
+      "materialCode": "MAT001",
+      "batchNo": "B20260325",
+      "locationCode": "A-01-02",
+      "planQuantity": 100,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}
+
+### 6. 参数错误-mode非法
+POST {{baseUrl}}/api/light/control
+Content-Type: application/json
+
+{
+  "waveNo": "WV202603250001",
+  "userId": "USER001",
+  "mode": 9,
+  "color": "GREEN",
+  "duration": "inf"
+}
+
+### 7. 参数错误-负数数量
+POST {{baseUrl}}/api/light/picking/complete
+Content-Type: application/json
+
+{
+  "waveNo": "WV202603250001",
+  "userId": "USER001",
+  "details": [
+    {
+      "materialCode": "MAT001",
+      "batchNo": "B20260325",
+      "locationCode": "A-01-02",
+      "planQuantity": -1,
+      "actualQuantity": 100,
+      "updateTime": 1648195200000
+    }
+  ]
+}
+
+### 8. 参数错误-details为空
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV202603250001",
+  "userId": "USER001",
+  "updateTime": 1648195200000,
+  "details": []
+}
+
+### 9. 异常路径验证建议
+### 执行前临时将 t_light_control_log 重命名，再请求 /api/light/control，预期返回500；验证后恢复表名。

@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "2ud9c5419ag5484mbxxsafin0b0myji0",
+  "name" : "东信和平",
+  "type" : "api",
+  "parentId" : "0",
+  "path" : "/api",
+  "createTime" : null,
+  "updateTime" : 1775030400000,
+  "createBy" : null,
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

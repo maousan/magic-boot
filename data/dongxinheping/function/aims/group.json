@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "8fb50d27f89e42258deda5f4e6dd7c08",
+  "name" : "aims",
+  "type" : "function",
+  "parentId" : "0",
+  "path" : "aims",
+  "createTime" : 1775209490393,
+  "updateTime" : null,
+  "createBy" : "admin",
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

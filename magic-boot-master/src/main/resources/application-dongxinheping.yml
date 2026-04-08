@@ -1,0 +1,18 @@
+server:
+  port: 8090
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://192.168.2.90/magic-boot?rewriteBatchedStatements=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useUnicode=true&characterEncoding=UTF8&autoReconnect=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai}
+  config:
+    import:
+      - optional:classpath:application.yml
+
+magic-api:
+  resource:
+    location: data/dongxinheping
+
+# 插件路径
+plugin:
+  auto-start: false
+  signature-force-verify: false

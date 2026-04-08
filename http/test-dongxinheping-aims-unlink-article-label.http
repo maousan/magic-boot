@@ -1,0 +1,18 @@
+### 东信和平 AIMS 解绑 article 和 label 函数测试
+@baseUrl = http://127.0.0.1:8090
+
+### 1. 成功样例（labelCode 合法）
+POST {{baseUrl}}/api/function/aims/unlinkArticleAndLabel
+Content-Type: application/json
+
+{
+  "labelCode": "03E2D88CE1DC"
+}
+
+### 2. 参数错误（labelCode 为空，预期业务失败）
+POST {{baseUrl}}/api/function/aims/unlinkArticleAndLabel
+Content-Type: application/json
+
+{
+  "labelCode": ""
+}

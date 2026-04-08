@@ -1,0 +1,187 @@
+### 东信和平拣货上传接口测试
+@baseUrl = http://127.0.0.1:8090
+
+### 1. 成功上传-单条明细
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV202604010001",
+  "userId": "USER001",
+  "userName": "张三",
+  "updateTime": 1648195200000,
+  "details": [
+    {
+      "id": "DTL001",
+      "materialCode": "MAT001",
+      "batchNo": "B20260325",
+      "locationCode": "A-01-02",
+      "planQuantity": 100,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}
+
+### 2. 参数错误-waveNo缺失（预期400）
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "userId": "USER001",
+  "updateTime": 1648195200000,
+  "details": [
+    {
+      "id": "DTL001",
+      "materialCode": "MAT001",
+      "batchNo": "B20260325",
+      "locationCode": "A-01-02",
+      "planQuantity": 100,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}
+
+### 3. 参数错误-details为空（预期400）
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV202604010002",
+  "userId": "USER001",
+  "updateTime": 1648195200000,
+  "details": []
+}
+
+### 4. 参数错误-负数数量（预期400）
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV202604010003",
+  "userId": "USER001",
+  "updateTime": 1648195200000,
+  "details": [
+    {
+      "id": "DTL002",
+      "materialCode": "MAT002",
+      "batchNo": "B20260326",
+      "locationCode": "A-01-03",
+      "planQuantity": -1,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}
+
+### 5. 参数错误-status非法（预期400）
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV202604010004",
+  "userId": "USER001",
+  "updateTime": 1648195200000,
+  "details": [
+    {
+      "id": "DTL003",
+      "materialCode": "MAT003",
+      "batchNo": "B20260327",
+      "locationCode": "A-01-04",
+      "planQuantity": 10,
+      "actualQuantity": 5,
+      "status": 9
+    }
+  ]
+}
+
+### 6. 同waveNo重传覆盖验证-第一次
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV202604010005",
+  "userId": "USER001",
+  "userName": "张三",
+  "updateTime": 1648195200000,
+  "details": [
+    {
+      "id": "DTL004",
+      "materialCode": "MAT004",
+      "batchNo": "B20260328",
+      "locationCode": "A-01-05",
+      "planQuantity": 20,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}
+
+### 7. 同waveNo重传覆盖验证-第二次（预期覆盖）
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV202604010005",
+  "userId": "USER001",
+  "userName": "李四",
+  "updateTime": 1648195300000,
+  "details": [
+    {
+      "id": "DTL005",
+      "materialCode": "MAT005",
+      "batchNo": "B20260329",
+      "locationCode": "A-01-06",
+      "planQuantity": 30,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}
+
+### 8. 数据库异常验证建议（预期500）
+### 执行前可临时将 t_picking_upload 或 t_picking_upload_detail 改名后再请求成功样例，验证500后恢复表名。
+### 9. ������֤-������ҵӦ�첽��GREEN
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV-UPLOAD-LIGHT-0001",
+  "userId": "USER-UP-01",
+  "userName": "���Լ�",
+  "updateTime": 1648195200000,
+  "details": [
+    {
+      "id": "UL001",
+      "materialCode": "MAT-UL-01",
+      "batchNo": "B-UL-01",
+      "locationCode": "A-05-01",
+      "planQuantity": 10,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}
+
+### 10. ������֤-������ҵӦ�첽��BLUE��ͬ���εڶ����ϴ���
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV-UPLOAD-LIGHT-0001",
+  "userId": "USER-UP-02",
+  "userName": "������",
+  "updateTime": 1648195201000,
+  "details": [
+    {
+      "id": "UL002",
+      "materialCode": "MAT-UL-02",
+      "batchNo": "B-UL-01",
+      "locationCode": "A-05-01",
+      "planQuantity": 20,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}

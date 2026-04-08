@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "03a2d754c617417cb68306951d6f8cf6",
+  "name" : "数据",
+  "type" : "function",
+  "parentId" : "8fb50d27f89e42258deda5f4e6dd7c08",
+  "path" : "/articles",
+  "createTime" : 1775538795619,
+  "updateTime" : null,
+  "createBy" : "admin",
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

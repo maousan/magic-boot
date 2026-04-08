@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "89d74bcccfbc468a8dfcd06d6cc2fc56",
+  "name" : "工具函数",
+  "type" : "function",
+  "parentId" : "0",
+  "path" : "/utils",
+  "createTime" : null,
+  "updateTime" : 1775200255879,
+  "createBy" : null,
+  "updateBy" : "admin",
+  "paths" : [ ],
+  "options" : [ ]
+}

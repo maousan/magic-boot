@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "l5kl0q2xiqa4ryz349c3fkzj3hzm07vw",
+  "name" : "亮灯对接",
+  "type" : "api",
+  "parentId" : "2ud9c5419ag5484mbxxsafin0b0myji0",
+  "path" : "/light/picking",
+  "createTime" : null,
+  "updateTime" : 1775030400000,
+  "createBy" : null,
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

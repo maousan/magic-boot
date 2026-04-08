@@ -1,0 +1,33 @@
+### AIMS 更新article信息接口测试
+@baseUrl = http://119.29.52.245:9002
+
+### 1. 成功样例（200）
+POST {{baseUrl}}/articles
+Content-Type: application/json;charset=UTF-8
+Accept: application/json;charset=UTF-8
+
+{
+  "customBatchId": "BATCH-20260407-001",
+  "dataList": [
+    {
+      "stationCode": "10001",
+      "id": "A1-11-01-01-01",
+      "name": "A1-11-01-01-01-TEST",
+      "nfc": "NFC-001",
+      "data": {
+        "price": "9.90",
+        "category": "demo"
+      }
+    }
+  ]
+}
+
+### 2. 参数错误-dataList为空（预期4xx）
+POST {{baseUrl}}/articles
+Content-Type: application/json;charset=UTF-8
+Accept: application/json;charset=UTF-8
+
+{
+  "customBatchId": "BATCH-20260407-002",
+  "dataList": []
+}

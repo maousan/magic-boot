@@ -1,0 +1,40 @@
+### 东信和平库位码与电子标签条码绑定接口测试
+@baseUrl = http://127.0.0.1:8090
+
+### 1. 创建绑定-成功
+POST {{baseUrl}}/api/location/label-mapping
+Content-Type: application/json
+
+{
+  "locationCode": "LOC_PDA_20260407_001",
+  "labelCode": "03E2D88CE1DC",
+  "stationCode": "10001"
+}
+
+### 2. 创建绑定-参数错误（locationCode为空，预期400）
+POST {{baseUrl}}/api/location/label-mapping
+Content-Type: application/json
+
+{
+  "locationCode": "",
+  "labelCode": "03E2D88CE1DC"
+}
+
+### 3. 删除绑定-成功
+DELETE {{baseUrl}}/api/location/label-mapping?labelCode=03E2D88CE1DC
+
+### 4. 删除绑定-不存在（预期业务错误）
+DELETE {{baseUrl}}/api/location/label-mapping?labelCode=03E2D88CE1DD
+
+### 5. 删除绑定-参数错误（labelCode为空，预期400）
+DELETE {{baseUrl}}/api/location/label-mapping?labelCode=
+
+### 6. 创建绑定-二维码格式 locationCode（双引号开头，取 Lot 字段）
+POST {{baseUrl}}/api/location/label-mapping
+Content-Type: application/json
+
+{
+  "locationCode": "\"OrdNo\":\"2025122365-1+01\";\"Lot\":\"A1-11-01-01-01\";\"Qty\":\"170\"",
+  "labelCode": "03E2D88CE1DC",
+  "stationCode": "10001"
+}

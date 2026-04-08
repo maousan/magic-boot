@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "qou8in0pu4dvva7g20trefax4lo26ye8",
+  "name" : "亮灯控制",
+  "type" : "api",
+  "parentId" : "2ud9c5419ag5484mbxxsafin0b0myji0",
+  "path" : "/light",
+  "createTime" : null,
+  "updateTime" : 1775193600000,
+  "createBy" : null,
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

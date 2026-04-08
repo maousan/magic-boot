@@ -1,0 +1,71 @@
+### 东信和平用户灯光颜色映射测试
+@baseUrl = http://127.0.0.1:8090
+
+### 0. 前置：在数据库中配置用户颜色映射（手工执行）
+### REPLACE INTO t_user_light_color(user_id, color, enabled, remark)
+### VALUES ('USER-COLOR-01', 'YELLOW', 1, '用户颜色映射测试'),
+###        ('USER-COLOR-02', 'BLUE', 1, '用户颜色映射测试');
+
+### 1. 上传场景：USER-COLOR-01 触发亮灯时应优先使用 YELLOW
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV-COLOR-0001",
+  "userId": "USER-COLOR-01",
+  "userName": "颜色用户1",
+  "updateTime": 1648195200000,
+  "details": [
+    {
+      "id": "COLOR-U-001",
+      "materialCode": "MAT-COLOR-01",
+      "batchNo": "B-COLOR-01",
+      "locationCode": "A-09-01",
+      "planQuantity": 10,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}
+
+### 2. 完成场景：USER-COLOR-02 触发亮灯时应优先使用 BLUE
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV-COLOR-0002",
+  "userId": "USER-COLOR-02",
+  "userName": "颜色用户2",
+  "updateTime": 1648195200000,
+  "details": [
+    {
+      "id": "COLOR-C-001",
+      "materialCode": "MAT-COLOR-02",
+      "batchNo": "B-COLOR-02",
+      "locationCode": "A-09-02",
+      "planQuantity": 6,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}
+
+POST {{baseUrl}}/api/light/picking/complete
+Content-Type: application/json
+
+{
+  "waveNo": "WV-COLOR-0002",
+  "userId": "USER-COLOR-02",
+  "details": [
+    {
+      "materialCode": "MAT-COLOR-02",
+      "batchNo": "B-COLOR-02",
+      "locationCode": "A-09-02",
+      "planQuantity": 6,
+      "actualQuantity": 3,
+      "updateTime": 1648195201000
+    }
+  ]
+}
+
+### 3. 未配置映射用户：按旧逻辑兜底（上传：单人GREEN/多人BLUE；完成：单人GREEN/多人CYAN）

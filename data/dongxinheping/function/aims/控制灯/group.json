@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "d7de530ea18542f2827146962f10bdb4",
+  "name" : "控制灯",
+  "type" : "function",
+  "parentId" : "8fb50d27f89e42258deda5f4e6dd7c08",
+  "path" : "/led",
+  "createTime" : 1775209693042,
+  "updateTime" : null,
+  "createBy" : "admin",
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "a18fa4b15beb4aedbac4201627d9175f",
+  "name" : "标签",
+  "type" : "function",
+  "parentId" : "8fb50d27f89e42258deda5f4e6dd7c08",
+  "path" : "/labels",
+  "createTime" : 1775538784392,
+  "updateTime" : null,
+  "createBy" : "admin",
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

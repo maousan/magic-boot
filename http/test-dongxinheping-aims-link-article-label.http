@@ -1,0 +1,28 @@
+### AIMS 绑定article和label接口测试
+@baseUrl = http://119.29.52.245:9002
+
+### 1. 成功样例（200）
+POST {{baseUrl}}/labels/link/10001
+Content-Type: application/json;charset=UTF-8
+Accept: application/json;charset=UTF-8
+
+{
+  "customBatchId": "BATCH-LINK-20260407-001",
+  "labelCode": "03E2D88CE1DC",
+  "articleIdList": [
+    "A1-11-01-01-01"
+  ],
+  "templateName": "4_2",
+  "arrow": "NONE",
+  "skipChecksumValidation": false
+}
+
+### 2. 参数错误-articleIdList为空（预期4xx）
+POST {{baseUrl}}/labels/link/10001
+Content-Type: application/json;charset=UTF-8
+Accept: application/json;charset=UTF-8
+
+{
+  "labelCode": "03E2D88CE1DC",
+  "articleIdList": []
+}

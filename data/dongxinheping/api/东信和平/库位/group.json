@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "6ce8544b21954e189dc7aeb484aeddfc",
+  "name" : "库位",
+  "type" : "api",
+  "parentId" : "2ud9c5419ag5484mbxxsafin0b0myji0",
+  "path" : "/location",
+  "createTime" : null,
+  "updateTime" : 1775554179545,
+  "createBy" : null,
+  "updateBy" : "admin",
+  "paths" : [ ],
+  "options" : [ ]
+}
