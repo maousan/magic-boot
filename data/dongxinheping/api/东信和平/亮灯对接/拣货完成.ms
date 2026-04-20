@@ -256,6 +256,7 @@ import com.dtflys.forest.Forest
 import '@/aims/led/turnOnLedByArticleId' as turnOnLedByArticleId
 import '@/aims/led/turnOffLedByArticleId' as turnOffLedByArticleId
 import '@/utils/getUserLightColor' as getUserLightColor
+import '@/utils/saveLightTraceLog' as saveLightTraceLog
 import org.ssssssss.magicboot.model.CommonCountMap
 
 if(body == null){
@@ -264,6 +265,11 @@ if(body == null){
 
 let payload = body
 let details = payload.details
+let traceId = payload.traceId
+if(traceId == null || traceId == ''){
+    traceId = UUID.randomUUID().toString().replace('-', '')
+}
+payload.traceId = traceId
 
 if(!payload.waveNo){
     exit 400, 'waveNo不能为空'
@@ -318,6 +324,7 @@ for(item in details){
 let waveNo = payload.waveNo
 let userId = payload.userId
 let now = new Date()
+let logPrefix = 'traceId=' + traceId + ', api=complete, waveNo=' + waveNo + ', userId=' + userId
 let transState = null
 let shouldTurnOffLocationCodes = []
 let shouldTurnOnLocationCodes = []
@@ -349,8 +356,36 @@ let formatLocationLog = (locationCodes, limit) => {
     }
     return 'size=' + locationCodes.size() + ',sample=' + sample
 }
+let mergeLocationCodes = (firstCodes, secondCodes) => {
+    let result = []
+    let uniq = {}
+    if(firstCodes != null){
+        for(code in firstCodes){
+            if(code != null && code != '' && uniq[code] == null){
+                uniq[code] = 1
+                result.add(code)
+            }
+        }
+    }
+    if(secondCodes != null){
+        for(code in secondCodes){
+            if(code != null && code != '' && uniq[code] == null){
+                uniq[code] = 1
+                result.add(code)
+            }
+        }
+    }
+    return result
+}
+let persistTraceLog = (stage, actionType, locationCodes, extraData) => {
+    let ok = saveLightTraceLog(traceId, 'complete', stage, actionType, waveNo, userId, locationCodes, extraData)
+    if(!ok){
+        log.error(logPrefix + ', stage=trace_persist_error, persistOk=false')
+    }
+}
 
 try {
+    log.info(logPrefix + ', stage=receive, detailCount=' + details.size())
     transState = anyline.beginTrans()
 
     let master = db.table('t_picking_upload').where().eq('wave_no', waveNo).eq('user_id', userId).selectOne()
@@ -412,7 +447,7 @@ try {
         if(actualQty >= planQty){
             statusVal = 1
         }
-        log.info('detail status calculate, waveNo=' + waveNo + ', locationCode=' + item.locationCode + ', materialCode=' + item.materialCode + ', actualQty=' + actualQty + ', planQty=' + planQty + ', status=' + statusVal)
+        log.info(logPrefix + ', stage=detail_calc, locationCode=' + item.locationCode + ', materialCode=' + item.materialCode + ', actualQty=' + actualQty + ', planQty=' + planQty + ', status=' + statusVal)
 
         // let detailId = UUID.randomUUID().toString().replace('-', '')
         let detailId = item.id
@@ -566,7 +601,7 @@ try {
         if(unpickedCount == null){
             unpickedCount = 0
         }
-        log.info('location evaluate, waveNo=' + waveNo + ', locationCode=' + locationCode + ', unpickedCount=' + unpickedCount)
+        log.info(logPrefix + ', stage=location_evaluate, locationCode=' + locationCode + ', unpickedCount=' + unpickedCount)
         if(unpickedCount == 0){
             shouldTurnOffLocationCodes.add(locationCode)
         } else {
@@ -588,7 +623,7 @@ try {
             incrementLocations.add(locationCode)
         }
     }
-    log.info('light decision, waveNo=' + waveNo + ', turnOn=' + formatLocationLog(shouldTurnOnLocationCodes, 20) + ', turnOff=' + formatLocationLog(shouldTurnOffLocationCodes, 20) + ', increment=' + formatLocationLog(incrementLocations, 20) + ', decrement=' + formatLocationLog(decrementLocations, 20))
+    log.info(logPrefix + ', stage=light_decision, turnOn=' + formatLocationLog(shouldTurnOnLocationCodes, 20) + ', turnOff=' + formatLocationLog(shouldTurnOffLocationCodes, 20) + ', increment=' + formatLocationLog(incrementLocations, 20) + ', decrement=' + formatLocationLog(decrementLocations, 20))
 
     anyline.commitTrans(transState)
 
@@ -613,7 +648,7 @@ try {
             affectedLocationCodes.add(locationCode)
         }
     }
-    log.info('common count reconcile start(complete), waveNo=' + waveNo + ', userId=' + userId + ', increment=' + formatLocationLog(incrementLocations, 20) + ', decrement=' + formatLocationLog(decrementLocations, 20) + ', affected=' + formatLocationLog(affectedLocationCodes, 20))
+    log.info(logPrefix + ', stage=reconcile_start, increment=' + formatLocationLog(incrementLocations, 20) + ', decrement=' + formatLocationLog(decrementLocations, 20) + ', affected=' + formatLocationLog(affectedLocationCodes, 20))
     // 自愈逻辑：按数据库实值批量回填 CommonCountMap（防止重启后缓存为空）
     let locationUserCountMap = {}
     if(affectedLocationCodes.size() > 0){
@@ -656,23 +691,26 @@ try {
         let locationUserCount = locationUserCountMap[locationCode]
         if(locationUserCount == null || locationUserCount <= 0){
             CommonCountMap.remove(locationCode)
-            log.info('common count reconcile remove(complete), locationCode=' + locationCode + ', dbCount=0, memCount=' + CommonCountMap.get(locationCode))
+            log.info(logPrefix + ', stage=reconcile_remove, locationCode=' + locationCode + ', dbCount=0, memCount=' + CommonCountMap.get(locationCode))
         } else {
             CommonCountMap.set(locationCode, locationUserCount)
-            log.info('common count reconcile set(complete), locationCode=' + locationCode + ', dbCount=' + locationUserCount + ', memCount=' + CommonCountMap.get(locationCode))
+            log.info(logPrefix + ', stage=reconcile_set, locationCode=' + locationCode + ', dbCount=' + locationUserCount + ', memCount=' + CommonCountMap.get(locationCode))
         }
     }
-    log.info('common count reconcile done(complete), size=' + CommonCountMap.size() + ', total=' + CommonCountMap.totalCount())
+    log.info(logPrefix + ', stage=reconcile_done, size=' + CommonCountMap.size() + ', total=' + CommonCountMap.totalCount())
 
     if(shouldTurnOffLocationCodes.size() > 0){
         try {
             log.info('dispatch async turnOff, waveNo=' + waveNo + `, stationCode=${stationCode}, articleIds=` + shouldTurnOffLocationCodes)
             let turnOffFuture = async turnOffLedByArticleId({
                 stationCode,
-                articleIds: shouldTurnOffLocationCodes
+                articleIds: shouldTurnOffLocationCodes,
+                traceId: traceId,
+                waveNo: waveNo,
+                userId: userId
             })
         } catch (asyncErr) {
-            log.error('异步灭灯调用触发失败: ' + asyncErr.message)
+            log.error(logPrefix + ', stage=dispatch_error, action=turnOff, message=' + asyncErr.message)
         }
     }
 
@@ -693,10 +731,13 @@ try {
             let turnOnSingleFuture = async turnOnLedByArticleId({
                 stationCode,
                 color: singleUserColor,
-                articleIds: singleUserLocationCodes
+                articleIds: singleUserLocationCodes,
+                traceId: traceId,
+                waveNo: waveNo,
+                userId: userId
             })
         } catch (asyncErr2) {
-            log.error('异步亮灯调用触发失败(单用户色): ' + asyncErr2.message)
+            log.error(logPrefix + ', stage=dispatch_error, action=turnOnSingle, message=' + asyncErr2.message)
         }
     }
 
@@ -706,13 +747,42 @@ try {
             let turnOnMultiFuture = async turnOnLedByArticleId({
                 stationCode,
                 color: multiUserColor,
-                articleIds: multiUserLocationCodes
+                articleIds: multiUserLocationCodes,
+                traceId: traceId,
+                waveNo: waveNo,
+                userId: userId
             })
         } catch (asyncErr3) {
-            log.error('异步亮灯调用触发失败(多用户色): ' + asyncErr3.message)
+            log.error(logPrefix + ', stage=dispatch_error, action=turnOnMulti, message=' + asyncErr3.message)
         }
     }
 
+    log.info(logPrefix + ', stage=done, turnOn=' + formatLocationLog(shouldTurnOnLocationCodes, 20) + ', turnOff=' + formatLocationLog(shouldTurnOffLocationCodes, 20))
+    let completeActionType = 'none'
+    let completeTraceLocationCodes = []
+    let hasTurnOn = singleUserLocationCodes.size() > 0 || multiUserLocationCodes.size() > 0
+    let hasTurnOff = shouldTurnOffLocationCodes.size() > 0
+    if(hasTurnOn && hasTurnOff){
+        completeActionType = 'mix'
+        completeTraceLocationCodes = mergeLocationCodes(shouldTurnOnLocationCodes, shouldTurnOffLocationCodes)
+    } else if(hasTurnOn){
+        completeActionType = 'turn_on'
+        completeTraceLocationCodes = shouldTurnOnLocationCodes
+    } else if(hasTurnOff){
+        completeActionType = 'turn_off'
+        completeTraceLocationCodes = shouldTurnOffLocationCodes
+    } else {
+        completeTraceLocationCodes = affectedLocationCodes
+    }
+    persistTraceLog('done', completeActionType, completeTraceLocationCodes, {
+        turnOnSingle: singleUserLocationCodes,
+        turnOnMulti: multiUserLocationCodes,
+        turnOff: shouldTurnOffLocationCodes,
+        increment: incrementLocations,
+        decrement: decrementLocations,
+        commonCountSize: CommonCountMap.size(),
+        commonCountTotal: CommonCountMap.totalCount()
+    })
     exit 200, '拣货完成同步成功'
 } catch (e) {
     if(transState != null){
@@ -721,6 +791,9 @@ try {
         } catch (ignore) {
         }
     }
-    log.error('拣货完成同步异常: ' + e.message)
+    log.error(logPrefix + ', stage=error, message=' + e.message)
+    persistTraceLog('error', 'mix', [], {
+        errorMessage: e.message
+    })
     exit 500, '拣货完成同步失败: ' + e.message
 }

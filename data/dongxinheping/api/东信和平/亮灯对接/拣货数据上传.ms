@@ -278,6 +278,7 @@ import log
 import java.util.UUID
 import '@/aims/led/turnOnLedByArticleId' as turnOnLedByArticleId
 import '@/utils/getUserLightColor' as getUserLightColor
+import '@/utils/saveLightTraceLog' as saveLightTraceLog
 import org.ssssssss.magicboot.model.CommonCountMap
 import com.dtflys.forest.Forest
 
@@ -289,6 +290,11 @@ if(body == null){
 
 let payload = body
 let details = payload.details
+let traceId = payload.traceId
+if(traceId == null || traceId == ''){
+    traceId = UUID.randomUUID().toString().replace('-', '')
+}
+payload.traceId = traceId
 
 if(!payload.waveNo){
     exit 400, 'waveNo不能为空'
@@ -343,10 +349,13 @@ for(item in details){
 let waveNo = payload.waveNo
 let userId = payload.userId
 let now = new Date()
+let logPrefix = 'traceId=' + traceId + ', api=upload, waveNo=' + waveNo + ', userId=' + userId
 let uploadLocationCodeSet = {}
 let uploadLocationCodes = []
 let oldUnpickedLocationCodeSet = {}
 let oldUnpickedLocationCodes = []
+let singleUserLocationCodes = []
+let multiUserLocationCodes = []
 let formatLocationLog = (locationCodes, limit) => {
     if(locationCodes == null){
         return 'size=0,sample=[]'
@@ -366,9 +375,37 @@ let formatLocationLog = (locationCodes, limit) => {
     }
     return 'size=' + locationCodes.size() + ',sample=' + sample
 }
+let mergeLocationCodes = (firstCodes, secondCodes) => {
+    let result = []
+    let uniq = {}
+    if(firstCodes != null){
+        for(code in firstCodes){
+            if(code != null && code != '' && uniq[code] == null){
+                uniq[code] = 1
+                result.add(code)
+            }
+        }
+    }
+    if(secondCodes != null){
+        for(code in secondCodes){
+            if(code != null && code != '' && uniq[code] == null){
+                uniq[code] = 1
+                result.add(code)
+            }
+        }
+    }
+    return result
+}
+let persistTraceLog = (stage, actionType, locationCodes, extraData) => {
+    let ok = saveLightTraceLog(traceId, 'upload', stage, actionType, waveNo, userId, locationCodes, extraData)
+    if(!ok){
+        log.error(logPrefix + ', stage=trace_persist_error, persistOk=false')
+    }
+}
 
 let transState = null
 try {
+    log.info(logPrefix + ', stage=receive, detailCount=' + details.size())
     transState = anyline.beginTrans()
 
     let existingMaster = db.table('t_picking_upload').where().eq('wave_no', waveNo).eq('user_id', userId).selectOne()
@@ -548,7 +585,7 @@ try {
             }
         }
     }
-    log.info('common count reconcile start(upload), waveNo=' + waveNo + ', userId=' + userId + ', added=' + formatLocationLog(addedLocationCodes, 20) + ', removed=' + formatLocationLog(removedLocationCodes, 20) + ', affected=' + formatLocationLog(affectedLocationCodes, 20))
+    log.info(logPrefix + ', stage=reconcile_start, added=' + formatLocationLog(addedLocationCodes, 20) + ', removed=' + formatLocationLog(removedLocationCodes, 20) + ', affected=' + formatLocationLog(affectedLocationCodes, 20))
     // 自愈逻辑：不依赖差量结果，按数据库实值批量回填 CommonCountMap（防止重启后缓存为空）
     let locationUserCountMap = {}
     if(affectedLocationCodes.size() > 0){
@@ -591,13 +628,13 @@ try {
         let locationUserCount = locationUserCountMap[locationCode]
         if(locationUserCount == null || locationUserCount <= 0){
             CommonCountMap.remove(locationCode)
-            log.info('common count reconcile remove(upload), locationCode=' + locationCode + ', dbCount=0, memCount=' + CommonCountMap.get(locationCode))
+            log.info(logPrefix + ', stage=reconcile_remove, locationCode=' + locationCode + ', dbCount=0, memCount=' + CommonCountMap.get(locationCode))
         } else {
             CommonCountMap.set(locationCode, locationUserCount)
-            log.info('common count reconcile set(upload), locationCode=' + locationCode + ', dbCount=' + locationUserCount + ', memCount=' + CommonCountMap.get(locationCode))
+            log.info(logPrefix + ', stage=reconcile_set, locationCode=' + locationCode + ', dbCount=' + locationUserCount + ', memCount=' + CommonCountMap.get(locationCode))
         }
     }
-    log.info('common count reconcile done(upload), size=' + CommonCountMap.size() + ', total=' + CommonCountMap.totalCount())
+    log.info(logPrefix + ', stage=reconcile_done, size=' + CommonCountMap.size() + ', total=' + CommonCountMap.totalCount())
 
     if(uploadLocationCodes.size() > 0){
         let singleUserColor = 'GREEN'
@@ -607,8 +644,8 @@ try {
             singleUserColor = mappedColor
         }
 
-        let singleUserLocationCodes = []
-        let multiUserLocationCodes = []
+        singleUserLocationCodes = []
+        multiUserLocationCodes = []
         for(locationCode in uploadLocationCodes){
             let locationUserCount = CommonCountMap.get(locationCode)
             if(locationUserCount > 1){
@@ -624,10 +661,13 @@ try {
                 let turnOnSingleFuture = async turnOnLedByArticleId({
                     stationCode,
                     color: singleUserColor,
-                    articleIds: singleUserLocationCodes
+                    articleIds: singleUserLocationCodes,
+                    traceId: traceId,
+                    waveNo: waveNo,
+                    userId: userId
                 })
             } catch (asyncErr) {
-                log.error('异步亮灯调用触发失败(单用户色): ' + asyncErr.message)
+                log.error(logPrefix + ', stage=dispatch_error, action=turnOnSingle, message=' + asyncErr.message)
             }
         }
 
@@ -637,16 +677,44 @@ try {
                 let turnOnMultiFuture = async turnOnLedByArticleId({
                     stationCode,
                     color: multiUserColor,
-                    articleIds: multiUserLocationCodes
+                    articleIds: multiUserLocationCodes,
+                    traceId: traceId,
+                    waveNo: waveNo,
+                    userId: userId
                 })
             } catch (asyncErr2) {
-                log.error('异步亮灯调用触发失败(多用户色): ' + asyncErr2.message)
+                log.error(logPrefix + ', stage=dispatch_error, action=turnOnMulti, message=' + asyncErr2.message)
             }
         }
     }
 
     // log.info("CommonCountMap: {}", CommonCountMap.snapshot())
 
+    log.info(logPrefix + ', stage=done, turnOnSingle=' + formatLocationLog(singleUserLocationCodes, 20) + ', turnOnMulti=' + formatLocationLog(multiUserLocationCodes, 20))
+    let uploadActionType = 'none'
+    let traceLocationCodes = []
+    let hasTurnOn = singleUserLocationCodes.size() > 0 || multiUserLocationCodes.size() > 0
+    let hasTurnOff = removedLocationCodes.size() > 0
+    if(hasTurnOn && hasTurnOff){
+        uploadActionType = 'mix'
+        traceLocationCodes = mergeLocationCodes(uploadLocationCodes, removedLocationCodes)
+    } else if(hasTurnOn){
+        uploadActionType = 'turn_on'
+        traceLocationCodes = uploadLocationCodes
+    } else if(hasTurnOff){
+        uploadActionType = 'turn_off'
+        traceLocationCodes = removedLocationCodes
+    } else {
+        traceLocationCodes = affectedLocationCodes
+    }
+    persistTraceLog('done', uploadActionType, traceLocationCodes, {
+        turnOnSingle: singleUserLocationCodes,
+        turnOnMulti: multiUserLocationCodes,
+        removed: removedLocationCodes,
+        affected: affectedLocationCodes,
+        commonCountSize: CommonCountMap.size(),
+        commonCountTotal: CommonCountMap.totalCount()
+    })
     exit 200, '拣货数据上传成功'
 } catch (e) {
     if(transState != null){
@@ -655,6 +723,9 @@ try {
         } catch (ignore) {
         }
     }
-    log.error('拣货数据上传事务异常: ' + e.message)
+    log.error(logPrefix + ', stage=error, message=' + e.message)
+    persistTraceLog('error', 'turn_on', [], {
+        errorMessage: e.message
+    })
     exit 500, '拣货数据上传失败: ' + e.message
 }

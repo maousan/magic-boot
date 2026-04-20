@@ -160,6 +160,7 @@ import org.ssssssss.magicapi.utils.JsonUtils
 import com.dtflys.forest.Forest
 import '@/aims/led/turnOffLedByArticleId' as turnOffLedByArticleId
 import '@/aims/led/turnOnLedByArticleId' as turnOnLedByArticleId
+import '@/utils/saveLightTraceLog' as saveLightTraceLog
 import org.ssssssss.magicboot.model.CommonCountMap
 
 const mixColor = Forest.config().getVariableValue("mixColor")
@@ -173,6 +174,11 @@ if (body == null) {
 }
 
 let payload = body
+let traceId = payload.traceId
+if(traceId == null || traceId == ''){
+    traceId = UUID.randomUUID().toString().replace('-', '')
+}
+payload.traceId = traceId
 
 if (!payload.waveNo) {
     exit 400, 'waveNo不能为空'
@@ -212,6 +218,7 @@ if (modeVal == 1 || modeVal == 2) {
 }
 
 let requestJson = JsonUtils.toJsonString(payload)
+let logPrefix = 'traceId=' + traceId + ', api=control, waveNo=' + payload.waveNo + ', userId=' + payload.userId
 let transState = null
 let formatLocationLog = (locationCodes, limit) => {
     if(locationCodes == null){
@@ -231,6 +238,33 @@ let formatLocationLog = (locationCodes, limit) => {
         i = i + 1
     }
     return 'size=' + locationCodes.size() + ',sample=' + sample
+}
+let mergeLocationCodes = (firstCodes, secondCodes) => {
+    let result = []
+    let uniq = {}
+    if(firstCodes != null){
+        for(code in firstCodes){
+            if(code != null && code != '' && uniq[code] == null){
+                uniq[code] = 1
+                result.add(code)
+            }
+        }
+    }
+    if(secondCodes != null){
+        for(code in secondCodes){
+            if(code != null && code != '' && uniq[code] == null){
+                uniq[code] = 1
+                result.add(code)
+            }
+        }
+    }
+    return result
+}
+let persistTraceLog = (stage, actionTypeValue, locationCodes, extraData) => {
+    let ok = saveLightTraceLog(traceId, 'control', stage, actionTypeValue, payload.waveNo, payload.userId, locationCodes, extraData)
+    if(!ok){
+        log.error(logPrefix + ', stage=trace_persist_error, persistOk=false')
+    }
 }
 let resolveAffectedLocationCodes = (payloadObj) => {
     let result = []
@@ -335,6 +369,7 @@ let queryUserUnpickedLocationCodes = (waveNo, userId) => {
 }
 
 try {
+    log.info(logPrefix + ', stage=receive, mode=' + modeVal + ', color=' + colorVal + ', duration=' + durationVal)
     transState = anyline.beginTrans()
 
     anyline.insert('t_light_control_log', {
@@ -358,12 +393,12 @@ try {
     if(modeVal == 1 || modeVal == 2){
         for(locationCode in userUnpickedLocationCodes){
             let currentCount = CommonCountMap.increment(locationCode)
-            log.info('common count increment from control, waveNo=' + payload.waveNo + ', userId=' + payload.userId + ', locationCode=' + locationCode + ', count=' + currentCount)
+            log.info(logPrefix + ', stage=count_increment, locationCode=' + locationCode + ', count=' + currentCount)
         }
     } else {
         for(locationCode in userUnpickedLocationCodes){
             let currentCount = CommonCountMap.decrement(locationCode)
-            log.info('common count decrement from control, waveNo=' + payload.waveNo + ', userId=' + payload.userId + ', locationCode=' + locationCode + ', count=' + currentCount)
+            log.info(logPrefix + ', stage=count_decrement, locationCode=' + locationCode + ', count=' + currentCount)
         }
     }
 
@@ -392,7 +427,7 @@ try {
         multiUserColor = 'CYAN'
     }
 
-    log.info('control location summary, waveNo=' + payload.waveNo + ', mode=' + modeVal + ', affected=' + formatLocationLog(affectedLocationCodes, 20) + ', all=' + formatLocationLog(allLocationCodes, 20))
+    log.info(logPrefix + ', stage=light_decision, mode=' + modeVal + ', affected=' + formatLocationLog(affectedLocationCodes, 20) + ', all=' + formatLocationLog(allLocationCodes, 20) + ', turnOnSingle=' + formatLocationLog(turnOnSingleLocationCodes, 20) + ', turnOnMulti=' + formatLocationLog(turnOnMultiLocationCodes, 20) + ', turnOff=' + formatLocationLog(turnOffLocationCodes, 20))
 
     if (modeVal == 3 || modeVal == 4) {
         if(turnOffLocationCodes.size() > 0){
@@ -400,10 +435,13 @@ try {
                 log.info('dispatch async turnOff from control, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', articleIds=' + turnOffLocationCodes)
                 let turnOffFuture = async turnOffLedByArticleId({
                     stationCode: stationCode,
-                    articleIds: turnOffLocationCodes
+                    articleIds: turnOffLocationCodes,
+                    traceId: traceId,
+                    waveNo: payload.waveNo,
+                    userId: payload.userId
                 })
             } catch (asyncErr1) {
-                log.error('异步灭灯调用触发失败: ' + asyncErr1.message)
+                log.error(logPrefix + ', stage=dispatch_error, action=turnOff, message=' + asyncErr1.message)
             }
         }
         if(turnOnSingleLocationCodes.size() > 0){
@@ -412,10 +450,13 @@ try {
                 let turnOnSingleFuture = async turnOnLedByArticleId({
                     stationCode: stationCode,
                     color: 'GREEN',
-                    articleIds: turnOnSingleLocationCodes
+                    articleIds: turnOnSingleLocationCodes,
+                    traceId: traceId,
+                    waveNo: payload.waveNo,
+                    userId: payload.userId
                 })
             } catch (asyncErr2) {
-                log.error('异步补亮调用触发失败(单用户色): ' + asyncErr2.message)
+                log.error(logPrefix + ', stage=dispatch_error, action=turnOnSingleAfterOff, message=' + asyncErr2.message)
             }
         }
         if(turnOnMultiLocationCodes.size() > 0){
@@ -424,10 +465,13 @@ try {
                 let turnOnMultiFuture = async turnOnLedByArticleId({
                     stationCode: stationCode,
                     color: multiUserColor,
-                    articleIds: turnOnMultiLocationCodes
+                    articleIds: turnOnMultiLocationCodes,
+                    traceId: traceId,
+                    waveNo: payload.waveNo,
+                    userId: payload.userId
                 })
             } catch (asyncErr3) {
-                log.error('异步补亮调用触发失败(多用户色): ' + asyncErr3.message)
+                log.error(logPrefix + ', stage=dispatch_error, action=turnOnMultiAfterOff, message=' + asyncErr3.message)
             }
         }
     } else {
@@ -437,10 +481,13 @@ try {
                 let turnOnSingleFuture2 = async turnOnLedByArticleId({
                     stationCode,
                     color: colorVal,
-                    articleIds: turnOnSingleLocationCodes
+                    articleIds: turnOnSingleLocationCodes,
+                    traceId: traceId,
+                    waveNo: payload.waveNo,
+                    userId: payload.userId
                 })
             } catch (asyncErr4) {
-                log.error('异步亮灯调用触发失败(单用户色): ' + asyncErr4.message)
+                log.error(logPrefix + ', stage=dispatch_error, action=turnOnSingle, message=' + asyncErr4.message)
             }
         }
         if(turnOnMultiLocationCodes.size() > 0){
@@ -449,10 +496,13 @@ try {
                 let turnOnMultiFuture2 = async turnOnLedByArticleId({
                     stationCode,
                     color: multiUserColor,
-                    articleIds: turnOnMultiLocationCodes
+                    articleIds: turnOnMultiLocationCodes,
+                    traceId: traceId,
+                    waveNo: payload.waveNo,
+                    userId: payload.userId
                 })
             } catch (asyncErr5) {
-                log.error('异步亮灯调用触发失败(多用户色): ' + asyncErr5.message)
+                log.error(logPrefix + ', stage=dispatch_error, action=turnOnMulti, message=' + asyncErr5.message)
             }
         }
         // 点亮模式下，也把不该亮的库位灭掉，避免残灯
@@ -461,15 +511,43 @@ try {
                 log.info('dispatch async turnOff from control(on mode), waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', articleIds=' + turnOffLocationCodes)
                 let turnOffFuture2 = async turnOffLedByArticleId({
                     stationCode: stationCode,
-                    articleIds: turnOffLocationCodes
+                    articleIds: turnOffLocationCodes,
+                    traceId: traceId,
+                    waveNo: payload.waveNo,
+                    userId: payload.userId
                 })
             } catch (asyncErr6) {
-                log.error('异步灭灯调用触发失败(点亮模式): ' + asyncErr6.message)
+                log.error(logPrefix + ', stage=dispatch_error, action=turnOffOnMode, message=' + asyncErr6.message)
             }
         }
     }
 
-    log.info('CommonCountMap(control): ' + CommonCountMap.snapshot())
+    log.info(logPrefix + ', stage=done, commonCountSize=' + CommonCountMap.size() + ', commonCountTotal=' + CommonCountMap.totalCount())
+    let hasTurnOn = turnOnSingleLocationCodes.size() > 0 || turnOnMultiLocationCodes.size() > 0
+    let hasTurnOff = turnOffLocationCodes.size() > 0
+    let controlActionType = 'none'
+    let controlTraceLocationCodes = []
+    if(hasTurnOn && hasTurnOff){
+        controlActionType = 'mix'
+        controlTraceLocationCodes = mergeLocationCodes(mergeLocationCodes(turnOnSingleLocationCodes, turnOnMultiLocationCodes), turnOffLocationCodes)
+    } else if(hasTurnOn){
+        controlActionType = 'turn_on'
+        controlTraceLocationCodes = mergeLocationCodes(turnOnSingleLocationCodes, turnOnMultiLocationCodes)
+    } else if(hasTurnOff){
+        controlActionType = 'turn_off'
+        controlTraceLocationCodes = turnOffLocationCodes
+    } else {
+        controlTraceLocationCodes = allLocationCodes
+    }
+    persistTraceLog('done', controlActionType, controlTraceLocationCodes, {
+        mode: modeVal,
+        turnOnSingle: turnOnSingleLocationCodes,
+        turnOnMulti: turnOnMultiLocationCodes,
+        turnOff: turnOffLocationCodes,
+        affected: affectedLocationCodes,
+        commonCountSize: CommonCountMap.size(),
+        commonCountTotal: CommonCountMap.totalCount()
+    })
     exit 200, '指令发送成功'
 } catch (e) {
     if (transState != null) {
@@ -477,6 +555,10 @@ try {
             anyline.rollbackTrans(transState)
         } catch (ignore) {}
     }
-    log.error('亮灯控制接口异常: ' + e.message)
+    log.error(logPrefix + ', stage=error, message=' + e.message)
+    persistTraceLog('error', actionType, [], {
+        mode: modeVal,
+        errorMessage: e.message
+    })
     exit 500, '指令发送失败: ' + e.message
 }
