@@ -5,7 +5,7 @@
   "groupId" : "qou8in0pu4dvva7g20trefax4lo26ye8",
   "name" : "亮灯灭灯控制",
   "createTime" : null,
-  "updateTime" : 1775325539871,
+  "updateTime" : 1776138310377,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -164,8 +164,6 @@ import '@/aims/led/turnOnLedByArticleId' as turnOnLedByArticleId
 if (body == null) {
     exit 400, '请求体不能为空'
 }
-
-// http://119.29.52.245:9002/
 
 let payload = body
 

@@ -5,7 +5,7 @@
   "groupId" : "a18fa4b15beb4aedbac4201627d9175f",
   "name" : "解绑article和label",
   "createTime" : null,
-  "updateTime" : 1775542800000,
+  "updateTime" : 1776138238606,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -31,6 +31,8 @@
 import log
 import com.dtflys.forest.Forest
 
+const aimsHost = Forest.config().getVariableValue("aimsHost")
+
 if(data == null){
     return {
         success: false,
@@ -48,7 +50,7 @@ if(labelCode == null || labelCode == ''){
     }
 }
 
-let url = 'http://119.29.52.245:9002/labels/unlink?labelCode=' + labelCode
+let url = `http://${aimsHost}/labels/unlink?labelCode=${labelCode}`
 let response = Forest.post(url)
     .contentType('application/json;charset=UTF-8')
     .addHeader('Accept', 'application/json;charset=UTF-8')

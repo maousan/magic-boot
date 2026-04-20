@@ -5,7 +5,7 @@
   "groupId" : "a18fa4b15beb4aedbac4201627d9175f",
   "name" : "绑定article和label",
   "createTime" : null,
-  "updateTime" : 1775541022838,
+  "updateTime" : 1776138262988,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -32,6 +32,8 @@ import log
 import java.util.List
 import java.util.ArrayList
 import com.dtflys.forest.Forest
+
+const aimsHost = Forest.config().getVariableValue("aimsHost")
 
 if(data == null){
     return {
@@ -96,7 +98,7 @@ let requestBody = {
     arrowDirection: data.arrowDirection
 }
 
-let url = 'http://119.29.52.245:9002/labels/link/' + stationCode
+let url = `http://${aimsHost}/labels/link/${stationCode}`
 let response = Forest.post(url)
     .contentType('application/json;charset=UTF-8')
     .addHeader('Accept', 'application/json;charset=UTF-8')

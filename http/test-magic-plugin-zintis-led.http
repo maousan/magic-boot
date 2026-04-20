@@ -1,0 +1,168 @@
+### Zintis LED Plugin API Test
+@baseUrl = http://localhost:8090
+
+### 1. Turn on (0x35)
+# 项目	十六进制	十进制
+# 控制口_1	0xF5	245
+# 控制口_2	0xCA	202
+# 控制口_3	0x3A	58
+# 控制口_4	0xA5	165
+# 控制口_5	0x23	35
+# 控制口_6	0xBA	186
+# 控制口_ALL	0x9C	156
+POST {{baseUrl}}/led/control/on
+Content-Type: application/json
+
+{
+  "deviceIp": "192.168.2.198",
+  "devicePort": 9527,
+  "hostAddress": 198,
+  "dataCommand": 186,
+  "timeoutMs": 3000
+}
+
+### 2. Turn off (0xFA)
+POST {{baseUrl}}/led/control/off
+Content-Type: application/json
+
+{
+  "deviceIp": "192.168.2.198",
+  "devicePort": 9527,
+  "hostAddress": 198,
+  "dataCommand": 186,
+  "timeoutMs": 3000
+}
+
+### 3. Pulse (0x36)
+POST {{baseUrl}}/led/control/pulse
+Content-Type: application/json
+
+{
+  "deviceIp": "192.168.2.198",
+  "devicePort": 9527,
+  "hostAddress": 198,
+  "dataCommand": 186,
+  "timeoutMs": 3000
+}
+
+### 4. Query (0xAB)
+POST {{baseUrl}}/led/control/query
+Content-Type: application/json
+
+{
+  "deviceIp": "192.168.2.198",
+  "devicePort": 9527,
+  "hostAddress": 198,
+  "dataCommand": 245,
+  "timeoutMs": 3000
+}
+
+### 5. Health
+GET {{baseUrl}}/led/health
+
+### 6. Query system info
+POST {{baseUrl}}/led/system/info
+Content-Type: application/json
+
+{
+  "deviceIp": "192.168.2.198",
+  "devicePort": 9527,
+  "hostAddress": 198,
+  "dataCommand": 207,
+  "timeoutMs": 3000
+}
+
+### 7. Open TCP server (0xBF + 0x23)
+POST {{baseUrl}}/led/tcp/server/open
+Content-Type: application/json
+
+{
+  "deviceIp": "192.168.2.198",
+  "devicePort": 9527,
+  "hostAddress": 198,
+  "timeoutMs": 3000
+}
+
+### 8. Close TCP server (0xBF + 0x2E)
+POST {{baseUrl}}/led/tcp/server/close
+Content-Type: application/json
+
+{
+  "deviceIp": "192.168.2.198",
+  "devicePort": 9527,
+  "hostAddress": 198,
+  "timeoutMs": 3000
+}
+
+### 9. Open TCP client (0xBF + 0x33)
+POST {{baseUrl}}/led/tcp/client/open
+Content-Type: application/json
+
+{
+  "deviceIp": "192.168.2.198",
+  "devicePort": 9527,
+  "hostAddress": 198,
+  "targetIp": "192.168.2.198",
+  "targetPort": 9834,
+  "timeoutMs": 3000
+}
+
+### 10. Close TCP client (0xBF + 0x3E)
+POST {{baseUrl}}/led/tcp/client/close
+Content-Type: application/json
+
+{
+  "deviceIp": "192.168.2.198",
+  "devicePort": 9527,
+  "hostAddress": 198,
+  "timeoutMs": 3000
+}
+
+### 11. Scan LAN for ESP32 LED devices
+POST {{baseUrl}}/led/lan/scan
+Content-Type: application/json
+
+{
+  "subnetPrefix": "192.168.2",
+  "devicePort": 9527,
+  "startHost": 1,
+  "endHost": 254,
+  "threadPoolSize": 32,
+  "timeoutMs": 300,
+  "queryDataCommand": 207
+}
+
+### 12. Netty server status
+GET {{baseUrl}}/led/netty/server/status
+
+### 13. Netty server start (default 9834)
+POST {{baseUrl}}/led/netty/server/start
+Content-Type: application/json
+
+{}
+
+### 14. Netty server stop
+POST {{baseUrl}}/led/netty/server/stop
+
+### 15. Query signal strength
+POST {{baseUrl}}/led/system/signal-strength
+Content-Type: application/json
+
+{
+  "deviceIp": "192.168.2.198",
+  "devicePort": 9527,
+  "hostAddress": 198,
+  "timeoutMs": 3000
+}
+
+### 16. Query system network (MAC + IP)
+POST {{baseUrl}}/led/system/network
+Content-Type: application/json
+
+{
+  "deviceIp": "192.168.2.198",
+  "devicePort": 9527,
+  "hostAddress": 198,
+  "dataCommand": 207,
+  "timeoutMs": 3000
+}

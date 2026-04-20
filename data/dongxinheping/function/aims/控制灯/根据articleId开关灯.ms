@@ -5,7 +5,7 @@
   "groupId" : "d7de530ea18542f2827146962f10bdb4",
   "name" : "根据articleId开关灯",
   "createTime" : 1775235016864,
-  "updateTime" : 1775533629586,
+  "updateTime" : 1776138210827,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -47,7 +47,7 @@ import java.util.HashMap
 import java.util.List
 import com.dtflys.forest.Forest;
 
-log.info("")
+const aimsHost = Forest.config().getVariableValue("aimsHost")
 
 if(source == null){
     return {
@@ -131,7 +131,7 @@ if(ledItems.size() == 0){
     }
 }
 
-let response = Forest.put('http://119.29.52.245:9002/labels/contents/led/article')
+let response = Forest.put(`http://${aimsHost}/labels/contents/led/article`)
     .contentType('application/json;charset=UTF-8')
     .addHeader('Accept', 'application/json;charset=UTF-8')
     .addBody(ledItems)

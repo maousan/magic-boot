@@ -5,7 +5,7 @@
   "groupId" : "03a2d754c617417cb68306951d6f8cf6",
   "name" : "更新article信息",
   "createTime" : null,
-  "updateTime" : 1775539941356,
+  "updateTime" : 1776138168999,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -31,6 +31,8 @@
 import log
 import java.util.List
 import com.dtflys.forest.Forest
+
+const aimsHost = Forest.config().getVariableValue("aimsHost")
 
 if(dataList == null){
     return {
@@ -74,7 +76,7 @@ for(item in dataList){
     }
 }
 
-let response = Forest.post('http://119.29.52.245:9002/articles')
+let response = Forest.post(`http://${aimsHost}:9002/articles`)
     .contentType('application/json;charset=UTF-8')
     .addHeader('Accept', 'application/json;charset=UTF-8')
     .addBody(payload)

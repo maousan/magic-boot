@@ -1,0 +1,13 @@
+{
+  "pluginId": "zintis-led-plugin",
+  "version": "1.0.0",
+  "manifestVersion": "1.0",
+  "displayName": "Zintis LED Plugin",
+  "entryJar": "plugin.jar",
+  "requiresMagicBoot": ">=1.0.0",
+  "permissions": [
+    "plugin:view"
+  ],
+  "checksumSha256": "REPLACE_WITH_PLUGIN_JAR_SHA256",
+  "signature": "REPLACE_WITH_BASE64_SIGNATURE_WHEN_SIGNATURE_FORCE_VERIFY_ENABLED"
+}
