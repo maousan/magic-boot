@@ -330,6 +330,25 @@ if(stationCode == null || stationCode == ''){
 let oldUnpickedCountMap = {}
 let incrementLocations = []
 let decrementLocations = []
+let formatLocationLog = (locationCodes, limit) => {
+    if(locationCodes == null){
+        return 'size=0,sample=[]'
+    }
+    let max = limit
+    if(max == null || max <= 0){
+        max = 10
+    }
+    let sample = []
+    let i = 0
+    for(code in locationCodes){
+        if(i >= max){
+            break
+        }
+        sample.add(code)
+        i = i + 1
+    }
+    return 'size=' + locationCodes.size() + ',sample=' + sample
+}
 
 try {
     transState = anyline.beginTrans()
@@ -341,21 +360,49 @@ try {
     }
 
     let masterId = master.id
+    let currentLocationCodes = []
     for(locationCode in locationCodeSet.keySet()){
-        let oldUnpickedCount = db.selectInt("""
-            select count(1)
+        currentLocationCodes.add(locationCode)
+        oldUnpickedCountMap[locationCode] = 0
+    }
+    if(currentLocationCodes.size() > 0){
+        let oldCountSql = """
+            select location_code, count(1) as unpicked_count
               from t_picking_upload_detail
              where bill_id = #{billId}
-               and location_code = #{locationCode}
                and ifnull(status, 0) <> 1
-        """, {
-            billId: masterId,
-            locationCode: locationCode
-        })
-        if(oldUnpickedCount == null){
-            oldUnpickedCount = 0
+        """
+        let oldCountParams = {
+            billId: masterId
         }
-        oldUnpickedCountMap[locationCode] = oldUnpickedCount
+        let oldInSql = ""
+        let oldIndex = 0
+        for(locationCode in currentLocationCodes){
+            let paramKey = 'locationCode' + oldIndex
+            oldCountParams[paramKey] = locationCode
+            if(oldIndex > 0){
+                oldInSql = oldInSql + ','
+            }
+            oldInSql = oldInSql + '#{' + paramKey + '}'
+            oldIndex = oldIndex + 1
+        }
+        oldCountSql = oldCountSql + " and location_code in (" + oldInSql + ") group by location_code"
+        let oldCountRows = db.select(oldCountSql, oldCountParams)
+        if(oldCountRows != null){
+            for(row in oldCountRows){
+                let locationCode = row.location_code
+                if(locationCode == null || locationCode == ''){
+                    locationCode = row.locationCode
+                }
+                let unpickedCount = row.unpicked_count
+                if(unpickedCount == null){
+                    unpickedCount = row.unpickedCount
+                }
+                if(locationCode != null && locationCode != ''){
+                    oldUnpickedCountMap[locationCode] = unpickedCount
+                }
+            }
+        }
     }
 
     for(item in details){
@@ -435,34 +482,98 @@ try {
         singleUserColor = mappedColor
     }
 
-    for(locationCode in locationCodeSet.keySet()){
-        let unpickedCount = db.selectInt("""
-            select count(1)
+    let waveLocationUnpickedMap = {}
+    let billLocationUnpickedMap = {}
+    if(currentLocationCodes.size() > 0){
+        let inSql = ""
+        let index1 = 0
+        let locationInParams = {}
+        for(locationCode in currentLocationCodes){
+            let paramKey = 'locationCode' + index1
+            locationInParams[paramKey] = locationCode
+            if(index1 > 0){
+                inSql = inSql + ','
+            }
+            inSql = inSql + '#{' + paramKey + '}'
+            index1 = index1 + 1
+        }
+
+        let waveCountSql = """
+            select location_code, count(1) as unpicked_count
               from t_picking_upload_detail
              where wave_no = #{waveNo}
-               and location_code = #{locationCode}
                and ifnull(status, 0) <> 1
-        """, {
-            waveNo: waveNo,
-            locationCode: locationCode
-        })
+               and location_code in (""" + inSql + """)
+             group by location_code
+        """
+        let waveCountParams = {
+            waveNo: waveNo
+        }
+        for(paramKey in locationInParams.keySet()){
+            waveCountParams[paramKey] = locationInParams[paramKey]
+        }
+        let waveCountRows = db.select(waveCountSql, waveCountParams)
+        if(waveCountRows != null){
+            for(row in waveCountRows){
+                let locationCode = row.location_code
+                if(locationCode == null || locationCode == ''){
+                    locationCode = row.locationCode
+                }
+                let unpickedCount = row.unpicked_count
+                if(unpickedCount == null){
+                    unpickedCount = row.unpickedCount
+                }
+                if(locationCode != null && locationCode != ''){
+                    waveLocationUnpickedMap[locationCode] = unpickedCount
+                }
+            }
+        }
+
+        let billCountSql = """
+            select location_code, count(1) as unpicked_count
+              from t_picking_upload_detail
+             where bill_id = #{billId}
+               and ifnull(status, 0) <> 1
+               and location_code in (""" + inSql + """)
+             group by location_code
+        """
+        let billCountParams = {
+            billId: masterId
+        }
+        for(paramKey in locationInParams.keySet()){
+            billCountParams[paramKey] = locationInParams[paramKey]
+        }
+        let billCountRows = db.select(billCountSql, billCountParams)
+        if(billCountRows != null){
+            for(row in billCountRows){
+                let locationCode = row.location_code
+                if(locationCode == null || locationCode == ''){
+                    locationCode = row.locationCode
+                }
+                let unpickedCount = row.unpicked_count
+                if(unpickedCount == null){
+                    unpickedCount = row.unpickedCount
+                }
+                if(locationCode != null && locationCode != ''){
+                    billLocationUnpickedMap[locationCode] = unpickedCount
+                }
+            }
+        }
+    }
+
+    for(locationCode in currentLocationCodes){
+        let unpickedCount = waveLocationUnpickedMap[locationCode]
+        if(unpickedCount == null){
+            unpickedCount = 0
+        }
         log.info('location evaluate, waveNo=' + waveNo + ', locationCode=' + locationCode + ', unpickedCount=' + unpickedCount)
-        if(unpickedCount == null || unpickedCount == 0){
+        if(unpickedCount == 0){
             shouldTurnOffLocationCodes.add(locationCode)
         } else {
             shouldTurnOnLocationCodes.add(locationCode)
         }
 
-        let newUnpickedCount = db.selectInt("""
-            select count(1)
-              from t_picking_upload_detail
-             where bill_id = #{billId}
-               and location_code = #{locationCode}
-               and ifnull(status, 0) <> 1
-        """, {
-            billId: masterId,
-            locationCode: locationCode
-        })
+        let newUnpickedCount = billLocationUnpickedMap[locationCode]
         if(newUnpickedCount == null){
             newUnpickedCount = 0
         }
@@ -477,7 +588,7 @@ try {
             incrementLocations.add(locationCode)
         }
     }
-    log.info('light decision, waveNo=' + waveNo + ', turnOn=' + shouldTurnOnLocationCodes + ', turnOff=' + shouldTurnOffLocationCodes + ', increment=' + incrementLocations + ', decrement=' + decrementLocations)
+    log.info('light decision, waveNo=' + waveNo + ', turnOn=' + formatLocationLog(shouldTurnOnLocationCodes, 20) + ', turnOff=' + formatLocationLog(shouldTurnOffLocationCodes, 20) + ', increment=' + formatLocationLog(incrementLocations, 20) + ', decrement=' + formatLocationLog(decrementLocations, 20))
 
     anyline.commitTrans(transState)
 
@@ -502,17 +613,47 @@ try {
             affectedLocationCodes.add(locationCode)
         }
     }
-    log.info('common count reconcile start(complete), waveNo=' + waveNo + ', userId=' + userId + ', increment=' + incrementLocations + ', decrement=' + decrementLocations + ', affected=' + affectedLocationCodes)
-    // 自愈逻辑：按数据库实值回填 CommonCountMap（防止重启后缓存为空）
-    for(locationCode in affectedLocationCodes){
-        let locationUserCount = db.selectInt("""
-            select count(distinct d.bill_id)
+    log.info('common count reconcile start(complete), waveNo=' + waveNo + ', userId=' + userId + ', increment=' + formatLocationLog(incrementLocations, 20) + ', decrement=' + formatLocationLog(decrementLocations, 20) + ', affected=' + formatLocationLog(affectedLocationCodes, 20))
+    // 自愈逻辑：按数据库实值批量回填 CommonCountMap（防止重启后缓存为空）
+    let locationUserCountMap = {}
+    if(affectedLocationCodes.size() > 0){
+        let reconcileSql = """
+            select d.location_code as location_code, count(distinct d.bill_id) as user_count
               from t_picking_upload_detail d
-             where d.location_code = #{locationCode}
-               and ifnull(d.status, 0) <> 1
-        """, {
-            locationCode: locationCode
-        })
+             where ifnull(d.status, 0) <> 1
+        """
+        let reconcileParams = {}
+        let inSql2 = ""
+        let index3 = 0
+        for(locationCode in affectedLocationCodes){
+            let paramKey = 'locationCode' + index3
+            reconcileParams[paramKey] = locationCode
+            if(index3 > 0){
+                inSql2 = inSql2 + ','
+            }
+            inSql2 = inSql2 + '#{' + paramKey + '}'
+            index3 = index3 + 1
+        }
+        reconcileSql = reconcileSql + " and d.location_code in (" + inSql2 + ") group by d.location_code"
+        let reconcileRows = db.select(reconcileSql, reconcileParams)
+        if(reconcileRows != null){
+            for(row in reconcileRows){
+                let locationCode = row.location_code
+                if(locationCode == null || locationCode == ''){
+                    locationCode = row.locationCode
+                }
+                let locationUserCount = row.user_count
+                if(locationUserCount == null){
+                    locationUserCount = row.userCount
+                }
+                if(locationCode != null && locationCode != ''){
+                    locationUserCountMap[locationCode] = locationUserCount
+                }
+            }
+        }
+    }
+    for(locationCode in affectedLocationCodes){
+        let locationUserCount = locationUserCountMap[locationCode]
         if(locationUserCount == null || locationUserCount <= 0){
             CommonCountMap.remove(locationCode)
             log.info('common count reconcile remove(complete), locationCode=' + locationCode + ', dbCount=0, memCount=' + CommonCountMap.get(locationCode))
@@ -521,7 +662,7 @@ try {
             log.info('common count reconcile set(complete), locationCode=' + locationCode + ', dbCount=' + locationUserCount + ', memCount=' + CommonCountMap.get(locationCode))
         }
     }
-    log.info('common count reconcile done(complete), snapshot=' + CommonCountMap.snapshot() + ', size=' + CommonCountMap.size() + ', total=' + CommonCountMap.totalCount())
+    log.info('common count reconcile done(complete), size=' + CommonCountMap.size() + ', total=' + CommonCountMap.totalCount())
 
     if(shouldTurnOffLocationCodes.size() > 0){
         try {

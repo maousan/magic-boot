@@ -68,6 +68,32 @@ public final class CommonCountMap {
     }
 
     /**
+     * 直接设置计数（long重载），负数按0处理；为0时移除键。
+     */
+    public static void set(String key, long count) {
+        int normalized;
+        if (count <= MIN_COUNT) {
+            normalized = MIN_COUNT;
+        } else if (count > Integer.MAX_VALUE) {
+            normalized = Integer.MAX_VALUE;
+        } else {
+            normalized = (int) count;
+        }
+        set(key, normalized);
+    }
+
+    /**
+     * 直接设置计数（Number重载），兼容脚本层Long/Integer/BigDecimal等数值类型。
+     */
+    public static void set(String key, Number count) {
+        if (count == null) {
+            set(key, MIN_COUNT);
+            return;
+        }
+        set(key, count.longValue());
+    }
+
+    /**
      * 获取计数，不存在时返回0。
      */
     public static int get(String key) {

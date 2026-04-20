@@ -213,27 +213,97 @@ if (modeVal == 1 || modeVal == 2) {
 
 let requestJson = JsonUtils.toJsonString(payload)
 let transState = null
+let formatLocationLog = (locationCodes, limit) => {
+    if(locationCodes == null){
+        return 'size=0,sample=[]'
+    }
+    let max = limit
+    if(max == null || max <= 0){
+        max = 10
+    }
+    let sample = []
+    let i = 0
+    for(code in locationCodes){
+        if(i >= max){
+            break
+        }
+        sample.add(code)
+        i = i + 1
+    }
+    return 'size=' + locationCodes.size() + ',sample=' + sample
+}
+let resolveAffectedLocationCodes = (payloadObj) => {
+    let result = []
+    let uniq = {}
+    if(payloadObj == null){
+        return result
+    }
+    let source = payloadObj.affectedLocationCodes
+    if(source == null){
+        source = payloadObj.locationCodes
+    }
+    if(source != null){
+        for(code in source){
+            if(code != null && code != '' && uniq[code] == null){
+                uniq[code] = 1
+                result.add(code)
+            }
+        }
+    }
+    return result
+}
 
-let queryLocationCodes = (waveNo, onlyUnpicked) => {
+let queryLocationSummary = (waveNo, targetLocationCodes) => {
     let sql = """
-        select distinct location_code
+        select location_code,
+               sum(case when ifnull(status, 0) <> 1 then 1 else 0 end) as unpicked_count
           from t_picking_upload_detail
          where wave_no = #{waveNo}
            and ifnull(location_code, '') <> ''
     """
-    if(onlyUnpicked){
-        sql = sql + " and ifnull(status, 0) <> 1 "
+    let params = {
+        waveNo: waveNo
     }
-    let rows = db.select(sql, {waveNo: waveNo})
-    let locationCodes = []
+    if(targetLocationCodes != null && targetLocationCodes.size() > 0){
+        let inSql = ""
+        let idx = 0
+        for(locationCode in targetLocationCodes){
+            let key = 'locationCode' + idx
+            params[key] = locationCode
+            if(idx > 0){
+                inSql = inSql + ','
+            }
+            inSql = inSql + '#{' + key + '}'
+            idx = idx + 1
+        }
+        sql = sql + " and location_code in (" + inSql + ")"
+    }
+    sql = sql + " group by location_code"
+    let rows = db.select(sql, params)
+    let summary = {
+        allLocationCodes: [],
+        unpickedLocationSet: {}
+    }
     if(rows != null){
         for(row in rows){
-            if(row.location_code != null && row.location_code != ''){
-                locationCodes.push(row.location_code)
+            let locationCode = row.location_code
+            if(locationCode == null || locationCode == ''){
+                locationCode = row.locationCode
+            }
+            if(locationCode == null || locationCode == ''){
+                continue
+            }
+            summary.allLocationCodes.add(locationCode)
+            let unpickedCount = row.unpicked_count
+            if(unpickedCount == null){
+                unpickedCount = row.unpickedCount
+            }
+            if(unpickedCount != null && unpickedCount > 0){
+                summary.unpickedLocationSet[locationCode] = 1
             }
         }
     }
-    return locationCodes
+    return summary
 }
 
 let queryUserUnpickedLocationCodes = (waveNo, userId) => {
@@ -297,12 +367,10 @@ try {
         }
     }
 
-    let allLocationCodes = queryLocationCodes(payload.waveNo, false)
-    let unpickedLocationCodes = queryLocationCodes(payload.waveNo, true)
-    let unpickedLocationSet = {}
-    for(locationCode in unpickedLocationCodes){
-        unpickedLocationSet[locationCode] = 1
-    }
+    let affectedLocationCodes = resolveAffectedLocationCodes(payload)
+    let locationSummary = queryLocationSummary(payload.waveNo, affectedLocationCodes)
+    let allLocationCodes = locationSummary.allLocationCodes
+    let unpickedLocationSet = locationSummary.unpickedLocationSet
 
     let turnOffLocationCodes = []
     let turnOnSingleLocationCodes = []
@@ -323,6 +391,8 @@ try {
     if(multiUserColor == null || multiUserColor == ''){
         multiUserColor = 'CYAN'
     }
+
+    log.info('control location summary, waveNo=' + payload.waveNo + ', mode=' + modeVal + ', affected=' + formatLocationLog(affectedLocationCodes, 20) + ', all=' + formatLocationLog(allLocationCodes, 20))
 
     if (modeVal == 3 || modeVal == 4) {
         if(turnOffLocationCodes.size() > 0){

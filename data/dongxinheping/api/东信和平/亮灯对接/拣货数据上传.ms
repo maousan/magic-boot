@@ -5,7 +5,7 @@
   "groupId" : "l5kl0q2xiqa4ryz349c3fkzj3hzm07vw",
   "name" : "拣货数据上传",
   "createTime" : null,
-  "updateTime" : 1776672510979,
+  "updateTime" : 1776702303642,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -347,6 +347,25 @@ let uploadLocationCodeSet = {}
 let uploadLocationCodes = []
 let oldUnpickedLocationCodeSet = {}
 let oldUnpickedLocationCodes = []
+let formatLocationLog = (locationCodes, limit) => {
+    if(locationCodes == null){
+        return 'size=0,sample=[]'
+    }
+    let max = limit
+    if(max == null || max <= 0){
+        max = 10
+    }
+    let sample = []
+    let i = 0
+    for(code in locationCodes){
+        if(i >= max){
+            break
+        }
+        sample.add(code)
+        i = i + 1
+    }
+    return 'size=' + locationCodes.size() + ',sample=' + sample
+}
 
 let transState = null
 try {
@@ -396,6 +415,7 @@ try {
         anyline.insert('t_picking_upload', masterRow)
     }
 
+    let detailRows = []
     for(item in details){
         let actualQty = item.actualQuantity
         if(actualQty == null){
@@ -421,11 +441,59 @@ try {
             create_time: now
         }
 
-        anyline.insert('t_picking_upload_detail', detailRow)
+        detailRows.add(detailRow)
         if(item.status != 1 && uploadLocationCodeSet[item.locationCode] == null){
             uploadLocationCodeSet[item.locationCode] = 1
             uploadLocationCodes.add(item.locationCode)
         }
+    }
+    if(detailRows.size() > 0){
+        let batchInsertSql = """
+            insert into t_picking_upload_detail (
+                id,
+                wave_no,
+                bill_id,
+                material_code,
+                batch_no,
+                location_code,
+                plan_quantity,
+                actual_quantity,
+                status,
+                create_time
+            ) values
+        """
+        let batchInsertValuesSql = ""
+        let batchInsertParams = {}
+        let rowIndex = 0
+        for(detailRow in detailRows){
+            if(rowIndex > 0){
+                batchInsertValuesSql = batchInsertValuesSql + ","
+            }
+            let suffix = "_" + rowIndex
+            batchInsertValuesSql = batchInsertValuesSql + "("
+                + "#{id" + suffix + "},"
+                + "#{waveNo" + suffix + "},"
+                + "#{billId" + suffix + "},"
+                + "#{materialCode" + suffix + "},"
+                + "#{batchNo" + suffix + "},"
+                + "#{locationCode" + suffix + "},"
+                + "#{planQuantity" + suffix + "},"
+                + "#{actualQuantity" + suffix + "},"
+                + "#{status" + suffix + "},"
+                + "#{createTime" + suffix + "})"
+            batchInsertParams["id" + suffix] = detailRow.id
+            batchInsertParams["waveNo" + suffix] = detailRow.wave_no
+            batchInsertParams["billId" + suffix] = detailRow.bill_id
+            batchInsertParams["materialCode" + suffix] = detailRow.material_code
+            batchInsertParams["batchNo" + suffix] = detailRow.batch_no
+            batchInsertParams["locationCode" + suffix] = detailRow.location_code
+            batchInsertParams["planQuantity" + suffix] = detailRow.plan_quantity
+            batchInsertParams["actualQuantity" + suffix] = detailRow.actual_quantity
+            batchInsertParams["status" + suffix] = detailRow.status
+            batchInsertParams["createTime" + suffix] = detailRow.create_time
+            rowIndex = rowIndex + 1
+        }
+        db.update(batchInsertSql + batchInsertValuesSql, batchInsertParams)
     }
 
     anyline.commitTrans(transState)
@@ -480,17 +548,47 @@ try {
             }
         }
     }
-    log.info('common count reconcile start(upload), waveNo=' + waveNo + ', userId=' + userId + ', added=' + addedLocationCodes + ', removed=' + removedLocationCodes + ', affected=' + affectedLocationCodes)
-    // 自愈逻辑：不依赖差量结果，按数据库实值回填 CommonCountMap（防止重启后缓存为空）
-    for(locationCode in affectedLocationCodes){
-        let locationUserCount = db.selectInt("""
-            select count(distinct d.bill_id)
+    log.info('common count reconcile start(upload), waveNo=' + waveNo + ', userId=' + userId + ', added=' + formatLocationLog(addedLocationCodes, 20) + ', removed=' + formatLocationLog(removedLocationCodes, 20) + ', affected=' + formatLocationLog(affectedLocationCodes, 20))
+    // 自愈逻辑：不依赖差量结果，按数据库实值批量回填 CommonCountMap（防止重启后缓存为空）
+    let locationUserCountMap = {}
+    if(affectedLocationCodes.size() > 0){
+        let reconcileSql = """
+            select d.location_code as location_code, count(distinct d.bill_id) as user_count
               from t_picking_upload_detail d
-             where d.location_code = #{locationCode}
-               and ifnull(d.status, 0) <> 1
-        """, {
-            locationCode: locationCode
-        })
+             where ifnull(d.status, 0) <> 1
+        """
+        let reconcileParams = {}
+        let inSql = ""
+        let index2 = 0
+        for(locationCode in affectedLocationCodes){
+            let paramKey = 'locationCode' + index2
+            reconcileParams[paramKey] = locationCode
+            if(index2 > 0){
+                inSql = inSql + ','
+            }
+            inSql = inSql + '#{' + paramKey + '}'
+            index2 = index2 + 1
+        }
+        reconcileSql = reconcileSql + " and d.location_code in (" + inSql + ") group by d.location_code"
+        let reconcileRows = db.select(reconcileSql, reconcileParams)
+        if(reconcileRows != null){
+            for(row in reconcileRows){
+                let locationCode = row.location_code
+                if(locationCode == null || locationCode == ''){
+                    locationCode = row.locationCode
+                }
+                let locationUserCount = row.user_count
+                if(locationUserCount == null){
+                    locationUserCount = row.userCount
+                }
+                if(locationCode != null && locationCode != ''){
+                    locationUserCountMap[locationCode] = locationUserCount
+                }
+            }
+        }
+    }
+    for(locationCode in affectedLocationCodes){
+        let locationUserCount = locationUserCountMap[locationCode]
         if(locationUserCount == null || locationUserCount <= 0){
             CommonCountMap.remove(locationCode)
             log.info('common count reconcile remove(upload), locationCode=' + locationCode + ', dbCount=0, memCount=' + CommonCountMap.get(locationCode))
@@ -499,7 +597,7 @@ try {
             log.info('common count reconcile set(upload), locationCode=' + locationCode + ', dbCount=' + locationUserCount + ', memCount=' + CommonCountMap.get(locationCode))
         }
     }
-    log.info('common count reconcile done(upload), snapshot=' + CommonCountMap.snapshot() + ', size=' + CommonCountMap.size() + ', total=' + CommonCountMap.totalCount())
+    log.info('common count reconcile done(upload), size=' + CommonCountMap.size() + ', total=' + CommonCountMap.totalCount())
 
     if(uploadLocationCodes.size() > 0){
         let singleUserColor = 'GREEN'
@@ -547,7 +645,7 @@ try {
         }
     }
 
-    log.info("CommonCountMap: {}", CommonCountMap.snapshot())
+    // log.info("CommonCountMap: {}", CommonCountMap.snapshot())
 
     exit 200, '拣货数据上传成功'
 } catch (e) {
