@@ -5,7 +5,7 @@
   "groupId" : "6ce8544b21954e189dc7aeb484aeddfc",
   "name" : "绑定库位码和标签码",
   "createTime" : 1775549000000,
-  "updateTime" : 1775555778231,
+  "updateTime" : 1776665024175,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -39,13 +39,12 @@ import java.util.ArrayList
 import com.dtflys.forest.Forest
 import '@/utils/parseLot' as parseLot
 
+const aimsHost = Forest.config().getVariableValue("aimsHost")
+const stationCode = Forest.config().getVariableValue("stationCode")
+
 let parsedLocationCode = parseLot(body.locationCode)
 let locationCode = parsedLocationCode != null && parsedLocationCode.Lot != null ? parsedLocationCode.Lot : parsedLocationCode
 let labelCode = body.labelCode
-let stationCode = body.stationCode
-if(stationCode == null || stationCode == ''){
-    stationCode = '10001'
-}
 
 if(locationCode == null || locationCode == ''){
     exit 400, 'locationCode不能为空'
@@ -70,7 +69,7 @@ let requestBody = {
     arrowDirection: body.arrowDirection
 }
 
-let url = 'http://119.29.52.245:9002/labels/link/' + stationCode
+let url = `http://${aimsHost}:9002/labels/link/${stationCode}`
 let response = Forest.post(url)
     .contentType('application/json;charset=UTF-8')
     .addHeader('Accept', 'application/json;charset=UTF-8')

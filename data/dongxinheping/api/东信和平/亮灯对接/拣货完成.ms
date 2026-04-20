@@ -5,7 +5,7 @@
   "groupId" : "l5kl0q2xiqa4ryz349c3fkzj3hzm07vw",
   "name" : "拣货完成",
   "createTime" : null,
-  "updateTime" : 1775538439367,
+  "updateTime" : 1776672835524,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -25,10 +25,10 @@
     "expression" : null,
     "children" : null
   } ],
-  "requestBody" : "{\n    \"waveNo\": \"WV202603250001\",\n    \"userId\": \"USER002\",\n    \"details\": [\n        {\n            \"id\": \"DTL001\",\n            \"materialCode\": \"MAT001\",\n            \"batchNo\": \"B20260325\",\n            \"locationCode\": \"A1-11-01-01-01\",\n            \"planQuantity\": 100,\n            \"actualQuantity\": 100,\n            \"updateTime\": 1648195200000\n        }\n    ]\n}",
+  "requestBody" : "{\n    \"waveNo\": \"WV202603250001\",\n    \"userId\": \"USER002\",\n    \"details\": [\n        {\n            \"id\": \"DTL001\",\n            \"materialCode\": \"MAT001\",\n            \"batchNo\": \"B20260325\",\n            \"locationCode\": \"A1-11-02-01-01\",\n            \"planQuantity\": 100,\n            \"actualQuantity\": 100,\n            \"updateTime\": 1648195200000\n        }\n    ]\n}",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"拣货完成同步成功\",\n    \"data\": null,\n    \"timestamp\": 1775534482357,\n    \"executeTime\": 69\n}",
+  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"拣货完成同步成功\",\n    \"data\": null,\n    \"timestamp\": 1776672767274,\n    \"executeTime\": 153\n}",
   "description" : "当用户完成某一个物料拣选后，WMS 向亮灯系统同步完成信息。",
   "requestBodyDefinition" : {
     "name" : "",
@@ -252,10 +252,11 @@
 ================================
 import log
 import java.util.UUID
-import redis
+import com.dtflys.forest.Forest
 import '@/aims/led/turnOnLedByArticleId' as turnOnLedByArticleId
 import '@/aims/led/turnOffLedByArticleId' as turnOffLedByArticleId
 import '@/utils/getUserLightColor' as getUserLightColor
+import org.ssssssss.magicboot.model.CommonCountMap
 
 if(body == null){
     exit 400, '请求体不能为空'
@@ -320,7 +321,15 @@ let now = new Date()
 let transState = null
 let shouldTurnOffLocationCodes = []
 let shouldTurnOnLocationCodes = []
-let workColor = 'GREEN'
+let singleUserColor = 'GREEN'
+let multiUserColor = 'BLUE'
+let stationCode = Forest.config().getVariableValue("stationCode")
+if(stationCode == null || stationCode == ''){
+    stationCode = '10001'
+}
+let oldUnpickedCountMap = {}
+let incrementLocations = []
+let decrementLocations = []
 
 try {
     transState = anyline.beginTrans()
@@ -332,6 +341,23 @@ try {
     }
 
     let masterId = master.id
+    for(locationCode in locationCodeSet.keySet()){
+        let oldUnpickedCount = db.selectInt("""
+            select count(1)
+              from t_picking_upload_detail
+             where bill_id = #{billId}
+               and location_code = #{locationCode}
+               and ifnull(status, 0) <> 1
+        """, {
+            billId: masterId,
+            locationCode: locationCode
+        })
+        if(oldUnpickedCount == null){
+            oldUnpickedCount = 0
+        }
+        oldUnpickedCountMap[locationCode] = oldUnpickedCount
+    }
+
     for(item in details){
         let actualQty = item.actualQuantity
         let planQty = item.planQuantity
@@ -404,16 +430,9 @@ try {
         update_time: latestUpdateTime
     })
 
-    let waveUserCount = db.selectInt("select count(distinct user_id) from t_picking_upload where wave_no = #{waveNo}", {
-        waveNo: waveNo
-    })
     let mappedColor = getUserLightColor(userId)
     if(mappedColor != null && mappedColor != ''){
-        workColor = mappedColor
-    } else if(waveUserCount != null && waveUserCount > 1){
-        workColor = 'CYAN'
-    } else {
-        workColor = 'GREEN'
+        singleUserColor = mappedColor
     }
 
     for(locationCode in locationCodeSet.keySet()){
@@ -433,16 +452,82 @@ try {
         } else {
             shouldTurnOnLocationCodes.add(locationCode)
         }
+
+        let newUnpickedCount = db.selectInt("""
+            select count(1)
+              from t_picking_upload_detail
+             where bill_id = #{billId}
+               and location_code = #{locationCode}
+               and ifnull(status, 0) <> 1
+        """, {
+            billId: masterId,
+            locationCode: locationCode
+        })
+        if(newUnpickedCount == null){
+            newUnpickedCount = 0
+        }
+
+        let oldUnpickedCount = oldUnpickedCountMap[locationCode]
+        if(oldUnpickedCount == null){
+            oldUnpickedCount = 0
+        }
+        if(oldUnpickedCount > 0 && newUnpickedCount == 0){
+            decrementLocations.add(locationCode)
+        } else if(oldUnpickedCount == 0 && newUnpickedCount > 0){
+            incrementLocations.add(locationCode)
+        }
     }
-    log.info('light decision, waveNo=' + waveNo + ', color=' + workColor + ', turnOn=' + shouldTurnOnLocationCodes + ', turnOff=' + shouldTurnOffLocationCodes)
+    log.info('light decision, waveNo=' + waveNo + ', turnOn=' + shouldTurnOnLocationCodes + ', turnOff=' + shouldTurnOffLocationCodes + ', increment=' + incrementLocations + ', decrement=' + decrementLocations)
 
     anyline.commitTrans(transState)
 
+    let affectedLocationCodeSet = {}
+    let affectedLocationCodes = []
+    for(locationCode in incrementLocations){
+        if(affectedLocationCodeSet[locationCode] == null){
+            affectedLocationCodeSet[locationCode] = 1
+            affectedLocationCodes.add(locationCode)
+        }
+    }
+    for(locationCode in decrementLocations){
+        if(affectedLocationCodeSet[locationCode] == null){
+            affectedLocationCodeSet[locationCode] = 1
+            affectedLocationCodes.add(locationCode)
+        }
+    }
+    // 本次完成接口涉及的库位（用于处理差量=0但缓存为空的重启场景）
+    for(locationCode in locationCodeSet.keySet()){
+        if(affectedLocationCodeSet[locationCode] == null){
+            affectedLocationCodeSet[locationCode] = 1
+            affectedLocationCodes.add(locationCode)
+        }
+    }
+    log.info('common count reconcile start(complete), waveNo=' + waveNo + ', userId=' + userId + ', increment=' + incrementLocations + ', decrement=' + decrementLocations + ', affected=' + affectedLocationCodes)
+    // 自愈逻辑：按数据库实值回填 CommonCountMap（防止重启后缓存为空）
+    for(locationCode in affectedLocationCodes){
+        let locationUserCount = db.selectInt("""
+            select count(distinct d.bill_id)
+              from t_picking_upload_detail d
+             where d.location_code = #{locationCode}
+               and ifnull(d.status, 0) <> 1
+        """, {
+            locationCode: locationCode
+        })
+        if(locationUserCount == null || locationUserCount <= 0){
+            CommonCountMap.remove(locationCode)
+            log.info('common count reconcile remove(complete), locationCode=' + locationCode + ', dbCount=0, memCount=' + CommonCountMap.get(locationCode))
+        } else {
+            CommonCountMap.set(locationCode, locationUserCount)
+            log.info('common count reconcile set(complete), locationCode=' + locationCode + ', dbCount=' + locationUserCount + ', memCount=' + CommonCountMap.get(locationCode))
+        }
+    }
+    log.info('common count reconcile done(complete), snapshot=' + CommonCountMap.snapshot() + ', size=' + CommonCountMap.size() + ', total=' + CommonCountMap.totalCount())
+
     if(shouldTurnOffLocationCodes.size() > 0){
         try {
-            log.info('dispatch async turnOff, waveNo=' + waveNo + ', stationCode=10001, articleIds=' + shouldTurnOffLocationCodes)
+            log.info('dispatch async turnOff, waveNo=' + waveNo + `, stationCode=${stationCode}, articleIds=` + shouldTurnOffLocationCodes)
             let turnOffFuture = async turnOffLedByArticleId({
-                stationCode: "10001",
+                stationCode,
                 articleIds: shouldTurnOffLocationCodes
             })
         } catch (asyncErr) {
@@ -450,16 +535,40 @@ try {
         }
     }
 
-    if(shouldTurnOnLocationCodes.size() > 0){
+    let singleUserLocationCodes = []
+    let multiUserLocationCodes = []
+    for(locationCode in shouldTurnOnLocationCodes){
+        let locationUserCount = CommonCountMap.get(locationCode)
+        if(locationUserCount > 1){
+            multiUserLocationCodes.add(locationCode)
+        } else {
+            singleUserLocationCodes.add(locationCode)
+        }
+    }
+
+    if(singleUserLocationCodes.size() > 0){
         try {
-            log.info('dispatch async turnOn, waveNo=' + waveNo + ', stationCode=10001, color=' + workColor + ', articleIds=' + shouldTurnOnLocationCodes)
-            let turnOnFuture = async turnOnLedByArticleId({
-                stationCode: "10001",
-                color: workColor,
-                articleIds: shouldTurnOnLocationCodes
+            log.info('dispatch async turnOn(single user) from complete, waveNo=' + waveNo + `, stationCode=${stationCode}, color=` + singleUserColor + ', articleIds=' + singleUserLocationCodes)
+            let turnOnSingleFuture = async turnOnLedByArticleId({
+                stationCode,
+                color: singleUserColor,
+                articleIds: singleUserLocationCodes
             })
         } catch (asyncErr2) {
-            log.error('异步亮灯调用触发失败: ' + asyncErr2.message)
+            log.error('异步亮灯调用触发失败(单用户色): ' + asyncErr2.message)
+        }
+    }
+
+    if(multiUserLocationCodes.size() > 0){
+        try {
+            log.info('dispatch async turnOn(multi user) from complete, waveNo=' + waveNo + `, stationCode=${stationCode}, color=` + multiUserColor + ', articleIds=' + multiUserLocationCodes)
+            let turnOnMultiFuture = async turnOnLedByArticleId({
+                stationCode,
+                color: multiUserColor,
+                articleIds: multiUserLocationCodes
+            })
+        } catch (asyncErr3) {
+            log.error('异步亮灯调用触发失败(多用户色): ' + asyncErr3.message)
         }
     }
 

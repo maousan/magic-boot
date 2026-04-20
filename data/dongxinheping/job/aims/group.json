@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "999006442fb54aebbb2015e4a23bdba8",
+  "name" : "aims",
+  "type" : "job",
+  "parentId" : "0",
+  "path" : "/aims",
+  "createTime" : 1776664386270,
+  "updateTime" : null,
+  "createBy" : "admin",
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

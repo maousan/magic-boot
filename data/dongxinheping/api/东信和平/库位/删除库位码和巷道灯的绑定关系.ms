@@ -5,7 +5,7 @@
   "groupId" : "6ce8544b21954e189dc7aeb484aeddfc",
   "name" : "删除库位码和巷道灯的绑定关系",
   "createTime" : 1775201582139,
-  "updateTime" : 1775300478447,
+  "updateTime" : 1776665211274,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -46,4 +46,4 @@
   "responseBodyDefinition" : null
 }
 ================================
-return db.table("t_location_led").where().eq("location_code", lotNo).delete()
+return db.table("t_location_led").where().eq("location_code", lotNo).eq("floor_no", floorNo).delete()

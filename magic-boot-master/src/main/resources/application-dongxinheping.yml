@@ -16,6 +16,7 @@ forest:
   variables:
     aimsHost: 119.29.52.245:9002
     stationCode: 10001
+    mixColor: CYAN
 
 # 插件路径
 plugin:

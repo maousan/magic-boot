@@ -5,7 +5,7 @@
   "groupId" : "6ce8544b21954e189dc7aeb484aeddfc",
   "name" : "解绑库位码和标签码",
   "createTime" : 1775542800000,
-  "updateTime" : 1775554184364,
+  "updateTime" : 1776665196457,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -49,11 +49,14 @@
 import log
 import com.dtflys.forest.Forest
 
+const aimsHost = Forest.config().getVariableValue("aimsHost")
+const stationCode = Forest.config().getVariableValue("stationCode")
+
 if(labelCode == null || labelCode == ''){
     exit 400, 'labelCode不能为空'
 }
 
-let unlinkUrl = 'http://119.29.52.245:9002/labels/unlink?labelCode=' + labelCode
+let unlinkUrl = `http://${aimsHost}:9002/labels/unlink?labelCode=${labelCode}`
 let unlinkResponse = Forest.post(unlinkUrl)
     .contentType('application/json;charset=UTF-8')
     .addHeader('Accept', 'application/json;charset=UTF-8')

@@ -5,7 +5,7 @@
   "groupId" : "l5kl0q2xiqa4ryz349c3fkzj3hzm07vw",
   "name" : "拣货数据上传",
   "createTime" : null,
-  "updateTime" : 1775538426584,
+  "updateTime" : 1776672510979,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -25,10 +25,10 @@
     "expression" : null,
     "children" : null
   } ],
-  "requestBody" : "{\n  \"waveNo\": \"WV202603250001\",\n  \"userId\": \"USER002\",\n  \"userName\": \"张三\",\n  \"updateTime\": 1648195200000,\n  \"details\": [\n    {\n      \"id\": \"DTL001\",\n      \"materialCode\": \"MAT001\",\n      \"batchNo\": \"B20260325\",\n      \"locationCode\": \"A1-11-02-01-01\",\n      \"planQuantity\": 100,\n      \"actualQuantity\": 0,\n      \"status\": 0\n    },\n    {\n      \"id\": \"D3003\",\n      \"materialCode\": \"MAT-013\",\n      \"batchNo\": \"BATCH-ERR-3\",\n      \"locationCode\": \"A1-11-01-01-01\",\n      \"planQuantity\": 6,\n      \"actualQuantity\": 0,\n      \"status\": 1\n    }\n  ]\n}",
+  "requestBody" : "{\n  \"waveNo\": \"WV202603250001\",\n  \"userId\": \"USER001\",\n  \"userName\": \"张三\",\n  \"updateTime\": 1648195200000,\n  \"details\": [\n    {\n      \"id\": \"DTL001\",\n      \"materialCode\": \"MAT001\",\n      \"batchNo\": \"B20260325\",\n      \"locationCode\": \"A1-11-02-01-01\",\n      \"planQuantity\": 100,\n      \"actualQuantity\": 60,\n      \"status\": 0\n    },\n    {\n      \"id\": \"D3003\",\n      \"materialCode\": \"MAT-013\",\n      \"batchNo\": \"BATCH-ERR-3\",\n      \"locationCode\": \"A1-11-01-01-01\",\n      \"planQuantity\": 6,\n      \"actualQuantity\": 0,\n      \"status\": 0\n    }\n  ]\n}",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"拣货数据上传成功\",\n    \"data\": null,\n    \"timestamp\": 1775538425101,\n    \"executeTime\": 96\n}",
+  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"拣货数据上传成功\",\n    \"data\": null,\n    \"timestamp\": 1776672498381,\n    \"executeTime\": 122\n}",
   "description" : "当用户进入拣选页面时，上传波次内待拣明细并刷新主从表数据。",
   "requestBodyDefinition" : {
     "name" : "root",
@@ -275,10 +275,13 @@
 }
 ================================
 import log
-import redis
 import java.util.UUID
 import '@/aims/led/turnOnLedByArticleId' as turnOnLedByArticleId
 import '@/utils/getUserLightColor' as getUserLightColor
+import org.ssssssss.magicboot.model.CommonCountMap
+import com.dtflys.forest.Forest
+
+const stationCode = Forest.config().getVariableValue("stationCode")
 
 if(body == null){
     exit 400, '请求体不能为空'
@@ -342,6 +345,8 @@ let userId = payload.userId
 let now = new Date()
 let uploadLocationCodeSet = {}
 let uploadLocationCodes = []
+let oldUnpickedLocationCodeSet = {}
+let oldUnpickedLocationCodes = []
 
 let transState = null
 try {
@@ -351,6 +356,26 @@ try {
     let masterId = UUID.randomUUID().toString().replace('-', '')
     if(existingMaster != null && existingMaster.id != null && existingMaster.id != ''){
         masterId = existingMaster.id
+        let oldRows = db.select("""
+            select distinct location_code
+              from t_picking_upload_detail
+             where bill_id = #{billId}
+               and ifnull(status, 0) <> 1
+        """, {
+            billId: masterId
+        })
+        if(oldRows != null){
+            for(row in oldRows){
+                let oldLocationCode = row.location_code
+                if(oldLocationCode == null || oldLocationCode == ''){
+                    oldLocationCode = row.locationCode
+                }
+                if(oldLocationCode != null && oldLocationCode != '' && oldUnpickedLocationCodeSet[oldLocationCode] == null){
+                    oldUnpickedLocationCodeSet[oldLocationCode] = 1
+                    oldUnpickedLocationCodes.add(oldLocationCode)
+                }
+            }
+        }
     }
 
     db.table('t_picking_upload_detail').where().eq('bill_id', masterId).delete()
@@ -381,6 +406,8 @@ try {
             detailId = UUID.randomUUID().toString().replace('-', '')
         }
 
+        item.status = item.planQuantity > actualQty ? 0 : 1
+
         let detailRow = {
             id: detailId,
             wave_no: waveNo,
@@ -401,62 +428,126 @@ try {
         }
     }
 
-    let userCount = db.selectInt("select count(distinct user_id) from t_picking_upload where wave_no = #{waveNo}", {waveNo: waveNo})
-    db.update("""
-        insert into t_picking_upload_user (wave_no, user_count)
-        values (#{waveNo}, #{userCount})
-        on duplicate key update user_count = values(user_count)
-    """, {waveNo: waveNo, userCount: userCount})
-    // redis.default.hashPut("picking:"+waveNo, userId, 1)
     anyline.commitTrans(transState)
 
-    if(uploadLocationCodes.size() > 0){
-        let workColor = 'GREEN'
-        let mappedColor = getUserLightColor(userId)
-        if(mappedColor != null && mappedColor != ''){
-            workColor = mappedColor
-        } else if(userCount != null && userCount > 1){
-            workColor = 'BLUE'
+    let addedLocationCodes = []
+    let removedLocationCodes = []
+    for(locationCode in uploadLocationCodes){
+        if(oldUnpickedLocationCodeSet[locationCode] == null){
+            addedLocationCodes.add(locationCode)
         }
+    }
+    for(oldLocationCode in oldUnpickedLocationCodes){
+        if(uploadLocationCodeSet[oldLocationCode] == null){
+            removedLocationCodes.add(oldLocationCode)
+        }
+    }
 
-        let shouldTurnOnLocationCodes = []
-        let unpickedLocationSet = {}
-        let unpickedRows = db.select("""
-            select location_code, count(1) as unpicked_count
-              from t_picking_upload_detail
-             where wave_no = #{waveNo}
-               and ifnull(status, 0) <> 1
-             group by location_code
-        """, {
-            waveNo: waveNo
-        })
-        if(unpickedRows != null){
-            for(row in unpickedRows){
-                log.info("{}", row)
-                if(rowLocationCode != null){
-                    unpickedLocationSet[row.locationCode] = 1
-                }
-            }
+    let affectedLocationCodeSet = {}
+    let affectedLocationCodes = []
+    // 差量有变化的库位
+    for(locationCode in addedLocationCodes){
+        if(affectedLocationCodeSet[locationCode] == null){
+            affectedLocationCodeSet[locationCode] = 1
+            affectedLocationCodes.add(locationCode)
         }
-        for(locationCode in uploadLocationCodes){
-            if(unpickedLocationSet[locationCode] != null){
-                shouldTurnOnLocationCodes.add(locationCode)
-            }
+    }
+    for(locationCode in removedLocationCodes){
+        if(affectedLocationCodeSet[locationCode] == null){
+            affectedLocationCodeSet[locationCode] = 1
+            affectedLocationCodes.add(locationCode)
         }
-
-        if(shouldTurnOnLocationCodes.size() > 0){
-            try {
-                log.info('dispatch async turnOn from upload, waveNo=' + waveNo + ', stationCode=10001, color=' + workColor + ', articleIds=' + shouldTurnOnLocationCodes)
-                let turnOnFuture = async turnOnLedByArticleId({
-                    stationCode: "10001",
-                    color: workColor,
-                    articleIds: shouldTurnOnLocationCodes
-                })
-            } catch (asyncErr) {
-                log.error('异步亮灯调用触发失败: ' + asyncErr.message)
+    }
+    // 本次上报涉及的库位（用于处理差量=0但缓存为空的重启场景）
+    for(locationCode in uploadLocationCodes){
+        if(affectedLocationCodeSet[locationCode] == null){
+            affectedLocationCodeSet[locationCode] = 1
+            affectedLocationCodes.add(locationCode)
+        }
+    }
+    for(locationCode in oldUnpickedLocationCodes){
+        if(affectedLocationCodeSet[locationCode] == null){
+            affectedLocationCodeSet[locationCode] = 1
+            affectedLocationCodes.add(locationCode)
+        }
+    }
+    if(affectedLocationCodes.size() == 0){
+        for(item in details){
+            let detailLocationCode = item.locationCode
+            if(detailLocationCode != null && detailLocationCode != '' && affectedLocationCodeSet[detailLocationCode] == null){
+                affectedLocationCodeSet[detailLocationCode] = 1
+                affectedLocationCodes.add(detailLocationCode)
             }
         }
     }
+    log.info('common count reconcile start(upload), waveNo=' + waveNo + ', userId=' + userId + ', added=' + addedLocationCodes + ', removed=' + removedLocationCodes + ', affected=' + affectedLocationCodes)
+    // 自愈逻辑：不依赖差量结果，按数据库实值回填 CommonCountMap（防止重启后缓存为空）
+    for(locationCode in affectedLocationCodes){
+        let locationUserCount = db.selectInt("""
+            select count(distinct d.bill_id)
+              from t_picking_upload_detail d
+             where d.location_code = #{locationCode}
+               and ifnull(d.status, 0) <> 1
+        """, {
+            locationCode: locationCode
+        })
+        if(locationUserCount == null || locationUserCount <= 0){
+            CommonCountMap.remove(locationCode)
+            log.info('common count reconcile remove(upload), locationCode=' + locationCode + ', dbCount=0, memCount=' + CommonCountMap.get(locationCode))
+        } else {
+            CommonCountMap.set(locationCode, locationUserCount)
+            log.info('common count reconcile set(upload), locationCode=' + locationCode + ', dbCount=' + locationUserCount + ', memCount=' + CommonCountMap.get(locationCode))
+        }
+    }
+    log.info('common count reconcile done(upload), snapshot=' + CommonCountMap.snapshot() + ', size=' + CommonCountMap.size() + ', total=' + CommonCountMap.totalCount())
+
+    if(uploadLocationCodes.size() > 0){
+        let singleUserColor = 'GREEN'
+        let multiUserColor = 'BLUE'
+        let mappedColor = getUserLightColor(userId)
+        if(mappedColor != null && mappedColor != ''){
+            singleUserColor = mappedColor
+        }
+
+        let singleUserLocationCodes = []
+        let multiUserLocationCodes = []
+        for(locationCode in uploadLocationCodes){
+            let locationUserCount = CommonCountMap.get(locationCode)
+            if(locationUserCount > 1){
+                multiUserLocationCodes.add(locationCode)
+            } else {
+                singleUserLocationCodes.add(locationCode)
+            }
+        }
+
+        if(singleUserLocationCodes.size() > 0){
+            try {
+                log.info('dispatch async turn on from upload(single user), waveNo=' + waveNo + `, stationCode=${stationCode}, color=` + singleUserColor + ', articleIds=' + singleUserLocationCodes)
+                let turnOnSingleFuture = async turnOnLedByArticleId({
+                    stationCode,
+                    color: singleUserColor,
+                    articleIds: singleUserLocationCodes
+                })
+            } catch (asyncErr) {
+                log.error('异步亮灯调用触发失败(单用户色): ' + asyncErr.message)
+            }
+        }
+
+        if(multiUserLocationCodes.size() > 0){
+            try {
+                log.info('dispatch async turn on from upload(multi user), waveNo=' + waveNo + `, stationCode=${stationCode}, color=` + multiUserColor + ', articleIds=' + multiUserLocationCodes)
+                let turnOnMultiFuture = async turnOnLedByArticleId({
+                    stationCode,
+                    color: multiUserColor,
+                    articleIds: multiUserLocationCodes
+                })
+            } catch (asyncErr2) {
+                log.error('异步亮灯调用触发失败(多用户色): ' + asyncErr2.message)
+            }
+        }
+    }
+
+    log.info("CommonCountMap: {}", CommonCountMap.snapshot())
 
     exit 200, '拣货数据上传成功'
 } catch (e) {

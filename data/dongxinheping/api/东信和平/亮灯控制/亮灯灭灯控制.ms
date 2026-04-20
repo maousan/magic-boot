@@ -5,7 +5,7 @@
   "groupId" : "qou8in0pu4dvva7g20trefax4lo26ye8",
   "name" : "亮灯灭灯控制",
   "createTime" : null,
-  "updateTime" : 1776138310377,
+  "updateTime" : 1776669187355,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -156,10 +156,17 @@
 ================================
 import log
 import java.util.UUID
-import redis
 import org.ssssssss.magicapi.utils.JsonUtils
+import com.dtflys.forest.Forest
 import '@/aims/led/turnOffLedByArticleId' as turnOffLedByArticleId
 import '@/aims/led/turnOnLedByArticleId' as turnOnLedByArticleId
+import org.ssssssss.magicboot.model.CommonCountMap
+
+const mixColor = Forest.config().getVariableValue("mixColor")
+let stationCode = Forest.config().getVariableValue("stationCode")
+if(stationCode == null || stationCode == ''){
+    stationCode = '10001'
+}
 
 if (body == null) {
     exit 400, '请求体不能为空'
@@ -207,6 +214,56 @@ if (modeVal == 1 || modeVal == 2) {
 let requestJson = JsonUtils.toJsonString(payload)
 let transState = null
 
+let queryLocationCodes = (waveNo, onlyUnpicked) => {
+    let sql = """
+        select distinct location_code
+          from t_picking_upload_detail
+         where wave_no = #{waveNo}
+           and ifnull(location_code, '') <> ''
+    """
+    if(onlyUnpicked){
+        sql = sql + " and ifnull(status, 0) <> 1 "
+    }
+    let rows = db.select(sql, {waveNo: waveNo})
+    let locationCodes = []
+    if(rows != null){
+        for(row in rows){
+            if(row.location_code != null && row.location_code != ''){
+                locationCodes.push(row.location_code)
+            }
+        }
+    }
+    return locationCodes
+}
+
+let queryUserUnpickedLocationCodes = (waveNo, userId) => {
+    let rows = db.select("""
+        select distinct d.location_code
+          from t_picking_upload_detail d
+          left join t_picking_upload m on m.id = d.bill_id
+         where m.wave_no = #{waveNo}
+           and m.user_id = #{userId}
+           and ifnull(d.status, 0) <> 1
+           and ifnull(d.location_code, '') <> ''
+    """, {
+        waveNo: waveNo,
+        userId: userId
+    })
+    let locationCodes = []
+    if(rows != null){
+        for(row in rows){
+            let code = row.location_code
+            if(code == null || code == ''){
+                code = row.locationCode
+            }
+            if(code != null && code != ''){
+                locationCodes.add(code)
+            }
+        }
+    }
+    return locationCodes
+}
+
 try {
     transState = anyline.beginTrans()
 
@@ -223,24 +280,126 @@ try {
         create_time: new Date()
     })
 
-    // TODO 预留：后续在此补充三方亮灯系统API调用逻辑
-    const redisKey = "picking:"+payload.waveNo
-    if (modeVal == 1 || modelValue == 2) {
-        redis.default.hashPut(redisKey, payload.userId, 1)
-    } else {
-        redis.default.hashDelete(redisKey, [payload.userId])
-    }
-
-    const userCount = redis.default.hashSize(redisKey)
-    if (userCount === 0) {
-        //灭灯
-    } else if (userCount === 1) {
-        //亮绿灯
-    } else {
-        //亮其他灯
-    }
-
     anyline.commitTrans(transState)
+    transState = null
+
+    // 以“当前用户在该波次下的未拣库位”为单位更新 CommonCountMap
+    let userUnpickedLocationCodes = queryUserUnpickedLocationCodes(payload.waveNo, payload.userId)
+    if(modeVal == 1 || modeVal == 2){
+        for(locationCode in userUnpickedLocationCodes){
+            let currentCount = CommonCountMap.increment(locationCode)
+            log.info('common count increment from control, waveNo=' + payload.waveNo + ', userId=' + payload.userId + ', locationCode=' + locationCode + ', count=' + currentCount)
+        }
+    } else {
+        for(locationCode in userUnpickedLocationCodes){
+            let currentCount = CommonCountMap.decrement(locationCode)
+            log.info('common count decrement from control, waveNo=' + payload.waveNo + ', userId=' + payload.userId + ', locationCode=' + locationCode + ', count=' + currentCount)
+        }
+    }
+
+    let allLocationCodes = queryLocationCodes(payload.waveNo, false)
+    let unpickedLocationCodes = queryLocationCodes(payload.waveNo, true)
+    let unpickedLocationSet = {}
+    for(locationCode in unpickedLocationCodes){
+        unpickedLocationSet[locationCode] = 1
+    }
+
+    let turnOffLocationCodes = []
+    let turnOnSingleLocationCodes = []
+    let turnOnMultiLocationCodes = []
+
+    for(locationCode in allLocationCodes){
+        let locationUserCount = CommonCountMap.get(locationCode)
+        if(unpickedLocationSet[locationCode] == null || locationUserCount <= 0){
+            turnOffLocationCodes.add(locationCode)
+        } else if(locationUserCount > 1){
+            turnOnMultiLocationCodes.add(locationCode)
+        } else {
+            turnOnSingleLocationCodes.add(locationCode)
+        }
+    }
+
+    let multiUserColor = mixColor
+    if(multiUserColor == null || multiUserColor == ''){
+        multiUserColor = 'CYAN'
+    }
+
+    if (modeVal == 3 || modeVal == 4) {
+        if(turnOffLocationCodes.size() > 0){
+            try {
+                log.info('dispatch async turnOff from control, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', articleIds=' + turnOffLocationCodes)
+                let turnOffFuture = async turnOffLedByArticleId({
+                    stationCode: stationCode,
+                    articleIds: turnOffLocationCodes
+                })
+            } catch (asyncErr1) {
+                log.error('异步灭灯调用触发失败: ' + asyncErr1.message)
+            }
+        }
+        if(turnOnSingleLocationCodes.size() > 0){
+            try {
+                log.info('dispatch async turnOn(single user) after turnOff, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', color=GREEN, articleIds=' + turnOnSingleLocationCodes)
+                let turnOnSingleFuture = async turnOnLedByArticleId({
+                    stationCode: stationCode,
+                    color: 'GREEN',
+                    articleIds: turnOnSingleLocationCodes
+                })
+            } catch (asyncErr2) {
+                log.error('异步补亮调用触发失败(单用户色): ' + asyncErr2.message)
+            }
+        }
+        if(turnOnMultiLocationCodes.size() > 0){
+            try {
+                log.info('dispatch async turnOn(multi user) after turnOff, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', color=' + multiUserColor + ', articleIds=' + turnOnMultiLocationCodes)
+                let turnOnMultiFuture = async turnOnLedByArticleId({
+                    stationCode: stationCode,
+                    color: multiUserColor,
+                    articleIds: turnOnMultiLocationCodes
+                })
+            } catch (asyncErr3) {
+                log.error('异步补亮调用触发失败(多用户色): ' + asyncErr3.message)
+            }
+        }
+    } else {
+        if(turnOnSingleLocationCodes.size() > 0){
+            try {
+                log.info('dispatch async turnOn(single user) from control, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', color=' + colorVal + ', articleIds=' + turnOnSingleLocationCodes)
+                let turnOnSingleFuture2 = async turnOnLedByArticleId({
+                    stationCode,
+                    color: colorVal,
+                    articleIds: turnOnSingleLocationCodes
+                })
+            } catch (asyncErr4) {
+                log.error('异步亮灯调用触发失败(单用户色): ' + asyncErr4.message)
+            }
+        }
+        if(turnOnMultiLocationCodes.size() > 0){
+            try {
+                log.info('dispatch async turnOn(multi user) from control, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', color=' + multiUserColor + ', articleIds=' + turnOnMultiLocationCodes)
+                let turnOnMultiFuture2 = async turnOnLedByArticleId({
+                    stationCode,
+                    color: multiUserColor,
+                    articleIds: turnOnMultiLocationCodes
+                })
+            } catch (asyncErr5) {
+                log.error('异步亮灯调用触发失败(多用户色): ' + asyncErr5.message)
+            }
+        }
+        // 点亮模式下，也把不该亮的库位灭掉，避免残灯
+        if(turnOffLocationCodes.size() > 0){
+            try {
+                log.info('dispatch async turnOff from control(on mode), waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', articleIds=' + turnOffLocationCodes)
+                let turnOffFuture2 = async turnOffLedByArticleId({
+                    stationCode: stationCode,
+                    articleIds: turnOffLocationCodes
+                })
+            } catch (asyncErr6) {
+                log.error('异步灭灯调用触发失败(点亮模式): ' + asyncErr6.message)
+            }
+        }
+    }
+
+    log.info('CommonCountMap(control): ' + CommonCountMap.snapshot())
     exit 200, '指令发送成功'
 } catch (e) {
     if (transState != null) {
