@@ -9,7 +9,7 @@ import org.ssssssss.magicapi.core.event.GroupEvent;
 import org.ssssssss.magicapi.function.model.FunctionInfo;
 import org.ssssssss.magicapi.core.model.Parameter;
 import org.ssssssss.magicapi.core.service.MagicResourceStorage;
-import org.ssssssss.magicapi.utils.ScriptManager;
+import org.ssssssss.magicapi.utils.ScriptIdUtils;
 import org.ssssssss.magicapi.core.service.AbstractMagicDynamicRegistry;
 import org.ssssssss.script.MagicResourceLoader;
 import org.ssssssss.script.MagicScriptContext;
@@ -41,7 +41,8 @@ public class FunctionMagicDynamicRegistry extends AbstractMagicDynamicRegistry<F
 						functionContext.set(parameters.get(i).getName(), objects[i]);
 					}
 				}
-				Object value = ScriptManager.executeScript(functionInfo.getScript(), functionContext);
+				Object value = MagicConfiguration.getScriptExecutor()
+						.executeScript(ScriptIdUtils.resolveFunction(functionInfo), functionInfo.getScript(), functionContext);
 				if (value instanceof ExitValue) {
 					throw new MagicExitException((ExitValue) value);
 				}

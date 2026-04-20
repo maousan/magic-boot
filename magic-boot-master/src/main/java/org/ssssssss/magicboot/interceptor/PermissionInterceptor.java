@@ -87,6 +87,7 @@ public class PermissionInterceptor implements RequestInterceptor, HandlerInterce
      */
     @Override
     public Object preHandle(ApiInfo info, MagicScriptContext context, MagicHttpServletRequest request, MagicHttpServletResponse response) {
+        context.getRootVariables().put("__user__", StpUtil.getLoginIdDefaultNull());
         // dev 环境下跳过登录校验
         if (isDevEnvironment()) {
             return null;

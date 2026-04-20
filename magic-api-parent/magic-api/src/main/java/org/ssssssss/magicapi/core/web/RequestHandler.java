@@ -31,6 +31,7 @@ import org.ssssssss.magicapi.core.servlet.MagicHttpServletRequest;
 import org.ssssssss.magicapi.core.servlet.MagicHttpServletResponse;
 import org.ssssssss.magicapi.modules.servlet.ResponseModule;
 import org.ssssssss.magicapi.utils.PatternUtils;
+import org.ssssssss.magicapi.utils.ScriptIdUtils;
 import org.ssssssss.magicapi.utils.ScriptManager;
 import org.ssssssss.script.MagicScriptContext;
 import org.ssssssss.script.MagicScriptDebugContext;
@@ -333,7 +334,9 @@ public class RequestHandler extends MagicController {
 	private Object invokeRequest(RequestEntity requestEntity) throws Throwable {
 		try {
 			MagicScriptContext context = requestEntity.getMagicScriptContext();
-			Object result = ScriptManager.executeScript(requestEntity.getApiInfo().getScript(), context);
+			ApiInfo apiInfo = requestEntity.getApiInfo();
+			String scriptId = ScriptIdUtils.resolveApi(apiInfo, "");
+			Object result = MagicConfiguration.getScriptExecutor().executeScript(scriptId, apiInfo.getScript(), context);
 			Object value = result;
 			// 执行后置拦截器
 			if ((value = doPostHandle(requestEntity, value)) != null) {

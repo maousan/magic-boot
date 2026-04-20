@@ -14,6 +14,7 @@ import org.springframework.web.client.RestTemplate;
 import org.ssssssss.magicapi.core.annotation.MagicModule;
 import org.ssssssss.magicapi.core.config.Constants;
 import org.ssssssss.magicapi.core.config.JsonCodeConstants;
+import org.ssssssss.magicapi.core.config.MagicConfiguration;
 import org.ssssssss.magicapi.core.config.WebSocketSessionManager;
 import org.ssssssss.magicapi.core.context.RequestEntity;
 import org.ssssssss.magicapi.core.event.EventAction;
@@ -28,7 +29,7 @@ import org.ssssssss.magicapi.core.servlet.MagicRequestContextHolder;
 import org.ssssssss.magicapi.function.model.FunctionInfo;
 import org.ssssssss.magicapi.function.service.FunctionMagicDynamicRegistry;
 import org.ssssssss.magicapi.utils.PathUtils;
-import org.ssssssss.magicapi.utils.ScriptManager;
+import org.ssssssss.magicapi.utils.ScriptIdUtils;
 import org.ssssssss.magicapi.utils.SignUtils;
 import org.ssssssss.script.MagicScriptContext;
 
@@ -84,7 +85,8 @@ public class DefaultMagicAPIService implements MagicAPIService, JsonCodeConstant
 		if (requestEntity != null) {
 			requestEntity.setMagicScriptContext(scriptContext);
 		}
-		return (T) ScriptManager.executeScript(info.getScript(), scriptContext);
+		return (T) MagicConfiguration.getScriptExecutor()
+				.executeScript(ScriptIdUtils.resolve(info, this.prefix), info.getScript(), scriptContext);
 	}
 
 	@Override

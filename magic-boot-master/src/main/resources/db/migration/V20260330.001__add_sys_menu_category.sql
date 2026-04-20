@@ -25,16 +25,42 @@ WHERE child.is_del = 0
   AND (child.category IS NULL OR child.category = '');
 
 -- Then infer by route path for remaining records
-UPDATE sys_menu
-SET category = CASE
-  WHEN category IS NOT NULL AND category <> '' THEN category
-  WHEN path = '/profile' OR path LIKE '/profile/%' THEN 'settings'
-  WHEN path = '/app-center' OR path LIKE '/app-center/%' THEN 'app-center'
-  WHEN path = '/business' OR path LIKE '/business/%' THEN 'business'
-  WHEN path = '/system' OR path LIKE '/system/%' THEN 'system'
-  WHEN path = '/dashboard' OR path LIKE '/dashboard/%' THEN 'system'
-  WHEN path = '/security' OR path LIKE '/security/%' THEN 'system'
-  ELSE 'system'
-END
-WHERE is_del = 0
-  AND (category IS NULL OR category = '');
+SET @path_column_exists := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'sys_menu'
+    AND COLUMN_NAME = 'path'
+);
+
+SET @url_column_exists := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'sys_menu'
+    AND COLUMN_NAME = 'url'
+);
+
+SET @route_column := IF(@path_column_exists > 0, 'path', IF(@url_column_exists > 0, 'url', NULL));
+
+SET @sql_backfill_by_route := IF(
+  @route_column IS NULL,
+  'SELECT 1',
+  CONCAT(
+    'UPDATE sys_menu ',
+    'SET category = CASE ',
+    'WHEN category IS NOT NULL AND category <> '''' THEN category ',
+    'WHEN ', @route_column, ' = ''/profile'' OR ', @route_column, ' LIKE ''/profile/%'' THEN ''settings'' ',
+    'WHEN ', @route_column, ' = ''/app-center'' OR ', @route_column, ' LIKE ''/app-center/%'' THEN ''app-center'' ',
+    'WHEN ', @route_column, ' = ''/business'' OR ', @route_column, ' LIKE ''/business/%'' THEN ''business'' ',
+    'WHEN ', @route_column, ' = ''/system'' OR ', @route_column, ' LIKE ''/system/%'' THEN ''system'' ',
+    'WHEN ', @route_column, ' = ''/dashboard'' OR ', @route_column, ' LIKE ''/dashboard/%'' THEN ''system'' ',
+    'WHEN ', @route_column, ' = ''/security'' OR ', @route_column, ' LIKE ''/security/%'' THEN ''system'' ',
+    'ELSE ''system'' END ',
+    'WHERE is_del = 0 AND (category IS NULL OR category = '''')'
+  )
+);
+
+PREPARE stmt_backfill_by_route FROM @sql_backfill_by_route;
+EXECUTE stmt_backfill_by_route;
+DEALLOCATE PREPARE stmt_backfill_by_route;

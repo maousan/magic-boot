@@ -1,21 +1,6 @@
-version: "3.8"
-
-# 环境变量文件，可选
-# 创建 .env 文件覆盖默认值：
-# MYSQL_HOST=mysql (使用 Docker 内置) 或 192.168.1.100 (外部)
-# MYSQL_DATABASE=magic-boot
-# MYSQL_USER=magic
-# MYSQL_PASSWORD=your_password
-# REDIS_HOST=redis (使用 Docker 内置) 或 192.168.1.100 (外部)
-# REDIS_PASSWORD=your_redis_password
-#
-# 变量复用说明：
-# - .env 文件内部不支持 ${VAR} 引用其他变量
-# - 但可以在 docker-compose.yml 中使用 ${VAR:-default} 进行变量拼接
-# - 推荐方式：在 .env 中定义基础变量，在 yml 中拼接复杂值
+﻿version: "3.8"
 
 services:
-  # MySQL 8.0 数据库服务（可选，使用外部数据源时可不启动）
   mysql:
     image: mysql:8.0
     container_name: magic-boot-mysql
@@ -31,7 +16,6 @@ services:
       - "${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./db:/docker-entrypoint-initdb.d:ro
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -47,9 +31,8 @@ services:
       retries: 5
       start_period: 30s
     profiles:
-      - docker-db # 使用 --profile docker-db 启用 Docker 内置数据库
+      - docker-db
 
-  # Redis 缓存服务（可选，使用外部数据源时可不启动）
   redis:
     image: redis:7-alpine
     container_name: magic-boot-redis
@@ -60,10 +43,14 @@ services:
       - redis_data:/data
     command:
       - redis-server
-      - --appendonly yes
-      - --requirepass ${REDIS_PASSWORD:-Magic@Redis2026}
-      - --maxmemory 512mb
-      - --maxmemory-policy allkeys-lru
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD:-Magic@Redis2026}
+      - --maxmemory
+      - 512mb
+      - --maxmemory-policy
+      - allkeys-lru
     networks:
       - magic-boot-network
     healthcheck:
@@ -73,9 +60,8 @@ services:
       retries: 3
       start_period: 10s
     profiles:
-      - docker-db # 使用 --profile docker-db 启用 Docker 内置数据库
+      - docker-db
 
-  # Redis Commander (Redis 可视化管理工具，可选)
   redis-commander:
     image: rediscommander/redis-commander:latest
     container_name: magic-boot-redis-ui
@@ -90,9 +76,8 @@ services:
     networks:
       - magic-boot-network
     profiles:
-      - tools # 使用 --profile tools 启用
+      - tools
 
-  # Spring Boot 应用服务
   app:
     build:
       context: .
@@ -102,38 +87,29 @@ services:
     ports:
       - "${APP_PORT:-8089}:8089"
     environment:
-      # Spring 环境
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-dev}
-      # 服务器端口配置（覆盖 application-dev.yml 中的 8089 端口）
+      - SPRING_FLYWAY_ENABLED=${SPRING_FLYWAY_ENABLED:-true}
+      - SPRING_FLYWAY_BASELINE_ON_MIGRATE=${SPRING_FLYWAY_BASELINE_ON_MIGRATE:-false}
+      - SPRING_FLYWAY_PLACEHOLDER_REPLACEMENT=${SPRING_FLYWAY_PLACEHOLDER_REPLACEMENT:-false}
+      - SPRING_FLYWAY_LOCATIONS=${SPRING_FLYWAY_LOCATIONS:-classpath:db/migration}
       - SERVER_PORT=8089
-      # MySQL 数据库配置
-      # 支持两种模式：
-      # 1. USE_DOCKER_DB=true: 使用内置数据库，MYSQL_HOST 默认为 mysql
-      # 2. USE_DOCKER_DB=false: 使用外部数据源，MYSQL_HOST 指向外部地址
-      # 方式 1：直接使用完整的 URL（推荐，兼容性最好）
-      #   SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:-jdbc:mysql://mysql:3306/magic-boot?...}
-      # 方式 2：使用变量扩展拼接 URL（Docker Compose v2.20+）
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:-jdbc:mysql://${MYSQL_HOST:-mysql}:${MYSQL_PORT:-3306}/${MYSQL_DATABASE:-magic-boot}?useSSL=false&zeroDateTimeBehavior=convertToNull&useUnicode=true&characterEncoding=UTF8&autoReconnect=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai}
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-magic}
       - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-Magic@2026}
-      # Redis 配置（支持动态切换内外数据源）
       - EXTEND_REDIS_ENABLED=${EXTEND_REDIS_ENABLED:-true}
-      # 方式 1：使用变量扩展拼接（Docker Compose v2.20+）
       - SPRING_DATA_REDIS_HOST=${SPRING_DATA_REDIS_HOST:-${REDIS_HOST:-redis}}
-      # 容器内部通信始终使用 6379，外部访问端口由 REDIS_PORT 控制
       - SPRING_DATA_REDIS_PORT=${SPRING_DATA_REDIS_PORT:-6379}
       - SPRING_DATA_REDIS_PASSWORD=${SPRING_DATA_REDIS_PASSWORD:-${REDIS_PASSWORD:-Magic@Redis2026}}
       - SPRING_DATA_REDIS_DATABASE=${SPRING_DATA_REDIS_DATABASE:-0}
-      # 上传路径
+      - SPRING_REDIS_HOST=${SPRING_REDIS_HOST:-${REDIS_HOST:-redis}}
+      - SPRING_REDIS_PORT=${SPRING_REDIS_PORT:-6379}
+      - SPRING_REDIS_PASSWORD=${SPRING_REDIS_PASSWORD:-${REDIS_PASSWORD:-Magic@Redis2026}}
+      - SPRING_REDIS_DATABASE=${SPRING_REDIS_DATABASE:-0}
       - UPLOAD_DIR=${UPLOAD_DIR:-/app/uploads}
-      # JVM 配置
       - JAVA_OPTS=-Xms512m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
     volumes:
-      # Magic-API 资源目录（支持热更新）
       - ./data/magic-api:/app/data/magic-api:rw
-      # 文件上传目录
       - ./uploads:/app/uploads:rw
-      # 日志目录
       - ./logs:/app/logs:rw
     depends_on:
       mysql:
@@ -151,7 +127,6 @@ services:
       retries: 3
       start_period: 60s
 
-  # Nginx 反向代理（可选，用于生产环境）
   nginx:
     image: nginx:alpine
     container_name: magic-boot-nginx
@@ -169,7 +144,7 @@ services:
     networks:
       - magic-boot-network
     profiles:
-      - production # 使用 --profile production 启用
+      - production
 
 volumes:
   mysql_data:

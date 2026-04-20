@@ -50,6 +50,7 @@ import org.ssssssss.magicapi.core.resource.ResourceAdapter;
 import org.ssssssss.magicapi.core.service.*;
 import org.ssssssss.magicapi.core.service.impl.DefaultMagicAPIService;
 import org.ssssssss.magicapi.core.service.impl.DefaultMagicResourceService;
+import org.ssssssss.magicapi.core.service.impl.DefaultScriptExecutor;
 import org.ssssssss.magicapi.core.service.impl.RequestMagicDynamicRegistry;
 import org.ssssssss.magicapi.core.servlet.MagicRequestContextHolder;
 import org.ssssssss.magicapi.core.web.MagicResourceController;
@@ -233,6 +234,12 @@ public class MagicAPIAutoConfiguration implements WebMvcConfigurer, WebSocketCon
 		return new DefaultMagicAPIService(resultProvider, properties.getInstanceId(), magicResourceService, requestMagicDynamicRegistry, functionMagicDynamicRegistry, properties.isThrowException(), properties.getPrefix() ,magicRequestContextHolder, applicationContext);
 	}
 
+	@Bean
+	@ConditionalOnMissingBean(ScriptExecutor.class)
+	public ScriptExecutor scriptExecutor() {
+		return new DefaultScriptExecutor();
+	}
+
 	/**
 	 * 注册模块、类型扩展
 	 */
@@ -296,6 +303,7 @@ public class MagicAPIAutoConfiguration implements WebMvcConfigurer, WebSocketCon
 												 ResultProvider resultProvider,
 												 MagicResourceService magicResourceService,
 												 MagicAPIService magicAPIService,
+												 ScriptExecutor scriptExecutor,
 												 MagicNotifyService magicNotifyService,
 												 RequestMagicDynamicRegistry requestMagicDynamicRegistry,
 												 @Autowired(required = false) MagicBackupService magicBackupService) throws NoSuchMethodException {
@@ -311,6 +319,7 @@ public class MagicAPIAutoConfiguration implements WebMvcConfigurer, WebSocketCon
 		// 设置模块和扩展方法
 		setupMagicModules(extensionMethodsProvider.getIfAvailable(Collections::emptyList), languageProviders);
 		MagicConfiguration configuration = new MagicConfiguration();
+		MagicConfiguration.setScriptExecutor(scriptExecutor);
 		configuration.setMagicAPIService(magicAPIService);
 		configuration.setMagicNotifyService(magicNotifyService);
 		configuration.setInstanceId(properties.getInstanceId());

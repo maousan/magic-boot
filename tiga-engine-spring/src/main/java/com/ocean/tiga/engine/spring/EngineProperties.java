@@ -11,6 +11,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class EngineProperties {
 
     /**
+     * 是否启用引擎自动配置
+     */
+    private boolean enabled = true;
+
+    /**
      * 核心线程数
      */
     private int corePoolSize = Runtime.getRuntime().availableProcessors() * 2;
@@ -33,6 +38,14 @@ public class EngineProperties {
     // Getters and Setters
     public int getCorePoolSize() {
         return corePoolSize;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 
     public void setCorePoolSize(int corePoolSize) {

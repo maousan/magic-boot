@@ -19,7 +19,7 @@ import org.ssssssss.magicapi.core.servlet.MagicHttpServletResponse;
 import org.ssssssss.magicapi.core.web.RequestHandler;
 import org.ssssssss.magicapi.utils.Mapping;
 import org.ssssssss.magicapi.utils.PathUtils;
-import org.ssssssss.magicapi.utils.ScriptManager;
+import org.ssssssss.magicapi.utils.ScriptIdUtils;
 import org.ssssssss.script.MagicResourceLoader;
 import org.ssssssss.script.MagicScriptContext;
 import org.ssssssss.script.exception.MagicExitException;
@@ -69,7 +69,8 @@ public class RequestMagicDynamicRegistry extends AbstractMagicDynamicRegistry<Ap
 					varMap.putAll(variables.getVariables(context));
 					newContext.setScriptName(scriptName);
 					newContext.putMapIntoContext(varMap);
-					Object value = ScriptManager.executeScript(info.getScript(), newContext);
+					Object value = MagicConfiguration.getScriptExecutor()
+							.executeScript(ScriptIdUtils.resolveApi(info, this.prefix), info.getScript(), newContext);
 					if (value instanceof ExitValue) {
 						throw new MagicExitException((ExitValue) value);
 					}

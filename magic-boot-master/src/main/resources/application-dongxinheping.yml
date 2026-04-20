@@ -12,7 +12,13 @@ magic-api:
   resource:
     location: data/dongxinheping
 
+forest:
+  variables:
+    aimsHost: 119.29.52.245:9002
+    stationCode: 10001
+
 # 插件路径
 plugin:
-  auto-start: false
+  auto-load: true
+  auto-start: true
   signature-force-verify: false

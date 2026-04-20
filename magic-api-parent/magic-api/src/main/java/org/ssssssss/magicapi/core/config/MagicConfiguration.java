@@ -9,10 +9,12 @@ import org.ssssssss.magicapi.core.service.MagicResourceService;
 import org.ssssssss.magicapi.core.interceptor.AuthorizationInterceptor;
 import org.ssssssss.magicapi.core.interceptor.RequestInterceptor;
 import org.ssssssss.magicapi.core.service.MagicAPIService;
+import org.ssssssss.magicapi.core.service.ScriptExecutor;
 import org.ssssssss.magicapi.backup.service.MagicBackupService;
 import org.ssssssss.magicapi.core.service.MagicNotifyService;
 import org.ssssssss.magicapi.core.interceptor.ResultProvider;
 import org.ssssssss.magicapi.datasource.model.MagicDynamicDataSource;
+import org.ssssssss.magicapi.core.service.impl.DefaultScriptExecutor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,6 +59,8 @@ public class MagicConfiguration {
 	private MagicBackupService magicBackupService;
 
 	private static MagicResourceService magicResourceService;
+
+	private static ScriptExecutor scriptExecutor = new DefaultScriptExecutor();
 
 	private List<MagicDynamicRegistry<? extends MagicEntity>> magicDynamicRegistries;
 
@@ -181,6 +185,14 @@ public class MagicConfiguration {
 
 	public static MagicResourceService getMagicResourceService() {
 		return MagicConfiguration.magicResourceService;
+	}
+
+	public static ScriptExecutor getScriptExecutor() {
+		return scriptExecutor;
+	}
+
+	public static void setScriptExecutor(ScriptExecutor scriptExecutor) {
+		MagicConfiguration.scriptExecutor = scriptExecutor == null ? new DefaultScriptExecutor() : scriptExecutor;
 	}
 
 	public void setMagicResourceService(MagicResourceService magicResourceService) {

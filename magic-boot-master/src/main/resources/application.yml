@@ -320,8 +320,10 @@ plugin:
 # Tiga 脚本引擎配置
 tiga:
   engine:
-    enabled: true
+    enabled: false
     core-pool-size: 4       # CPU 核数 * 2（根据实际机器调整）
     max-pool-size: 8        # CPU 核数 * 4
     queue-capacity: 2000
     max-cache-size: 500
+  magic:
+    timeout-ms: 30000
