@@ -69,7 +69,7 @@
 - 新增特性或功能前，必须生成计划文档，保存到项目文件夹`.claude/plans`
 - 功能调整或者功能重构，必须生成变更日志文档
 - 新增特性或功能后，需生成里程碑文档
-- 源码文件统一保存为 UTF-8 无 BOM，行尾为 CRLF（Windows）
+- 源码文件统一保存为 UTF-8
 
 ## File Encoding & Line Endings
-- All newly created or modified files must use UTF-8 encoding without BOM and Windows (CRLF) line endings.
+- All newly created or modified files must use UTF-8 encoding
