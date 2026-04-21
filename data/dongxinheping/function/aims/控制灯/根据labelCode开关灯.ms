@@ -99,7 +99,7 @@ for(item in source){
         }
     }
     if(itemDuration == 'inf'){
-        itemDuration = '0'
+        itemDuration = '60m'
     }
     row.put('duration', itemDuration)
 

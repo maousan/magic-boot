@@ -30,14 +30,18 @@
 ================================
 import '@/aims/led/controlByArticleId' as controlByArticleId
 
-const { stationCode, color, articleIds } = data
+const { stationCode, color, articleIds, duration } = data
+let ledDuration = duration
+if(ledDuration == null || ledDuration == ''){
+    ledDuration = "60m"
+}
 
 const items = []
 
 for (articleId in articleIds) {
     items.push({
         color,
-        duration: "inf",
+        duration: ledDuration,
         articleId,
         patternId: 0
     })

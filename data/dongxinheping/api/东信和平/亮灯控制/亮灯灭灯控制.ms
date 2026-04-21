@@ -5,7 +5,7 @@
   "groupId" : "qou8in0pu4dvva7g20trefax4lo26ye8",
   "name" : "亮灯灭灯控制",
   "createTime" : null,
-  "updateTime" : 1776669187355,
+  "updateTime" : 1776744217958,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -25,7 +25,7 @@
     "expression" : null,
     "children" : null
   } ],
-  "requestBody" : "{\n  \"waveNo\": \"WV202603250001\",\n  \"userId\": \"USER001\",\n  \"mode\": 3,\n  \"color\": \"GREEN\",\n  \"duration\": \"inf\"\n}",
+  "requestBody" : "{\n  \"waveNo\": \"WV202603250001\",\n  \"userId\": \"USER001\",\n  \"mode\": 3,\n  \"color\": \"GREEN\",\n  \"duration\": \"60m\"\n}",
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"指令发送成功\",\n    \"data\": null,\n    \"timestamp\": 1775325451620,\n    \"executeTime\": 175\n}",
@@ -91,12 +91,12 @@
       "children" : [ ]
     }, {
       "name" : "duration",
-      "value" : "inf",
-      "description" : "亮灯时长，默认inf",
+      "value" : "60m",
+      "description" : "亮灯时长，默认60m",
       "required" : false,
       "dataType" : "String",
       "type" : null,
-      "defaultValue" : "inf",
+      "defaultValue" : "60m",
       "validateType" : "",
       "error" : "",
       "expression" : "",
@@ -168,6 +168,11 @@ let stationCode = Forest.config().getVariableValue("stationCode")
 if(stationCode == null || stationCode == ''){
     stationCode = '10001'
 }
+const controlDispatchAsync = Forest.config().getVariableValue("controlDispatchAsync")
+let controlAsyncEnabled = false
+if(controlDispatchAsync != null && (controlDispatchAsync + '').toLowerCase() == 'true'){
+    controlAsyncEnabled = true
+}
 
 if (body == null) {
     exit 400, '请求体不能为空'
@@ -200,21 +205,39 @@ if (colorVal == null || colorVal == '') {
     colorVal = 'GREEN'
 }
 let durationVal = payload.duration
-if (durationVal == null || durationVal == '') {
-    durationVal = 'inf'
+if(modeVal == 3 || modeVal == 4){
+    if(durationVal == null || durationVal == ''){
+        exit 400, 'mode=3/4时，duration必填且仅支持0或0s'
+    }
+    if(durationVal != '0' && durationVal != '0s'){
+        exit 400, 'mode=3/4时，duration仅支持0或0s'
+    }
+    if(durationVal == '0s'){
+        durationVal = '0'
+    }
+} else {
+    if (durationVal == null || durationVal == '') {
+        durationVal = '60m'
+    }
 }
 
 if (colorVal != 'RED' && colorVal != 'GREEN' && colorVal != 'BLUE' && colorVal != 'YELLOW' && colorVal != 'CYAN') {
     exit 400, 'color仅支持RED/GREEN/BLUE/YELLOW/CYAN'
 }
 
-if (durationVal != '10s' && durationVal != '30s' && durationVal != '1m' && durationVal != '2m' && durationVal != '5m' && durationVal != '10m' && durationVal != '15m' && durationVal != '20m' && durationVal != '30m' && durationVal != '60m' && durationVal != 'inf') {
-    exit 400, 'duration仅支持10s/30s/1m/2m/5m/10m/15m/20m/30m/60m/inf'
+if (modeVal == 1 || modeVal == 2) {
+    if (durationVal != '10s' && durationVal != '30s' && durationVal != '1m' && durationVal != '2m' && durationVal != '5m' && durationVal != '10m' && durationVal != '15m' && durationVal != '20m' && durationVal != '30m' && durationVal != '60m' && durationVal != 'inf') {
+        exit 400, 'mode=1/2时，duration仅支持10s/30s/1m/2m/5m/10m/15m/20m/30m/60m/inf'
+    }
 }
 
 let actionType = 'OFF'
 if (modeVal == 1 || modeVal == 2) {
     actionType = 'ON'
+}
+let traceActionTypeFromMode = 'turn_off'
+if (modeVal == 1 || modeVal == 2) {
+    traceActionTypeFromMode = 'turn_on'
 }
 
 let requestJson = JsonUtils.toJsonString(payload)
@@ -265,6 +288,15 @@ let persistTraceLog = (stage, actionTypeValue, locationCodes, extraData) => {
     if(!ok){
         log.error(logPrefix + ', stage=trace_persist_error, persistOk=false')
     }
+}
+let resolveDispatchSuccess = (resultObj) => {
+    if(resultObj == null){
+        return 'unknown'
+    }
+    if(resultObj.success == null){
+        return 'unknown'
+    }
+    return resultObj.success
 }
 let resolveAffectedLocationCodes = (payloadObj) => {
     let result = []
@@ -340,32 +372,49 @@ let queryLocationSummary = (waveNo, targetLocationCodes) => {
     return summary
 }
 
-let queryUserUnpickedLocationCodes = (waveNo, userId) => {
-    let rows = db.select("""
-        select distinct d.location_code
+let queryLocationUserCountMap = (waveNo, locationCodes) => {
+    let locationUserCountMap = {}
+    if(locationCodes == null || locationCodes.size() == 0){
+        return locationUserCountMap
+    }
+    let sql = """
+        select d.location_code as location_code, count(distinct d.bill_id) as user_count
           from t_picking_upload_detail d
-          left join t_picking_upload m on m.id = d.bill_id
-         where m.wave_no = #{waveNo}
-           and m.user_id = #{userId}
+         where d.wave_no = #{waveNo}
            and ifnull(d.status, 0) <> 1
-           and ifnull(d.location_code, '') <> ''
-    """, {
-        waveNo: waveNo,
-        userId: userId
-    })
-    let locationCodes = []
+    """
+    let params = {
+        waveNo: waveNo
+    }
+    let inSql = ""
+    let idx = 0
+    for(locationCode in locationCodes){
+        let key = 'locationCode' + idx
+        params[key] = locationCode
+        if(idx > 0){
+            inSql = inSql + ','
+        }
+        inSql = inSql + '#{' + key + '}'
+        idx = idx + 1
+    }
+    sql = sql + " and d.location_code in (" + inSql + ") group by d.location_code"
+    let rows = db.select(sql, params)
     if(rows != null){
         for(row in rows){
-            let code = row.location_code
-            if(code == null || code == ''){
-                code = row.locationCode
+            let locationCode = row.location_code
+            if(locationCode == null || locationCode == ''){
+                locationCode = row.locationCode
             }
-            if(code != null && code != ''){
-                locationCodes.add(code)
+            let userCount = row.user_count
+            if(userCount == null){
+                userCount = row.userCount
+            }
+            if(locationCode != null && locationCode != ''){
+                locationUserCountMap[locationCode] = userCount
             }
         }
     }
-    return locationCodes
+    return locationUserCountMap
 }
 
 try {
@@ -388,24 +437,26 @@ try {
     anyline.commitTrans(transState)
     transState = null
 
-    // 以“当前用户在该波次下的未拣库位”为单位更新 CommonCountMap
-    let userUnpickedLocationCodes = queryUserUnpickedLocationCodes(payload.waveNo, payload.userId)
-    if(modeVal == 1 || modeVal == 2){
-        for(locationCode in userUnpickedLocationCodes){
-            let currentCount = CommonCountMap.increment(locationCode)
-            log.info(logPrefix + ', stage=count_increment, locationCode=' + locationCode + ', count=' + currentCount)
-        }
-    } else {
-        for(locationCode in userUnpickedLocationCodes){
-            let currentCount = CommonCountMap.decrement(locationCode)
-            log.info(logPrefix + ', stage=count_decrement, locationCode=' + locationCode + ', count=' + currentCount)
-        }
-    }
-
     let affectedLocationCodes = resolveAffectedLocationCodes(payload)
     let locationSummary = queryLocationSummary(payload.waveNo, affectedLocationCodes)
     let allLocationCodes = locationSummary.allLocationCodes
     let unpickedLocationSet = locationSummary.unpickedLocationSet
+    if(affectedLocationCodes == null || affectedLocationCodes.size() == 0){
+        affectedLocationCodes = allLocationCodes
+    }
+    log.info(logPrefix + ', stage=reconcile_start, mode=' + modeVal + ', affected=' + formatLocationLog(affectedLocationCodes, 20))
+    let locationUserCountMap = queryLocationUserCountMap(payload.waveNo, affectedLocationCodes)
+    for(locationCode in affectedLocationCodes){
+        let locationUserCount = locationUserCountMap[locationCode]
+        if(locationUserCount == null || locationUserCount <= 0){
+            CommonCountMap.remove(locationCode)
+            log.info(logPrefix + ', stage=reconcile_remove, locationCode=' + locationCode + ', dbCount=0, memCount=' + CommonCountMap.get(locationCode))
+        } else {
+            CommonCountMap.set(locationCode, locationUserCount)
+            log.info(logPrefix + ', stage=reconcile_set, locationCode=' + locationCode + ', dbCount=' + locationUserCount + ', memCount=' + CommonCountMap.get(locationCode))
+        }
+    }
+    log.info(logPrefix + ', stage=reconcile_done, size=' + CommonCountMap.size() + ', total=' + CommonCountMap.totalCount())
 
     let turnOffLocationCodes = []
     let turnOnSingleLocationCodes = []
@@ -432,44 +483,86 @@ try {
     if (modeVal == 3 || modeVal == 4) {
         if(turnOffLocationCodes.size() > 0){
             try {
-                log.info('dispatch async turnOff from control, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', articleIds=' + turnOffLocationCodes)
-                let turnOffFuture = async turnOffLedByArticleId({
-                    stationCode: stationCode,
-                    articleIds: turnOffLocationCodes,
-                    traceId: traceId,
-                    waveNo: payload.waveNo,
-                    userId: payload.userId
-                })
+                if(controlAsyncEnabled){
+                    log.info('dispatch async turnOff from control, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', articleIds=' + turnOffLocationCodes)
+                    let turnOffFuture = async turnOffLedByArticleId({
+                        stationCode: stationCode,
+                        articleIds: turnOffLocationCodes,
+                        traceId: traceId,
+                        waveNo: payload.waveNo,
+                        userId: payload.userId
+                    })
+                } else {
+                    log.info('dispatch sync turnOff from control, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', articleIds=' + turnOffLocationCodes)
+                    let turnOffResult = turnOffLedByArticleId({
+                        stationCode: stationCode,
+                        articleIds: turnOffLocationCodes,
+                        traceId: traceId,
+                        waveNo: payload.waveNo,
+                        userId: payload.userId
+                    })
+                    log.info(logPrefix + ', stage=dispatch_result, action=turnOff, success=' + resolveDispatchSuccess(turnOffResult))
+                }
             } catch (asyncErr1) {
                 log.error(logPrefix + ', stage=dispatch_error, action=turnOff, message=' + asyncErr1.message)
             }
         }
         if(turnOnSingleLocationCodes.size() > 0){
             try {
-                log.info('dispatch async turnOn(single user) after turnOff, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', color=GREEN, articleIds=' + turnOnSingleLocationCodes)
-                let turnOnSingleFuture = async turnOnLedByArticleId({
-                    stationCode: stationCode,
-                    color: 'GREEN',
-                    articleIds: turnOnSingleLocationCodes,
-                    traceId: traceId,
-                    waveNo: payload.waveNo,
-                    userId: payload.userId
-                })
+                if(controlAsyncEnabled){
+                    log.info('dispatch async turnOn(single user) after turnOff, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', color=GREEN, articleIds=' + turnOnSingleLocationCodes)
+                    let turnOnSingleFuture = async turnOnLedByArticleId({
+                        stationCode: stationCode,
+                        color: 'GREEN',
+                        duration: durationVal,
+                        articleIds: turnOnSingleLocationCodes,
+                        traceId: traceId,
+                        waveNo: payload.waveNo,
+                        userId: payload.userId
+                    })
+                } else {
+                    log.info('dispatch sync turnOn(single user) after turnOff, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', color=GREEN, articleIds=' + turnOnSingleLocationCodes)
+                    let turnOnSingleResult = turnOnLedByArticleId({
+                        stationCode: stationCode,
+                        color: 'GREEN',
+                        duration: durationVal,
+                        articleIds: turnOnSingleLocationCodes,
+                        traceId: traceId,
+                        waveNo: payload.waveNo,
+                        userId: payload.userId
+                    })
+                    log.info(logPrefix + ', stage=dispatch_result, action=turnOnSingleAfterOff, success=' + resolveDispatchSuccess(turnOnSingleResult))
+                }
             } catch (asyncErr2) {
                 log.error(logPrefix + ', stage=dispatch_error, action=turnOnSingleAfterOff, message=' + asyncErr2.message)
             }
         }
         if(turnOnMultiLocationCodes.size() > 0){
             try {
-                log.info('dispatch async turnOn(multi user) after turnOff, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', color=' + multiUserColor + ', articleIds=' + turnOnMultiLocationCodes)
-                let turnOnMultiFuture = async turnOnLedByArticleId({
-                    stationCode: stationCode,
-                    color: multiUserColor,
-                    articleIds: turnOnMultiLocationCodes,
-                    traceId: traceId,
-                    waveNo: payload.waveNo,
-                    userId: payload.userId
-                })
+                if(controlAsyncEnabled){
+                    log.info('dispatch async turnOn(multi user) after turnOff, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', color=' + multiUserColor + ', articleIds=' + turnOnMultiLocationCodes)
+                    let turnOnMultiFuture = async turnOnLedByArticleId({
+                        stationCode: stationCode,
+                        color: multiUserColor,
+                        duration: durationVal,
+                        articleIds: turnOnMultiLocationCodes,
+                        traceId: traceId,
+                        waveNo: payload.waveNo,
+                        userId: payload.userId
+                    })
+                } else {
+                    log.info('dispatch sync turnOn(multi user) after turnOff, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', color=' + multiUserColor + ', articleIds=' + turnOnMultiLocationCodes)
+                    let turnOnMultiResult = turnOnLedByArticleId({
+                        stationCode: stationCode,
+                        color: multiUserColor,
+                        duration: durationVal,
+                        articleIds: turnOnMultiLocationCodes,
+                        traceId: traceId,
+                        waveNo: payload.waveNo,
+                        userId: payload.userId
+                    })
+                    log.info(logPrefix + ', stage=dispatch_result, action=turnOnMultiAfterOff, success=' + resolveDispatchSuccess(turnOnMultiResult))
+                }
             } catch (asyncErr3) {
                 log.error(logPrefix + ', stage=dispatch_error, action=turnOnMultiAfterOff, message=' + asyncErr3.message)
             }
@@ -477,30 +570,60 @@ try {
     } else {
         if(turnOnSingleLocationCodes.size() > 0){
             try {
-                log.info('dispatch async turnOn(single user) from control, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', color=' + colorVal + ', articleIds=' + turnOnSingleLocationCodes)
-                let turnOnSingleFuture2 = async turnOnLedByArticleId({
-                    stationCode,
-                    color: colorVal,
-                    articleIds: turnOnSingleLocationCodes,
-                    traceId: traceId,
-                    waveNo: payload.waveNo,
-                    userId: payload.userId
-                })
+                if(controlAsyncEnabled){
+                    log.info('dispatch async turnOn(single user) from control, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', color=' + colorVal + ', articleIds=' + turnOnSingleLocationCodes)
+                    let turnOnSingleFuture2 = async turnOnLedByArticleId({
+                        stationCode,
+                        color: colorVal,
+                        duration: durationVal,
+                        articleIds: turnOnSingleLocationCodes,
+                        traceId: traceId,
+                        waveNo: payload.waveNo,
+                        userId: payload.userId
+                    })
+                } else {
+                    log.info('dispatch sync turnOn(single user) from control, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', color=' + colorVal + ', articleIds=' + turnOnSingleLocationCodes)
+                    let turnOnSingleResult2 = turnOnLedByArticleId({
+                        stationCode,
+                        color: colorVal,
+                        duration: durationVal,
+                        articleIds: turnOnSingleLocationCodes,
+                        traceId: traceId,
+                        waveNo: payload.waveNo,
+                        userId: payload.userId
+                    })
+                    log.info(logPrefix + ', stage=dispatch_result, action=turnOnSingle, success=' + resolveDispatchSuccess(turnOnSingleResult2))
+                }
             } catch (asyncErr4) {
                 log.error(logPrefix + ', stage=dispatch_error, action=turnOnSingle, message=' + asyncErr4.message)
             }
         }
         if(turnOnMultiLocationCodes.size() > 0){
             try {
-                log.info('dispatch async turnOn(multi user) from control, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', color=' + multiUserColor + ', articleIds=' + turnOnMultiLocationCodes)
-                let turnOnMultiFuture2 = async turnOnLedByArticleId({
-                    stationCode,
-                    color: multiUserColor,
-                    articleIds: turnOnMultiLocationCodes,
-                    traceId: traceId,
-                    waveNo: payload.waveNo,
-                    userId: payload.userId
-                })
+                if(controlAsyncEnabled){
+                    log.info('dispatch async turnOn(multi user) from control, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', color=' + multiUserColor + ', articleIds=' + turnOnMultiLocationCodes)
+                    let turnOnMultiFuture2 = async turnOnLedByArticleId({
+                        stationCode,
+                        color: multiUserColor,
+                        duration: durationVal,
+                        articleIds: turnOnMultiLocationCodes,
+                        traceId: traceId,
+                        waveNo: payload.waveNo,
+                        userId: payload.userId
+                    })
+                } else {
+                    log.info('dispatch sync turnOn(multi user) from control, waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', color=' + multiUserColor + ', articleIds=' + turnOnMultiLocationCodes)
+                    let turnOnMultiResult2 = turnOnLedByArticleId({
+                        stationCode,
+                        color: multiUserColor,
+                        duration: durationVal,
+                        articleIds: turnOnMultiLocationCodes,
+                        traceId: traceId,
+                        waveNo: payload.waveNo,
+                        userId: payload.userId
+                    })
+                    log.info(logPrefix + ', stage=dispatch_result, action=turnOnMulti, success=' + resolveDispatchSuccess(turnOnMultiResult2))
+                }
             } catch (asyncErr5) {
                 log.error(logPrefix + ', stage=dispatch_error, action=turnOnMulti, message=' + asyncErr5.message)
             }
@@ -508,14 +631,26 @@ try {
         // 点亮模式下，也把不该亮的库位灭掉，避免残灯
         if(turnOffLocationCodes.size() > 0){
             try {
-                log.info('dispatch async turnOff from control(on mode), waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', articleIds=' + turnOffLocationCodes)
-                let turnOffFuture2 = async turnOffLedByArticleId({
-                    stationCode: stationCode,
-                    articleIds: turnOffLocationCodes,
-                    traceId: traceId,
-                    waveNo: payload.waveNo,
-                    userId: payload.userId
-                })
+                if(controlAsyncEnabled){
+                    log.info('dispatch async turnOff from control(on mode), waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', articleIds=' + turnOffLocationCodes)
+                    let turnOffFuture2 = async turnOffLedByArticleId({
+                        stationCode: stationCode,
+                        articleIds: turnOffLocationCodes,
+                        traceId: traceId,
+                        waveNo: payload.waveNo,
+                        userId: payload.userId
+                    })
+                } else {
+                    log.info('dispatch sync turnOff from control(on mode), waveNo=' + payload.waveNo + ', stationCode=' + stationCode + ', articleIds=' + turnOffLocationCodes)
+                    let turnOffResult2 = turnOffLedByArticleId({
+                        stationCode: stationCode,
+                        articleIds: turnOffLocationCodes,
+                        traceId: traceId,
+                        waveNo: payload.waveNo,
+                        userId: payload.userId
+                    })
+                    log.info(logPrefix + ', stage=dispatch_result, action=turnOffOnMode, success=' + resolveDispatchSuccess(turnOffResult2))
+                }
             } catch (asyncErr6) {
                 log.error(logPrefix + ', stage=dispatch_error, action=turnOffOnMode, message=' + asyncErr6.message)
             }
@@ -537,10 +672,11 @@ try {
         controlActionType = 'turn_off'
         controlTraceLocationCodes = turnOffLocationCodes
     } else {
-        controlTraceLocationCodes = allLocationCodes
+        controlTraceLocationCodes = []
     }
     persistTraceLog('done', controlActionType, controlTraceLocationCodes, {
         mode: modeVal,
+        allCount: allLocationCodes.size(),
         turnOnSingle: turnOnSingleLocationCodes,
         turnOnMulti: turnOnMultiLocationCodes,
         turnOff: turnOffLocationCodes,
@@ -556,8 +692,9 @@ try {
         } catch (ignore) {}
     }
     log.error(logPrefix + ', stage=error, message=' + e.message)
-    persistTraceLog('error', actionType, [], {
+    persistTraceLog('error', 'error', [], {
         mode: modeVal,
+        actionTypeFromMode: traceActionTypeFromMode,
         errorMessage: e.message
     })
     exit 500, '指令发送失败: ' + e.message

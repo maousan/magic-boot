@@ -792,7 +792,7 @@ try {
         }
     }
     log.error(logPrefix + ', stage=error, message=' + e.message)
-    persistTraceLog('error', 'mix', [], {
+    persistTraceLog('error', 'error', [], {
         errorMessage: e.message
     })
     exit 500, '拣货完成同步失败: ' + e.message

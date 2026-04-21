@@ -5,7 +5,7 @@
   "groupId" : "d7de530ea18542f2827146962f10bdb4",
   "name" : "根据articleId开关灯",
   "createTime" : 1775235016864,
-  "updateTime" : 1776138210827,
+  "updateTime" : 1776743773137,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -89,7 +89,7 @@ for(item in source){
         }
     }
     let row = new HashMap()
-    row.put("stationCode", stationCode)
+    row.put("stationCode", stationCode+'')
     row.put('articleId', item.articleId)
     let itemColor = item.color
     if(itemColor == null || itemColor == ''){
@@ -112,7 +112,7 @@ for(item in source){
         }
     }
     if(itemDuration == 'inf'){
-        itemDuration = '0'
+        itemDuration = '60m'
     }
     row.put('duration', itemDuration)
 

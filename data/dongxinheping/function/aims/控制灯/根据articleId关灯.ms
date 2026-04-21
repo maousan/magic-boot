@@ -5,7 +5,7 @@
   "groupId" : "d7de530ea18542f2827146962f10bdb4",
   "name" : "根据articleId关灯",
   "createTime" : 1775235122037,
-  "updateTime" : 1775533616436,
+  "updateTime" : 1776743748730,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -38,7 +38,7 @@ for (articleId in articleIds) {
     items.push({
         stationCode,
         color: "RED",
-        duration: "0",
+        duration: "0s",
         articleId,
         patternId: 0
     })

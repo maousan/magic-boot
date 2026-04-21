@@ -724,7 +724,7 @@ try {
         }
     }
     log.error(logPrefix + ', stage=error, message=' + e.message)
-    persistTraceLog('error', 'turn_on', [], {
+    persistTraceLog('error', 'error', [], {
         errorMessage: e.message
     })
     exit 500, '拣货数据上传失败: ' + e.message

@@ -25,7 +25,7 @@
         <module>magic-boot-master</module>
         <module>magic-plugin</module>
 <!--        <module>magic-plugin-demo</module>-->
-<!--        <module>magic-plugin-zintis-led</module>-->
+        <module>magic-plugin-zintis-led</module>
         <module>magic-plugin-api</module>
         <module>magic-script</module>
         <module>tiga-engine</module>
