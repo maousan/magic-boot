@@ -1,5 +1,6 @@
 package org.ssssssss.magicboot.zintis.led.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,6 +10,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Schema(description = "LED 控制命令响应")
 public class LedControlResponse {
 
     private boolean success;

@@ -1,168 +1,254 @@
 ### Zintis LED Plugin API Test
 @baseUrl = http://localhost:8090
+@pluginId = zintis-led-plugin
+@pluginApiPrefix = /plugin/{{pluginId}}/api
 
-### 1. Turn on (0x35)
-# 项目	十六进制	十进制
-# 控制口_1	0xF5	245
-# 控制口_2	0xCA	202
-# 控制口_3	0x3A	58
-# 控制口_4	0xA5	165
-# 控制口_5	0x23	35
-# 控制口_6	0xBA	186
-# 控制口_ALL	0x9C	156
-POST {{baseUrl}}/led/control/on
+### ========== 0. 基础检查 ==========
+
+### 0.1 Health
+GET {{baseUrl}}{{pluginApiPrefix}}/health
+
+
+### ========== 1. 直连设备控制（非 TCP 模式） ==========
+# 数据命令参考：
+# 项目        十六进制   十进制
+# 控制口_1    0xF5      245
+# 控制口_2    0xCA      202
+# 控制口_3    0x3A      58
+# 控制口_4    0xA5      165
+# 控制口_5    0x23      35
+# 控制口_6    0xBA      186
+# 控制口_ALL  0x9C      156
+
+### 1.1 Turn on (0x35)
+POST {{baseUrl}}{{pluginApiPrefix}}/control/on
 Content-Type: application/json
 
 {
-  "deviceIp": "192.168.2.198",
+  "deviceIp": "192.168.2.102",
   "devicePort": 9527,
-  "hostAddress": 198,
+  "hostAddress": 102,
   "dataCommand": 186,
   "timeoutMs": 3000
 }
 
-### 2. Turn off (0xFA)
-POST {{baseUrl}}/led/control/off
+### 1.2 Turn off (0xFA)
+POST {{baseUrl}}{{pluginApiPrefix}}/control/off
 Content-Type: application/json
 
 {
-  "deviceIp": "192.168.2.198",
+  "deviceIp": "192.168.2.102",
   "devicePort": 9527,
-  "hostAddress": 198,
+  "hostAddress": 102,
   "dataCommand": 186,
   "timeoutMs": 3000
 }
 
-### 3. Pulse (0x36)
-POST {{baseUrl}}/led/control/pulse
+### 1.3 Pulse (0x36)
+POST {{baseUrl}}{{pluginApiPrefix}}/control/pulse
 Content-Type: application/json
 
 {
-  "deviceIp": "192.168.2.198",
+  "deviceIp": "192.168.2.102",
   "devicePort": 9527,
-  "hostAddress": 198,
+  "hostAddress": 102,
   "dataCommand": 186,
   "timeoutMs": 3000
 }
 
-### 4. Query (0xAB)
-POST {{baseUrl}}/led/control/query
+### 1.4 Query status (0xAB)
+POST {{baseUrl}}{{pluginApiPrefix}}/control/query
 Content-Type: application/json
 
 {
-  "deviceIp": "192.168.2.198",
+  "deviceIp": "192.168.2.102",
   "devicePort": 9527,
-  "hostAddress": 198,
+  "hostAddress": 102,
   "dataCommand": 245,
   "timeoutMs": 3000
 }
 
-### 5. Health
-GET {{baseUrl}}/led/health
-
-### 6. Query system info
-POST {{baseUrl}}/led/system/info
+### 1.5 Query system info
+POST {{baseUrl}}{{pluginApiPrefix}}/system/info
 Content-Type: application/json
 
 {
-  "deviceIp": "192.168.2.198",
+  "deviceIp": "192.168.2.102",
   "devicePort": 9527,
-  "hostAddress": 198,
+  "hostAddress": 102,
   "dataCommand": 207,
   "timeoutMs": 3000
 }
 
-### 7. Open TCP server (0xBF + 0x23)
-POST {{baseUrl}}/led/tcp/server/open
+### 1.6 Query signal strength
+POST {{baseUrl}}{{pluginApiPrefix}}/system/signal-strength
 Content-Type: application/json
 
 {
-  "deviceIp": "192.168.2.198",
+  "deviceIp": "192.168.2.102",
   "devicePort": 9527,
-  "hostAddress": 198,
+  "hostAddress": 102,
   "timeoutMs": 3000
 }
 
-### 8. Close TCP server (0xBF + 0x2E)
-POST {{baseUrl}}/led/tcp/server/close
+### 1.7 Query system network (MAC + IP)
+POST {{baseUrl}}{{pluginApiPrefix}}/system/network
 Content-Type: application/json
 
 {
-  "deviceIp": "192.168.2.198",
+  "deviceIp": "192.168.2.102",
   "devicePort": 9527,
-  "hostAddress": 198,
+  "hostAddress": 102,
+  "dataCommand": 207,
   "timeoutMs": 3000
 }
 
-### 9. Open TCP client (0xBF + 0x33)
-POST {{baseUrl}}/led/tcp/client/open
+
+### ========== 2. 设备 TCP 模式配置（指令下发） ==========
+# 说明：本组是对 LED 设备下发“开启/关闭 TCP server/client 模式”指令，
+# 不等同于本服务自身的 Netty Server 管理。
+
+### 2.1 Open device TCP server (0xBF + 0x23)
+POST {{baseUrl}}{{pluginApiPrefix}}/tcp/server/open
 Content-Type: application/json
 
 {
-  "deviceIp": "192.168.2.198",
+  "deviceIp": "192.168.2.102",
   "devicePort": 9527,
-  "hostAddress": 198,
-  "targetIp": "192.168.2.198",
+  "hostAddress": 102,
+  "timeoutMs": 3000
+}
+
+### 2.2 Close device TCP server (0xBF + 0x2E)
+POST {{baseUrl}}{{pluginApiPrefix}}/tcp/server/close
+Content-Type: application/json
+
+{
+  "deviceIp": "192.168.2.102",
+  "devicePort": 9527,
+  "hostAddress": 102,
+  "timeoutMs": 3000
+}
+
+### 2.3 Open device TCP client (0xBF + 0x33)
+POST {{baseUrl}}{{pluginApiPrefix}}/tcp/client/open
+Content-Type: application/json
+
+{
+  "deviceIp": "192.168.2.102",
+  "devicePort": 9527,
+  "hostAddress": 102,
+  "targetIp": "192.168.2.180",
   "targetPort": 9834,
   "timeoutMs": 3000
 }
 
-### 10. Close TCP client (0xBF + 0x3E)
-POST {{baseUrl}}/led/tcp/client/close
+### 2.4 Close device TCP client (0xBF + 0x3E)
+POST {{baseUrl}}{{pluginApiPrefix}}/tcp/client/close
 Content-Type: application/json
 
 {
-  "deviceIp": "192.168.2.198",
+  "deviceIp": "192.168.2.102",
   "devicePort": 9527,
-  "hostAddress": 198,
+  "hostAddress": 102,
   "timeoutMs": 3000
 }
 
-### 11. Scan LAN for ESP32 LED devices
-POST {{baseUrl}}/led/lan/scan
-Content-Type: application/json
 
-{
-  "subnetPrefix": "192.168.2",
-  "devicePort": 9527,
-  "startHost": 1,
-  "endHost": 254,
-  "threadPoolSize": 32,
-  "timeoutMs": 300,
-  "queryDataCommand": 207
-}
+### ========== 3. Netty Server 管理（本服务） ==========
 
-### 12. Netty server status
-GET {{baseUrl}}/led/netty/server/status
+### 3.1 Netty server status
+GET {{baseUrl}}{{pluginApiPrefix}}/netty/server/status
 
-### 13. Netty server start (default 9834)
-POST {{baseUrl}}/led/netty/server/start
+### 3.2 Netty server start (default 9834)
+POST {{baseUrl}}{{pluginApiPrefix}}/netty/server/start
 Content-Type: application/json
 
 {}
 
-### 14. Netty server stop
-POST {{baseUrl}}/led/netty/server/stop
+### 3.3 Netty server stop
+POST {{baseUrl}}{{pluginApiPrefix}}/netty/server/stop
 
-### 15. Query signal strength
-POST {{baseUrl}}/led/system/signal-strength
+### 3.4 Netty active clients list
+GET {{baseUrl}}{{pluginApiPrefix}}/netty/server/clients
+
+
+### ========== 4. Netty 下行发送（本服务 -> 已连接客户端） ==========
+# remoteAddress 可先通过 {{pluginApiPrefix}}/netty/server/clients 获取
+
+### 4.1 Send to one client (ASCII payload)
+POST {{baseUrl}}{{pluginApiPrefix}}/netty/server/send
 Content-Type: application/json
 
 {
-  "deviceIp": "192.168.2.198",
-  "devicePort": 9527,
-  "hostAddress": 198,
-  "timeoutMs": 3000
+  "remoteAddress": "192.168.2.102:53915",
+  "payload": "PING_FROM_SERVER",
+  "payloadFormat": "ascii"
 }
 
-### 16. Query system network (MAC + IP)
-POST {{baseUrl}}/led/system/network
+### 4.2 Send to one client (HEX payload, 0x 前缀格式)
+POST {{baseUrl}}{{pluginApiPrefix}}/netty/server/send
 Content-Type: application/json
 
 {
-  "deviceIp": "192.168.2.198",
-  "devicePort": 9527,
-  "hostAddress": 198,
-  "dataCommand": 207,
-  "timeoutMs": 3000
+  "remoteAddress": "192.168.2.102:51853",
+  "payload": "0x66 0x35 0xBA 0x3C 0x07",
+  "payloadFormat": "hex"
+}
+
+### 4.3 Send to one client (HEX payload, plain hex string)
+POST {{baseUrl}}{{pluginApiPrefix}}/netty/server/send
+Content-Type: application/json
+
+{
+  "remoteAddress": "192.168.2.102:51853",
+  "payload": "66 35 BA 3C 07",
+  "payloadFormat": "hex"
+}
+
+### 4.4 Send to one client (numeric array payload)
+POST {{baseUrl}}{{pluginApiPrefix}}/netty/server/send
+Content-Type: application/json
+
+{
+  "remoteAddress": "192.168.2.102:51857",
+  "payloadArray": [102, 53, 186, 60, 7],
+  "payloadFormat": "hex"
+}
+
+### 4.5 Send to one client (Turn off payload)
+POST {{baseUrl}}{{pluginApiPrefix}}/netty/server/send
+Content-Type: application/json
+
+{
+  "remoteAddress": "192.168.2.102:51857",
+  "payload": "0x66 0xFA 0xBA 0xCC 0x52",
+  "payloadFormat": "hex"
+}
+
+### 4.6 Broadcast (ASCII payload)
+POST {{baseUrl}}{{pluginApiPrefix}}/netty/server/broadcast
+Content-Type: application/json
+
+{
+  "payload": "BROADCAST_FROM_SERVER",
+  "payloadFormat": "ascii"
+}
+
+### 4.7 Broadcast (HEX payload, plain hex string)
+POST {{baseUrl}}{{pluginApiPrefix}}/netty/server/broadcast
+Content-Type: application/json
+
+{
+  "payload": "66 AB 97 11 0D 33 41 3A 36 39 3A 37 41 3A 30 38 3A 44 30 3A 41 35 31 39 32 2E 31 36 38 2E 32 2E 31 30 32 90 78",
+  "payloadFormat": "hex"
+}
+
+### 4.8 Broadcast (numeric array payload)
+POST {{baseUrl}}{{pluginApiPrefix}}/netty/server/broadcast
+Content-Type: application/json
+
+{
+  "payloadArray": [102, 53, 186, 60, 7],
+  "payloadFormat": "hex"
 }

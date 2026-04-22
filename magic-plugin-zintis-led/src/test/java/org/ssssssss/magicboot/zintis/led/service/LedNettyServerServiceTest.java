@@ -2,9 +2,14 @@ package org.ssssssss.magicboot.zintis.led.service;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.ssssssss.magicboot.zintis.led.dto.LedNettyClientListResponse;
 import org.ssssssss.magicboot.zintis.led.dto.LedNettyServerStatusResponse;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LedNettyServerServiceTest {
@@ -28,5 +33,44 @@ class LedNettyServerServiceTest {
 
         LedNettyServerStatusResponse stop = service.stop();
         assertFalse(stop.isRunning());
+    }
+
+    @Test
+    void parsePayload_shouldSupportAsciiAndHex() {
+        assertArrayEquals("HELLO".getBytes(java.nio.charset.StandardCharsets.US_ASCII),
+                LedNettyServerService.parsePayload("HELLO", null, "ascii"));
+        assertArrayEquals(new byte[]{0x66, (byte) 0xAB, (byte) 0x97},
+                LedNettyServerService.parsePayload("66 AB 97", null, "hex"));
+        assertArrayEquals(new byte[]{0x66, (byte) 0xAB, (byte) 0x97},
+                LedNettyServerService.parsePayload("0x66,0xAB,0x97", null, "hex"));
+        assertArrayEquals(new byte[]{0x66, 0x35, (byte) 0xBA, 0x3C, 0x07},
+                LedNettyServerService.parsePayload("0x66 0x35 0xBA 0x3C 0x07", null, "hex"));
+    }
+
+    @Test
+    void parsePayload_shouldSupportNumericArrayFormat() {
+        assertArrayEquals(new byte[]{0x66, 0x35, (byte) 0xBA, 0x3C, 0x07},
+                LedNettyServerService.parsePayload(null, java.util.List.of(102, 53, 186, 60, 7), "hex"));
+    }
+
+    @Test
+    void parsePayload_shouldRejectInvalidHex() {
+        assertThrows(IllegalArgumentException.class, () -> LedNettyServerService.parsePayload("6AB", null, "hex"));
+        assertThrows(IllegalArgumentException.class, () -> LedNettyServerService.parsePayload("GG", null, "hex"));
+        assertThrows(IllegalArgumentException.class, () -> LedNettyServerService.parsePayload(null, java.util.List.of(1, 256), "hex"));
+        assertThrows(IllegalArgumentException.class, () -> LedNettyServerService.parsePayload(null, java.util.Arrays.asList(1, null), "hex"));
+        assertThrows(IllegalArgumentException.class, () -> LedNettyServerService.parsePayload(null, java.util.List.of(), "hex"));
+    }
+
+    @Test
+    void listClients_shouldReturnEmptyList_whenNoClientConnected() {
+        LedNettyServerStatusResponse start = service.start(0);
+        assertTrue(start.isRunning());
+
+        LedNettyClientListResponse response = service.listClients();
+        assertTrue(response.isRunning());
+        assertEquals(0, response.getTotalClients());
+        assertNotNull(response.getClients());
+        assertTrue(response.getClients().isEmpty());
     }
 }

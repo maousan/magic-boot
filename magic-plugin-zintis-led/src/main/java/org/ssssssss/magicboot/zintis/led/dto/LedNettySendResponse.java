@@ -12,13 +12,13 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "局域网扫描响应")
-public class LedLanScanResponse {
+@Schema(description = "Netty 发送结果响应")
+public class LedNettySendResponse {
 
     private boolean success;
     private String message;
-    private String subnetPrefix;
-    private int scannedCount;
-    private int matchedCount;
-    private List<LedLanDeviceInfo> devices;
+    private int totalTargets;
+    private int successCount;
+    private int failedCount;
+    private List<String> failedTargets;
 }

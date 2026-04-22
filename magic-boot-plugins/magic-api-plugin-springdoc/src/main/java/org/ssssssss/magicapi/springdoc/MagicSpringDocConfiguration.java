@@ -13,6 +13,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -30,6 +31,7 @@ import org.ssssssss.magicapi.utils.Mapping;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -42,6 +44,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 )
 public class MagicSpringDocConfiguration implements MagicPluginConfiguration, CommandLineRunner {
 
+	private static final String DEFAULT_GROUP_API_DOCS_URL = "/v3/api-docs/default";
+
 	private final MagicAPIProperties properties;
 	private final SpringDocConfig springDocConfig;
 	@Autowired
@@ -51,6 +55,7 @@ public class MagicSpringDocConfiguration implements MagicPluginConfiguration, Co
 	private final ObjectProvider<RequestMagicDynamicRegistry> requestMagicDynamicRegistryObjectProvider;
 	private final MagicResourceService magicResourceService;
 	private final ServletContext servletContext;
+	private final ApplicationContext applicationContext;
 
 	private final AtomicBoolean createdMapping = new AtomicBoolean(false);
 
@@ -58,12 +63,14 @@ public class MagicSpringDocConfiguration implements MagicPluginConfiguration, Co
 
 	public MagicSpringDocConfiguration(MagicAPIProperties properties, SpringDocConfig springDocConfig,
 									   ObjectProvider<RequestMagicDynamicRegistry> requestMagicDynamicRegistryObjectProvider,
-									   MagicResourceService magicResourceService, ServletContext servletContext) {
+									   MagicResourceService magicResourceService, ServletContext servletContext,
+									   ApplicationContext applicationContext) {
 		this.properties = properties;
 		this.springDocConfig = springDocConfig;
 		this.requestMagicDynamicRegistryObjectProvider = requestMagicDynamicRegistryObjectProvider;
 		this.magicResourceService = magicResourceService;
 		this.servletContext = servletContext;
+		this.applicationContext = applicationContext;
 	}
 
 	@Override
@@ -92,24 +99,11 @@ public class MagicSpringDocConfiguration implements MagicPluginConfiguration, Co
 		Set<AbstractSwaggerUiConfigProperties.SwaggerUrl> urls = swaggerUiConfigProperties.getUrls();
 		if (urls == null) {
 			urls = new HashSet<>();
-			AbstractSwaggerUiConfigProperties.SwaggerUrl url = new AbstractSwaggerUiConfigProperties.SwaggerUrl(
-					"default", springDocConfigProperties.getApiDocs().getPath(), null);
-			urls.add(url);
 		}
-		urls.add(new AbstractSwaggerUiConfigProperties.SwaggerUrl(springDocConfig.getGroupName(),
-				servletContext.getContextPath() + springDocConfig.getLocation(), null) {
-			@Override
-			public String getUrl() {
-				try {
-					if (createdMapping.compareAndSet(false, true)) {
-						createOpenApiProvider();
-					}
-				} catch (Exception e) {
-					logger.error("注册 SpringDoc 接口失败", e);
-				}
-				return super.getUrl();
-			}
-		});
+		ensureSwaggerUrl(urls, "default", DEFAULT_GROUP_API_DOCS_URL);
+		ensureSwaggerUrl(urls, springDocConfig.getGroupName(), servletContext.getContextPath() + springDocConfig.getLocation(), true);
+		ensurePluginSwaggerUrls(urls);
+		removeSwaggerUrl(urls, "pf4j-plugin-api");
 		swaggerUiConfigProperties.setUrls(urls);
 		return swaggerUiConfigProperties;
 	}
@@ -117,7 +111,8 @@ public class MagicSpringDocConfiguration implements MagicPluginConfiguration, Co
 	@Bean
 	@Primary
 	@Lazy
-	public SwaggerUiConfigParameters magicSwaggerUiConfigParameters(SwaggerUiConfigProperties swaggerUiConfigProperties) {
+	public SwaggerUiConfigParameters magicSwaggerUiConfigParameters(SwaggerUiConfigProperties swaggerUiConfigProperties,
+																	SpringDocConfigProperties springDocConfigProperties) {
 		return new SwaggerUiConfigParameters(swaggerUiConfigProperties) {
 			@Override
 			public Map<String, Object> getConfigParameters() {
@@ -131,19 +126,83 @@ public class MagicSpringDocConfiguration implements MagicPluginConfiguration, Co
 					}
 				}
 				Set<SwaggerUrl> urls = (Set<SwaggerUrl>) params.get("urls");
+				Set<AbstractSwaggerUiConfigProperties.SwaggerUrl> normalizedUrls;
 				if (urls == null) {
-					urls = new HashSet<>();
-					SwaggerUrl url = new SwaggerUrl("default", (String) params.remove("url"), null);
-					urls.add(url);
+					normalizedUrls = new HashSet<>();
+					String defaultUrl = (String) params.remove("url");
+					if (defaultUrl == null || defaultUrl.isBlank()) {
+						defaultUrl = DEFAULT_GROUP_API_DOCS_URL;
+					}
+					normalizedUrls.add(new SwaggerUrl("default", defaultUrl, null));
 				} else {
-					urls = new HashSet<>(urls);
+					normalizedUrls = new HashSet<>(urls);
 				}
-				urls.add(new SwaggerUrl(springDocConfig.getGroupName(),
-						servletContext.getContextPath() + springDocConfig.getLocation(), null));
-				params.put("urls", urls);
+				ensureSwaggerUrl(normalizedUrls, "default", DEFAULT_GROUP_API_DOCS_URL);
+				ensureSwaggerUrl(normalizedUrls, springDocConfig.getGroupName(),
+						servletContext.getContextPath() + springDocConfig.getLocation());
+				ensurePluginSwaggerUrls(normalizedUrls);
+				removeSwaggerUrl(normalizedUrls, "pf4j-plugin-api");
+				params.put("urls", normalizedUrls);
 				return params;
 			}
 		};
+	}
+
+	private void ensureSwaggerUrl(Set<AbstractSwaggerUiConfigProperties.SwaggerUrl> urls, String name, String url) {
+		ensureSwaggerUrl(urls, name, url, false);
+	}
+
+	private void ensureSwaggerUrl(Set<AbstractSwaggerUiConfigProperties.SwaggerUrl> urls, String name, String url, boolean lazyCreateProvider) {
+		boolean exists = urls.stream().anyMatch(it ->
+				(it.getName() != null && it.getName().equals(name))
+						|| (it.getUrl() != null && it.getUrl().equals(url)));
+		if (exists) {
+			return;
+		}
+		AbstractSwaggerUiConfigProperties.SwaggerUrl swaggerUrl = new AbstractSwaggerUiConfigProperties.SwaggerUrl(name, url, null) {
+			@Override
+			public String getUrl() {
+				if (lazyCreateProvider) {
+					try {
+						if (createdMapping.compareAndSet(false, true)) {
+							createOpenApiProvider();
+						}
+					} catch (Exception e) {
+						logger.error("注册 SpringDoc 接口失败", e);
+					}
+				}
+				return super.getUrl();
+			}
+		};
+		urls.add(swaggerUrl);
+	}
+
+	private void ensurePluginSwaggerUrls(Set<AbstractSwaggerUiConfigProperties.SwaggerUrl> urls) {
+		try {
+			Class<?> pluginManagerClass = Class.forName("org.pf4j.spring.SpringPluginManager");
+			Object pluginManager = applicationContext.getBean(pluginManagerClass);
+			Object startedPlugins = pluginManagerClass.getMethod("getStartedPlugins").invoke(pluginManager);
+			if (!(startedPlugins instanceof List<?> plugins)) {
+				return;
+			}
+			for (Object pluginWrapper : plugins) {
+				Object pluginIdValue = pluginWrapper.getClass().getMethod("getPluginId").invoke(pluginWrapper);
+				if (!(pluginIdValue instanceof String pluginId) || pluginId.isBlank()) {
+					continue;
+				}
+				String name = "plugin-" + pluginId;
+				String url = servletContext.getContextPath() + "/v3/api-docs/plugin/" + pluginId;
+				ensureSwaggerUrl(urls, name, url);
+			}
+		} catch (ClassNotFoundException ignored) {
+			// 非 PF4J 场景，忽略
+		} catch (Exception e) {
+			logger.debug("补充 PF4J 插件 swagger 分组失败", e);
+		}
+	}
+
+	private void removeSwaggerUrl(Set<AbstractSwaggerUiConfigProperties.SwaggerUrl> urls, String name) {
+		urls.removeIf(it -> name.equals(it.getName()));
 	}
 
 	private void createOpenApiProvider() throws NoSuchMethodException {

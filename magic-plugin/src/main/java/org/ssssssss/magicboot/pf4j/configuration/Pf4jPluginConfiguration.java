@@ -58,7 +58,7 @@ public class Pf4jPluginConfiguration {
             ApplicationContext applicationContext) {
 
         PluginControllerRegistrar registrar = new PluginControllerRegistrar(
-            pluginManager, handlerMapping, applicationContext);
+            pluginManager, handlerMapping, applicationContext, pluginProperties);
 
         // 添加状态监听器
         pluginManager.addPluginStateListener(registrar);

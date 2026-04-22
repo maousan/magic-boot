@@ -15,6 +15,10 @@ management:
     redis:
       enabled: ${extend.redis.enabled}  # 禁用 Redis 健康检查
 
+springdoc:
+  cache:
+    disabled: true
+
 spring:
   profiles:
     active: dev

@@ -67,4 +67,10 @@ public class PluginProperties {
      * Signature public key (PEM or Base64 X509).
      */
     private String signaturePublicKey = "";
+
+    /**
+     * Dynamic plugin controller API prefix template.
+     * Supports {pluginId} placeholder, e.g. /plugin/{pluginId}/api
+     */
+    private String apiPrefixTemplate = "/plugin/{pluginId}/api";
 }

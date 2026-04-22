@@ -349,11 +349,8 @@ public class LedControlService {
             if (ip.length != 4) {
                 throw new IllegalArgumentException("targetIp must be IPv4");
             }
-            byte[] payload = new byte[6];
-            System.arraycopy(ip, 0, payload, 0, 4);
-            payload[4] = (byte) ((targetPort >> 8) & 0xFF);
-            payload[5] = (byte) (targetPort & 0xFF);
-            return payload;
+            String endpoint = targetIp + ":" + targetPort;
+            return endpoint.getBytes(StandardCharsets.US_ASCII);
         } catch (UnknownHostException exception) {
             throw new IllegalArgumentException("targetIp is invalid", exception);
         }

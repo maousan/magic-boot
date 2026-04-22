@@ -216,9 +216,7 @@ class LedControlServiceTest {
         verify(tcpClientManager).sendAndReceive(anyString(), anyInt(), frameCaptor.capture(), anyInt());
         LedProtocolCodec.ParsedFrame parsedFrame = codec.parseFrame(frameCaptor.getValue());
         assertEquals(LedCommandConstants.SUB_OPEN_TCP_CLIENT & 0xFF, parsedFrame.getDataCommand());
-        assertArrayEquals(new byte[]{
-                (byte) 192, (byte) 168, 0x02, (byte) 198, 0x25, 0x37
-        }, parsedFrame.getPayload());
+        assertArrayEquals("192.168.2.198:9527".getBytes(java.nio.charset.StandardCharsets.US_ASCII), parsedFrame.getPayload());
     }
 
     @Test

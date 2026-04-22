@@ -28,7 +28,7 @@ POST {{baseUrl}}/plugin/admin/stop/demo-plugin
 ###
 
 ### TC-1.5 启动插件
-POST {{baseUrl}}/plugin/admin/start/demo-plugin
+POST {{baseUrl}}/plugin/admin/start/zintis-led-plugin
 
 ###
 
