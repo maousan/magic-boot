@@ -164,6 +164,12 @@ if (statusCode < 200 || statusCode >= 300) {
     exit 502, '调用巷道灯插件失败: ' + responseText
 }
 
+db.update("""
+    update t_location_led
+       set status = 1
+     where location_code = #{lotNo}
+""", {lotNo: lotNo})
+
 log.info('turnOnAisleLedByLotNo success, lotNo=' + lotNo + ', ledId=' + ledId + ', color=' + color + ', ip=' + deviceIp + ', dataCommand=' + dataCommand)
 return {
     lotNo: lotNo,
@@ -173,6 +179,7 @@ return {
     devicePort: 9527,
     hostAddress: hostAddress,
     dataCommand: dataCommand,
+    status: 1,
     pluginResponseText: responseText
 }
 

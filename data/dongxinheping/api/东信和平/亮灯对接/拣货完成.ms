@@ -5,7 +5,7 @@
   "groupId" : "l5kl0q2xiqa4ryz349c3fkzj3hzm07vw",
   "name" : "拣货完成",
   "createTime" : null,
-  "updateTime" : 1776672835524,
+  "updateTime" : 1776930898575,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -285,6 +285,9 @@ let index = 0
 let detailUniqMap = {}
 let locationCodeSet = {}
 for(item in details){
+    if(!item.id) {
+        exit 400, 'details[' + index + '].id不能为空'
+    }
     if(!item.materialCode){
         exit 400, 'details[' + index + '].materialCode不能为空'
     }
