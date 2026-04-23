@@ -4,7 +4,6 @@ import cn.hutool.core.util.ReflectUtil;
 import com.alibaba.druid.pool.DruidDataSource;
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.annotation.PostConstruct;
-import lombok.extern.slf4j.Slf4j;
 import org.anyline.data.datasource.DataSourceHolder;
 import org.anyline.data.jdbc.util.DataSourceUtil;
 import org.anyline.data.param.ConfigStore;
@@ -21,6 +20,8 @@ import org.anyline.service.AnylineService;
 import org.anyline.util.ConfigTable;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationEvent;
@@ -38,8 +39,8 @@ import java.util.stream.Collectors;
 
 @Component  //注入到Spring容器中
 @MagicModule("anyline")    // 模块名称
-@Slf4j
 public class AnylineModule implements ApplicationListener<ApplicationReadyEvent> {
+    private static final Logger log = LoggerFactory.getLogger(AnylineModule.class);
 
     @Autowired
     private AnylineService service;
