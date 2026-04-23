@@ -5,6 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>库位码-电子标签绑定</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/antd-mobile@5/es/global/global.css" />
   <style>
     * { box-sizing: border-box; }
     html, body, #app {
@@ -17,18 +18,10 @@
     .page {
       max-width: 680px;
       margin: 0 auto;
-      padding: 14px;
-    }
-    .top-link {
-      margin-bottom: 10px;
-      display: inline-block;
-      color: #2563eb;
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: 600;
+      padding: 0 12px 12px;
     }
     .hero {
-      margin-bottom: 12px;
+      margin: 10px 0 12px;
       border-radius: 16px;
       background: linear-gradient(135deg, #0f766e 0%, #0d9488 60%, #14b8a6 100%);
       color: #fff;
@@ -37,7 +30,7 @@
     }
     .hero h1 {
       margin: 0;
-      font-size: 23px;
+      font-size: 22px;
       line-height: 1.2;
     }
     .hero p {
@@ -50,20 +43,49 @@
       overflow: hidden;
       box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
       margin-bottom: 12px;
+      background: #fff;
+      padding: 12px;
+    }
+    .field {
+      margin-bottom: 10px;
+    }
+    .field-label {
+      display: block;
+      margin-bottom: 6px;
+      color: #334155;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .hint {
+      margin: 8px 0 0;
+      color: #64748b;
+      font-size: 13px;
+    }
+    .status-text {
+      font-size: 14px;
+      line-height: 1.5;
     }
   </style>
 </head>
 <body>
   <div id="app"></div>
-
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-  <script src="https://unpkg.com/naive-ui/dist/index.prod.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/antd-mobile@5/umd/antd-mobile.min.js"></script>
   <script>
     (function () {
-      var ref = Vue.ref;
-      var computed = Vue.computed;
-      var createApp = Vue.createApp;
-      var h = Vue.h;
+      var e = React.createElement;
+      var useState = React.useState;
+
+      var antd = window.antdMobile || window.antd;
+      if (!antd) { throw new Error("Ant Design Mobile CDN 加载失败"); }
+
+      var NavBar = antd.NavBar;
+      var Card = antd.Card;
+      var Input = antd.Input;
+      var Button = antd.Button;
+      var Tabs = antd.Tabs;
+      var Toast = antd.Toast;
 
       function trim(value) {
         if (value == null) return "";
@@ -75,12 +97,14 @@
           var xhr = new XMLHttpRequest();
           xhr.open(method, url, true);
           xhr.timeout = 15000;
-          if (method === "POST") xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+          if (method === "POST") {
+            xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+          }
           xhr.onreadystatechange = function () {
             if (xhr.readyState !== 4) return;
             var text = xhr.responseText || "";
             var json = null;
-            try { json = JSON.parse(text); } catch (e) {}
+            try { json = JSON.parse(text); } catch (ignore) {}
             resolve({ status: xhr.status, text: text, json: json });
           };
           xhr.onerror = function () { reject(new Error("网络异常，请检查服务是否可用")); };
@@ -90,260 +114,223 @@
         });
       }
 
-      createApp({
-        setup: function () {
-          var tab = ref("create");
-          var loading = ref(false);
+      function parseResult(result) {
+        var json = result.json;
+        var code = json && json.code;
+        var msg = json && json.message;
+        var data = json && json.data;
+        var isHttpOk = result.status >= 200 && result.status < 300;
+        var hasApiCode = json && code != null;
+        var isApiFailure = hasApiCode && Number(code) !== 200 && Number(code) !== 0;
+        return {
+          success: isHttpOk && !isApiFailure,
+          message: msg || "",
+          data: data,
+          fallback: result.text || ("HTTP " + result.status)
+        };
+      }
 
-          var createModel = ref({ locationCode: "", labelCode: "" });
-          var deleteModel = ref({ labelCode: "" });
+      function statusColor(statusType) {
+        if (statusType === "success") return "#16a34a";
+        if (statusType === "error") return "#dc2626";
+        if (statusType === "warning") return "#d97706";
+        return "#0d9488";
+      }
 
-          var statusType = ref("info");
-          var statusText = ref("就绪，等待操作。");
+      function App() {
+        var _a = useState("create");
+        var tab = _a[0];
+        var setTab = _a[1];
 
-          function setStatus(type, text) {
-            statusType.value = type;
-            statusText.value = text;
+        var _b = useState(false);
+        var loading = _b[0];
+        var setLoading = _b[1];
+
+        var _c = useState({ locationCode: "", labelCode: "" });
+        var createModel = _c[0];
+        var setCreateModel = _c[1];
+
+        var _d = useState({ labelCode: "" });
+        var deleteModel = _d[0];
+        var setDeleteModel = _d[1];
+
+        var _e = useState("info");
+        var statusType = _e[0];
+        var setStatusType = _e[1];
+
+        var _f = useState("就绪，等待操作。");
+        var statusText = _f[0];
+        var setStatusText = _f[1];
+
+        function setStatus(type, text) {
+          setStatusType(type);
+          setStatusText(text);
+        }
+
+        function onCreate() {
+          if (loading) return;
+          var locationCode = trim(createModel.locationCode);
+          var labelCode = trim(createModel.labelCode);
+          if (!locationCode) {
+            setStatus("error", "创建失败：locationCode 不能为空");
+            Toast.show({ icon: "fail", content: "locationCode 不能为空" });
+            return;
           }
-
-          function parseResult(result) {
-            var json = result.json;
-            var code = json && json.code;
-            var msg = json && json.message;
-            var data = json && json.data;
-            var isHttpOk = result.status >= 200 && result.status < 300;
-            var hasApiCode = json && code != null;
-            var isApiFailure = hasApiCode && Number(code) !== 200 && Number(code) !== 0;
-            return {
-              success: isHttpOk && !isApiFailure,
-              message: msg || "",
-              data: data,
-              fallback: result.text || ("HTTP " + result.status)
-            };
+          if (!labelCode) {
+            setStatus("error", "创建失败：labelCode 不能为空");
+            Toast.show({ icon: "fail", content: "labelCode 不能为空" });
+            return;
           }
-
-          async function onCreate() {
-            if (loading.value) return;
-            var locationCode = trim(createModel.value.locationCode);
-            var labelCode = trim(createModel.value.labelCode);
-            if (!locationCode) {
-              setStatus("error", "创建失败：locationCode 不能为空");
-              return;
+          setLoading(true);
+          setStatus("info", "创建中，请稍候...");
+          request("POST", "/api/location/label-mapping", {
+            locationCode: locationCode,
+            labelCode: labelCode
+          }).then(function (result) {
+            var parsed = parseResult(result);
+            if (parsed.success) {
+              setStatus("success", "创建成功：" + (parsed.message || "success"));
+              Toast.show({ icon: "success", content: "创建成功" });
+              setCreateModel({ locationCode: "", labelCode: "" });
+            } else {
+              setStatus("error", "创建失败：" + (parsed.message || parsed.fallback));
+              Toast.show({ icon: "fail", content: "创建失败" });
             }
-            if (!labelCode) {
-              setStatus("error", "创建失败：labelCode 不能为空");
-              return;
-            }
-            loading.value = true;
-            setStatus("info", "创建中，请稍候...");
-            try {
-              var result = await request("POST", "/api/location/label-mapping", {
-                locationCode: locationCode,
-                labelCode: labelCode
-              });
-              var parsed = parseResult(result);
-              if (parsed.success) {
-                setStatus("success", "创建成功：" + (parsed.message || "success"));
-                createModel.value.locationCode = "";
-                createModel.value.labelCode = "";
-              } else {
-                setStatus("error", "创建失败：" + (parsed.message || parsed.fallback));
-              }
-            } catch (err) {
-              setStatus("error", "请求失败：" + err.message);
-            } finally {
-              loading.value = false;
-            }
-          }
-
-          async function onDelete() {
-            if (loading.value) return;
-            var labelCode = trim(deleteModel.value.labelCode);
-            if (!labelCode) {
-              setStatus("error", "解绑失败：labelCode 不能为空");
-              return;
-            }
-            loading.value = true;
-            setStatus("info", "解绑中，请稍候...");
-            try {
-              var result = await request("DELETE", "/api/location/label-mapping?labelCode=" + encodeURIComponent(labelCode));
-              var parsed = parseResult(result);
-              if (parsed.success && Number(parsed.data) === 0) {
-                setStatus("warning", "解绑失败：未找到对应绑定关系");
-              } else if (parsed.success) {
-                setStatus("success", "解绑成功：" + (parsed.message || "success"));
-                deleteModel.value.labelCode = "";
-              } else {
-                setStatus("error", "解绑失败：" + (parsed.message || parsed.fallback));
-              }
-            } catch (err) {
-              setStatus("error", "请求失败：" + err.message);
-            } finally {
-              loading.value = false;
-            }
-          }
-
-          var statusAlertType = computed(function () {
-            if (statusType.value === "success") return "success";
-            if (statusType.value === "error") return "error";
-            if (statusType.value === "warning") return "warning";
-            return "info";
-          });
-
-          return {
-            tab: tab,
-            loading: loading,
-            createModel: createModel,
-            deleteModel: deleteModel,
-            statusText: statusText,
-            statusAlertType: statusAlertType,
-            onCreate: onCreate,
-            onDelete: onDelete
-          };
-        },
-        render: function () {
-          var self = this;
-          return h(naive.NConfigProvider, null, {
-            default: function () {
-              return h(naive.NMessageProvider, null, {
-                default: function () {
-                  return h("div", { class: "page" }, [
-                    h(naive.NButton, {
-                      quaternary: true,
-                      size: "small",
-                      style: "margin-bottom:10px;",
-                      onClick: function () { window.location.href = "./mapping-entry.html"; }
-                    }, {
-                      icon: function () {
-                        return h(naive.NIcon, { size: 16 }, {
-                          default: function () {
-                            return h("svg", {
-                              viewBox: "0 0 24 24",
-                              fill: "none",
-                              stroke: "currentColor",
-                              "stroke-width": "2",
-                              "stroke-linecap": "round",
-                              "stroke-linejoin": "round"
-                            }, [
-                              h("path", { d: "M15 18L9 12L15 6" }),
-                              h("path", { d: "M9 12H21" })
-                            ]);
-                          }
-                        });
-                      },
-                      default: function () { return "返回入口导航"; }
-                    }),
-                    h("div", { class: "hero" }, [
-                      h("h1", null, "库位码-电子标签绑定"),
-                      h("p", null, "创建与解绑一体化，适配 PDA 扫码操作")
-                    ]),
-                    h(naive.NCard, { class: "panel", bordered: false }, {
-                      default: function () {
-                        return [
-                          h(naive.NTabs, {
-                            type: "segment",
-                            animated: true,
-                            value: self.tab,
-                            "onUpdate:value": function (v) { self.tab = v; }
-                          }, {
-                            default: function () {
-                              return [
-                                h(naive.NTabPane, { name: "create", tab: "创建绑定" }, {
-                                  default: function () {
-                                    return [
-                                      h(naive.NForm, { labelPlacement: "top", showFeedback: false }, {
-                                        default: function () {
-                                          return [
-                                            h(naive.NFormItem, { label: "库位码 locationCode" }, {
-                                              default: function () {
-                                                return h(naive.NInput, {
-                                                  clearable: true,
-                                                  placeholder: "请扫码或输入 locationCode",
-                                                  value: self.createModel.locationCode,
-                                                  "onUpdate:value": function (v) { self.createModel.locationCode = v; },
-                                                  onKeyup: function (e) { if (e.key === "Enter") self.onCreate(); }
-                                                });
-                                              }
-                                            }),
-                                            h(naive.NFormItem, { label: "电子标签码 labelCode" }, {
-                                              default: function () {
-                                                return h(naive.NInput, {
-                                                  clearable: true,
-                                                  placeholder: "请扫码或输入 labelCode",
-                                                  value: self.createModel.labelCode,
-                                                  "onUpdate:value": function (v) { self.createModel.labelCode = v; },
-                                                  onKeyup: function (e) { if (e.key === "Enter") self.onCreate(); }
-                                                });
-                                              }
-                                            }),
-                                            h(naive.NButton, {
-                                              type: "primary",
-                                              block: true,
-                                              strong: true,
-                                              loading: self.loading,
-                                              onClick: self.onCreate
-                                            }, { default: function () { return "提交创建"; } }),
-                                            h("div", { style: "margin-top:8px;color:#64748b;font-size:13px;" }, "提示：创建绑定会调用本地接口并保存映射。")
-                                          ];
-                                        }
-                                      })
-                                    ];
-                                  }
-                                }),
-                                h(naive.NTabPane, { name: "delete", tab: "解绑绑定" }, {
-                                  default: function () {
-                                    return [
-                                      h(naive.NForm, { labelPlacement: "top", showFeedback: false }, {
-                                        default: function () {
-                                          return [
-                                            h(naive.NFormItem, { label: "电子标签码 labelCode" }, {
-                                              default: function () {
-                                                return h(naive.NInput, {
-                                                  clearable: true,
-                                                  placeholder: "请扫码或输入 labelCode",
-                                                  value: self.deleteModel.labelCode,
-                                                  "onUpdate:value": function (v) { self.deleteModel.labelCode = v; },
-                                                  onKeyup: function (e) { if (e.key === "Enter") self.onDelete(); }
-                                                });
-                                              }
-                                            }),
-                                            h(naive.NButton, {
-                                              type: "error",
-                                              block: true,
-                                              strong: true,
-                                              loading: self.loading,
-                                              onClick: self.onDelete
-                                            }, { default: function () { return "提交解绑"; } }),
-                                            h("div", { style: "margin-top:8px;color:#64748b;font-size:13px;" }, "提示：解绑会先调用 AIMS 解绑，再删除本地映射。")
-                                          ];
-                                        }
-                                      })
-                                    ];
-                                  }
-                                })
-                              ];
-                            }
-                          })
-                        ];
-                      }
-                    }),
-                    h(naive.NCard, { class: "panel", title: "操作状态", bordered: false }, {
-                      default: function () {
-                        return h(naive.NAlert, {
-                          type: self.statusAlertType,
-                          showIcon: true,
-                          bordered: false
-                        }, { default: function () { return self.statusText; } });
-                      }
-                    })
-                  ]);
-                }
-              });
-            }
+          }).catch(function (err) {
+            setStatus("error", "请求失败：" + err.message);
+            Toast.show({ icon: "fail", content: err.message });
+          }).finally(function () {
+            setLoading(false);
           });
         }
-      }).mount("#app");
+
+        function onDelete() {
+          if (loading) return;
+          var labelCode = trim(deleteModel.labelCode);
+          if (!labelCode) {
+            setStatus("error", "解绑失败：labelCode 不能为空");
+            Toast.show({ icon: "fail", content: "labelCode 不能为空" });
+            return;
+          }
+          setLoading(true);
+          setStatus("info", "解绑中，请稍候...");
+          request("DELETE", "/api/location/label-mapping?labelCode=" + encodeURIComponent(labelCode)).then(function (result) {
+            var parsed = parseResult(result);
+            if (parsed.success && Number(parsed.data) === 0) {
+              setStatus("warning", "解绑失败：未找到对应绑定关系");
+              Toast.show({ icon: "fail", content: "未找到对应绑定关系" });
+            } else if (parsed.success) {
+              setStatus("success", "解绑成功：" + (parsed.message || "success"));
+              Toast.show({ icon: "success", content: "解绑成功" });
+              setDeleteModel({ labelCode: "" });
+            } else {
+              setStatus("error", "解绑失败：" + (parsed.message || parsed.fallback));
+              Toast.show({ icon: "fail", content: "解绑失败" });
+            }
+          }).catch(function (err) {
+            setStatus("error", "请求失败：" + err.message);
+            Toast.show({ icon: "fail", content: err.message });
+          }).finally(function () {
+            setLoading(false);
+          });
+        }
+
+        return e("div", { className: "page" }, [
+          e(NavBar, {
+            key: "nav",
+            back: "返回入口导航",
+            onBack: function () { window.location.href = "./mapping-entry.html"; }
+          }, "库位码-电子标签绑定"),
+          e("div", { className: "hero", key: "hero" }, [
+            e("h1", { key: "title" }, "库位码-电子标签绑定"),
+            e("p", { key: "subtitle" }, "创建与解绑一体化，适配 PDA 扫码操作")
+          ]),
+          e(Card, {
+            key: "form-panel",
+            className: "panel",
+            title: "绑定操作"
+          }, e(Tabs, {
+            activeKey: tab,
+            onChange: function (key) { setTab(key); }
+          }, [
+            e(Tabs.Tab, { title: "创建绑定", key: "create" }, e("div", { style: { paddingTop: 8 } }, [
+              e("div", { className: "field", key: "locationCode" }, [
+                e("label", { className: "field-label", key: "label" }, "库位码 locationCode"),
+                e(Input, {
+                  key: "input",
+                  value: createModel.locationCode,
+                  placeholder: "请扫码或输入 locationCode",
+                  clearable: true,
+                  onChange: function (v) {
+                    setCreateModel({ locationCode: v, labelCode: createModel.labelCode });
+                  },
+                  onEnterPress: onCreate
+                })
+              ]),
+              e("div", { className: "field", key: "labelCode" }, [
+                e("label", { className: "field-label", key: "label" }, "电子标签码 labelCode"),
+                e(Input, {
+                  key: "input",
+                  value: createModel.labelCode,
+                  placeholder: "请扫码或输入 labelCode",
+                  clearable: true,
+                  onChange: function (v) {
+                    setCreateModel({ locationCode: createModel.locationCode, labelCode: v });
+                  },
+                  onEnterPress: onCreate
+                })
+              ]),
+              e(Button, {
+                key: "create-btn",
+                color: "primary",
+                loading: loading,
+                block: true,
+                onClick: onCreate
+              }, "提交创建"),
+              e("div", { className: "hint", key: "hint" }, "提示：创建绑定会调用本地接口并保存映射。")
+            ])),
+            e(Tabs.Tab, { title: "解绑绑定", key: "delete" }, e("div", { style: { paddingTop: 8 } }, [
+              e("div", { className: "field", key: "delete-labelCode" }, [
+                e("label", { className: "field-label", key: "label" }, "电子标签码 labelCode"),
+                e(Input, {
+                  key: "input",
+                  value: deleteModel.labelCode,
+                  placeholder: "请扫码或输入 labelCode",
+                  clearable: true,
+                  onChange: function (v) { setDeleteModel({ labelCode: v }); },
+                  onEnterPress: onDelete
+                })
+              ]),
+              e(Button, {
+                key: "delete-btn",
+                color: "danger",
+                loading: loading,
+                block: true,
+                onClick: onDelete
+              }, "提交解绑"),
+              e("div", { className: "hint", key: "hint" }, "提示：解绑会先调用 AIMS 解绑，再删除本地映射。")
+            ]))
+          ])),
+          e(Card, {
+            key: "status-panel",
+            className: "panel",
+            title: "操作状态"
+          }, e("div", {
+            className: "status-text",
+            style: { color: statusColor(statusType), fontWeight: 600 }
+          }, statusText))
+        ]);
+      }
+
+      var mountNode = document.getElementById("app");
+      if (ReactDOM.createRoot) {
+        ReactDOM.createRoot(mountNode).render(e(App));
+      } else {
+        ReactDOM.render(e(App), mountNode);
+      }
     })();
   </script>
 </body>
 </html>
+
+

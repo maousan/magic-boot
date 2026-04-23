@@ -5,6 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>PDA 绑定导航</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/antd-mobile@5/es/global/global.css" />
   <style>
     * { box-sizing: border-box; }
     html, body, #app {
@@ -55,81 +56,71 @@
       font-size: 14px;
       line-height: 1.45;
     }
-    @media (max-width: 360px) {
-      .hero-title { font-size: 22px; }
-      .card-title { font-size: 16px; }
-    }
   </style>
 </head>
 <body>
   <div id="app"></div>
-
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-  <script src="https://unpkg.com/naive-ui/dist/index.prod.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/antd-mobile@5/umd/antd-mobile.min.js"></script>
   <script>
     (function () {
-      var createApp = Vue.createApp;
-      var h = Vue.h;
+      var e = React.createElement;
+      var antd = window.antdMobile || window.antd;
+      if (!antd) { throw new Error("Ant Design Mobile CDN 加载失败"); }
 
-      createApp({
-        setup: function () {
-          var navItems = [
-            {
-              title: "库位码 - 巷道灯绑定",
-              desc: "维护库位码与巷道灯设备绑定关系（设备下拉显示 IP，提交使用 MAC）。",
-              href: "./led-mapping.html",
-              btn: "进入库位-巷道灯绑定"
-            },
-            {
-              title: "库位码 - 电子标签绑定",
-              desc: "维护库位码与电子标签条码的绑定关系。",
-              href: "./location-label-mapping.html",
-              btn: "进入库位-电子标签绑定"
-            },
-            {
-              title: "亮灯链路模拟测试（PC）",
-              desc: "联调 upload / complete / control 的完整链路。",
-              href: "./light-chain-simulator.html",
-              btn: "进入链路模拟页面"
-            }
-          ];
+      var Card = antd.Card;
+      var Button = antd.Button;
 
-          return function () {
-            return h(naive.NConfigProvider, null, {
-              default: function () {
-                return h("div", { class: "page" }, [
-                  h("div", { class: "hero" }, [
-                    h("h1", { class: "hero-title" }, "PDA 绑定功能导航"),
-                    h("p", { class: "hero-subtitle" }, "请选择要进入的页面")
-                  ]),
-                  h("div", { class: "nav-grid" }, navItems.map(function (item) {
-                    return h(naive.NCard, {
-                      size: "small",
-                      bordered: false,
-                      embedded: true,
-                      style: "border-radius:14px; box-shadow:0 2px 8px rgba(15,23,42,0.08);"
-                    }, {
-                      default: function () {
-                        return [
-                          h("h2", { class: "card-title" }, item.title),
-                          h("p", { class: "card-desc" }, item.desc),
-                          h(naive.NButton, {
-                            type: "primary",
-                            strong: true,
-                            style: "width:100%;",
-                            onClick: function () { window.location.href = item.href; }
-                          }, { default: function () { return item.btn; } })
-                        ];
-                      }
-                    });
-                  }))
-                ]);
-              }
-            });
-          };
+      var navItems = [
+        {
+          title: "库位码 - 巷道灯绑定",
+          desc: "维护库位码与巷道灯设备绑定关系（设备下拉显示 IP，提交使用 MAC）。",
+          href: "./led-mapping.html",
+          btn: "进入库位-巷道灯绑定"
+        },
+        {
+          title: "库位码 - 电子标签绑定",
+          desc: "维护库位码与电子标签条码的绑定关系。",
+          href: "./location-label-mapping.html",
+          btn: "进入库位-电子标签绑定"
         }
-      }).mount("#app");
+      ];
+
+      function App() {
+        return e("div", { className: "page" }, [
+          e("div", { className: "hero", key: "hero" }, [
+            e("h1", { className: "hero-title", key: "title" }, "PDA 绑定功能导航"),
+            e("p", { className: "hero-subtitle", key: "subtitle" }, "请选择要进入的页面")
+          ]),
+          e("div", { className: "nav-grid", key: "grid" }, navItems.map(function (item, index) {
+            return e(Card, {
+              key: "card-" + index,
+              style: { borderRadius: 14, boxShadow: "0 2px 8px rgba(15,23,42,0.08)" }
+            }, e("div", null, [
+              e("h2", { className: "card-title", key: "title" }, item.title),
+              e("p", { className: "card-desc", key: "desc" }, item.desc),
+              e(Button, {
+                key: "btn",
+                color: "primary",
+                block: true,
+                size: "middle",
+                onClick: function () { window.location.href = item.href; }
+              }, item.btn)
+            ]));
+          }))
+        ]);
+      }
+
+      var mountNode = document.getElementById("app");
+      if (ReactDOM.createRoot) {
+        ReactDOM.createRoot(mountNode).render(e(App));
+      } else {
+        ReactDOM.render(e(App), mountNode);
+      }
     })();
   </script>
 </body>
 </html>
+
+

@@ -5,6 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>库位-巷道灯绑定</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/antd-mobile@5/es/global/global.css" />
   <style>
     * { box-sizing: border-box; }
     html, body, #app {
@@ -17,18 +18,10 @@
     .page {
       max-width: 680px;
       margin: 0 auto;
-      padding: 14px;
-    }
-    .top-link {
-      margin-bottom: 10px;
-      display: inline-block;
-      color: #2563eb;
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: 600;
+      padding: 0 12px 12px;
     }
     .hero {
-      margin-bottom: 12px;
+      margin: 10px 0 12px;
       border-radius: 16px;
       background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%);
       color: #fff;
@@ -37,7 +30,7 @@
     }
     .hero h1 {
       margin: 0;
-      font-size: 23px;
+      font-size: 22px;
       line-height: 1.2;
     }
     .hero p {
@@ -50,21 +43,67 @@
       overflow: hidden;
       box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
       margin-bottom: 12px;
+      background: #fff;
+      padding: 12px;
+    }
+    .panel-title {
+      margin: 0 0 10px;
+      color: #0f172a;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .field {
+      margin-bottom: 10px;
+    }
+    .field-label {
+      display: block;
+      margin-bottom: 6px;
+      color: #334155;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .native-select {
+      width: 100%;
+      height: 38px;
+      border: 1px solid #dbe2ea;
+      border-radius: 10px;
+      padding: 0 8px;
+      color: #1f2937;
+      background: #fff;
+    }
+    .hint {
+      margin: 8px 0 0;
+      color: #64748b;
+      font-size: 13px;
+    }
+    .status-text {
+      font-size: 14px;
+      line-height: 1.5;
     }
   </style>
 </head>
 <body>
   <div id="app"></div>
-
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-  <script src="https://unpkg.com/naive-ui/dist/index.prod.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/antd-mobile@5/umd/antd-mobile.min.js"></script>
   <script>
     (function () {
-      var ref = Vue.ref;
-      var computed = Vue.computed;
-      var onMounted = Vue.onMounted;
-      var createApp = Vue.createApp;
-      var h = Vue.h;
+      var e = React.createElement;
+      var useState = React.useState;
+      var useEffect = React.useEffect;
+
+      var antd = window.antdMobile || window.antd;
+      if (!antd) { throw new Error("Ant Design Mobile CDN 加载失败"); }
+
+      var NavBar = antd.NavBar;
+      var Card = antd.Card;
+      var Input = antd.Input;
+      var Button = antd.Button;
+      var Tabs = antd.Tabs;
+      var Space = antd.Space;
+      var Toast = antd.Toast;
+      var DotLoading = antd.DotLoading;
 
       function trim(value) {
         if (value == null) return "";
@@ -76,12 +115,14 @@
           var xhr = new XMLHttpRequest();
           xhr.open(method, url, true);
           xhr.timeout = 15000;
-          if (method === "POST") xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+          if (method === "POST") {
+            xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+          }
           xhr.onreadystatechange = function () {
             if (xhr.readyState !== 4) return;
             var text = xhr.responseText || "";
             var json = null;
-            try { json = JSON.parse(text); } catch (e) {}
+            try { json = JSON.parse(text); } catch (ignore) {}
             resolve({ status: xhr.status, text: text, json: json });
           };
           xhr.onerror = function () { reject(new Error("网络异常，请检查服务是否可用")); };
@@ -91,340 +132,319 @@
         });
       }
 
-      createApp({
-        setup: function () {
-          var tab = ref("create");
-          var loading = ref(false);
-          var deviceLoading = ref(false);
+      function parseResult(result) {
+        var json = result.json;
+        var code = json && json.code;
+        var msg = json && json.message;
+        var data = json && json.data;
+        var isHttpOk = result.status >= 200 && result.status < 300;
+        var isApiOk = json ? Number(code) === 200 : false;
+        return {
+          success: isHttpOk && isApiOk,
+          message: msg || "",
+          data: data,
+          fallback: result.text || ("HTTP " + result.status)
+        };
+      }
 
-          var createModel = ref({
-            lotNo: "",
-            ledId: "",
-            color: "RED"
-          });
-          var deleteModel = ref({ lotNo: "" });
+      function statusColor(statusType) {
+        if (statusType === "success") return "#16a34a";
+        if (statusType === "error") return "#dc2626";
+        if (statusType === "warning") return "#d97706";
+        return "#2563eb";
+      }
 
-          var deviceOptions = ref([]);
+      function App() {
+        var _a = useState("create");
+        var tab = _a[0];
+        var setTab = _a[1];
 
-          var colorOptions = [
-            { label: "1-RED（红色，第1层）", value: "RED" },
-            { label: "2-YELLOW（黄色，第2层）", value: "YELLOW" },
-            { label: "3-GREEN（绿色，第3层）", value: "GREEN" }
-          ];
+        var _b = useState(false);
+        var loading = _b[0];
+        var setLoading = _b[1];
 
-          var statusType = ref("info");
-          var statusText = ref("就绪，等待操作。");
+        var _c = useState(false);
+        var deviceLoading = _c[0];
+        var setDeviceLoading = _c[1];
 
-          function setStatus(type, text) {
-            statusType.value = type;
-            statusText.value = text;
-          }
+        var _d = useState({ lotNo: "", ledId: "", color: "RED" });
+        var createModel = _d[0];
+        var setCreateModel = _d[1];
 
-          function parseResult(result) {
-            var json = result.json;
-            var code = json && json.code;
-            var msg = json && json.message;
-            var data = json && json.data;
-            var isHttpOk = result.status >= 200 && result.status < 300;
-            var isApiOk = json ? Number(code) === 200 : false;
-            return {
-              success: isHttpOk && isApiOk,
-              message: msg || "",
-              data: data,
-              fallback: result.text || ("HTTP " + result.status)
-            };
-          }
+        var _e = useState({ lotNo: "" });
+        var deleteModel = _e[0];
+        var setDeleteModel = _e[1];
 
-          async function loadDevices() {
-            deviceLoading.value = true;
-            try {
-              var result = await request("GET", "/api/location/led-devices");
-              var parsed = parseResult(result);
-              if (!parsed.success) {
-                setStatus("error", "巷道灯设备加载失败：" + (parsed.message || parsed.fallback));
-                deviceOptions.value = [];
-                return;
-              }
-              var list = parsed.data || [];
-              var options = [];
-              for (var i = 0; i < list.length; i++) {
-                var item = list[i] || {};
-                var macAddress = trim(item.macAddress || item.mac_address);
-                var ip = trim(item.ip || item.ipAddress || item.ip_address);
-                var remark = trim(item.remark);
-                if (!macAddress) continue;
-                var displayIp = ip || "未知IP";
-                var label = remark ? (remark + "（" + displayIp + "）") : displayIp;
-                options.push({ label: label, value: macAddress });
-              }
-              deviceOptions.value = options;
-              if (!createModel.value.ledId && options.length > 0) {
-                createModel.value.ledId = options[0].value;
-              }
-            } catch (err) {
-              setStatus("error", "巷道灯设备加载失败：" + err.message);
-              deviceOptions.value = [];
-            } finally {
-              deviceLoading.value = false;
-            }
-          }
+        var _f = useState([]);
+        var deviceOptions = _f[0];
+        var setDeviceOptions = _f[1];
 
-          async function onCreate() {
-            if (loading.value) return;
-            var lotNo = trim(createModel.value.lotNo);
-            var ledId = trim(createModel.value.ledId);
-            var color = trim(createModel.value.color);
-            if (!lotNo) {
-              setStatus("error", "创建失败：lotNo 不能为空");
+        var _g = useState("info");
+        var statusType = _g[0];
+        var setStatusType = _g[1];
+
+        var _h = useState("就绪，等待操作。");
+        var statusText = _h[0];
+        var setStatusText = _h[1];
+
+        function setStatus(type, text) {
+          setStatusType(type);
+          setStatusText(text);
+        }
+
+        function loadDevices() {
+          setDeviceLoading(true);
+          request("GET", "/api/location/led-devices").then(function (result) {
+            var parsed = parseResult(result);
+            if (!parsed.success) {
+              setStatus("error", "巷道灯设备加载失败：" + (parsed.message || parsed.fallback));
+              setDeviceOptions([]);
               return;
             }
-            if (!ledId) {
-              setStatus("error", "创建失败：ledId 不能为空");
-              return;
+            var list = parsed.data || [];
+            var options = [];
+            for (var i = 0; i < list.length; i++) {
+              var item = list[i] || {};
+              var macAddress = trim(item.macAddress || item.mac_address);
+              var ip = trim(item.ip || item.ipAddress || item.ip_address);
+              var remark = trim(item.remark);
+              if (!macAddress) continue;
+              var displayIp = ip || "未知IP";
+              var label = remark ? (remark + "（" + displayIp + "）") : displayIp;
+              options.push({ label: label, value: macAddress });
             }
-            if (!color) {
-              setStatus("error", "创建失败：color 不能为空");
-              return;
-            }
-            loading.value = true;
-            setStatus("info", "创建中，请稍候...");
-            try {
-              var result = await request("POST", "/api/location/led-mapping", {
-                lotNo: lotNo,
-                ledId: ledId,
-                color: color
-              });
-              var parsed = parseResult(result);
-              if (parsed.success) {
-                setStatus("success", "创建成功：" + (parsed.message || "success"));
-                createModel.value.lotNo = "";
-              } else {
-                setStatus("error", "创建失败：" + (parsed.message || parsed.fallback));
+            setDeviceOptions(options);
+            setCreateModel(function (prev) {
+              if (!prev.ledId && options.length > 0) {
+                return { lotNo: prev.lotNo, ledId: options[0].value, color: prev.color };
               }
-            } catch (err) {
-              setStatus("error", "请求失败：" + err.message);
-            } finally {
-              loading.value = false;
-            }
-          }
-
-          async function onDelete() {
-            if (loading.value) return;
-            var lotNo = trim(deleteModel.value.lotNo);
-            if (!lotNo) {
-              setStatus("error", "删除失败：lotNo 不能为空");
-              return;
-            }
-            loading.value = true;
-            setStatus("info", "删除中，请稍候...");
-            try {
-              var result = await request("DELETE", "/api/location/led-mapping?lotNo=" + encodeURIComponent(lotNo));
-              var parsed = parseResult(result);
-              if (parsed.success && Number(parsed.data) === 0) {
-                setStatus("warning", "删除失败：库位码不存在");
-              } else if (parsed.success) {
-                setStatus("success", "删除成功：" + (parsed.message || "success"));
-                deleteModel.value.lotNo = "";
-              } else {
-                setStatus("error", "删除失败：" + (parsed.message || parsed.fallback));
-              }
-            } catch (err) {
-              setStatus("error", "请求失败：" + err.message);
-            } finally {
-              loading.value = false;
-            }
-          }
-
-          onMounted(function () { loadDevices(); });
-
-          var statusAlertType = computed(function () {
-            if (statusType.value === "success") return "success";
-            if (statusType.value === "error") return "error";
-            if (statusType.value === "warning") return "warning";
-            return "info";
-          });
-
-          return {
-            tab: tab,
-            loading: loading,
-            deviceLoading: deviceLoading,
-            createModel: createModel,
-            deleteModel: deleteModel,
-            deviceOptions: deviceOptions,
-            colorOptions: colorOptions,
-            statusText: statusText,
-            statusAlertType: statusAlertType,
-            onCreate: onCreate,
-            onDelete: onDelete,
-            loadDevices: loadDevices
-          };
-        },
-        render: function () {
-          var self = this;
-          return h(naive.NConfigProvider, null, {
-            default: function () {
-              return h(naive.NMessageProvider, null, {
-                default: function () {
-                  return h("div", { class: "page" }, [
-                    h(naive.NButton, {
-                      quaternary: true,
-                      size: "small",
-                      style: "margin-bottom:10px;",
-                      onClick: function () { window.location.href = "./mapping-entry.html"; }
-                    }, {
-                      icon: function () {
-                        return h(naive.NIcon, { size: 16 }, {
-                          default: function () {
-                            return h("svg", {
-                              viewBox: "0 0 24 24",
-                              fill: "none",
-                              stroke: "currentColor",
-                              "stroke-width": "2",
-                              "stroke-linecap": "round",
-                              "stroke-linejoin": "round"
-                            }, [
-                              h("path", { d: "M15 18L9 12L15 6" }),
-                              h("path", { d: "M9 12H21" })
-                            ]);
-                          }
-                        });
-                      },
-                      default: function () { return "返回入口导航"; }
-                    }),
-                    h("div", { class: "hero" }, [
-                      h("h1", null, "库位-巷道灯绑定"),
-                      h("p", null, "设备下拉显示 IP，提交使用 MAC 地址")
-                    ]),
-                    h(naive.NCard, { class: "panel", bordered: false }, {
-                      default: function () {
-                        return [
-                          h(naive.NTabs, {
-                            type: "segment",
-                            animated: true,
-                            value: self.tab,
-                            "onUpdate:value": function (v) { self.tab = v; }
-                          }, {
-                            default: function () {
-                              return [
-                                h(naive.NTabPane, { name: "create", tab: "创建绑定" }, {
-                                  default: function () {
-                                    return [
-                                      h(naive.NForm, { labelPlacement: "top", showFeedback: false }, {
-                                        default: function () {
-                                          return [
-                                            h(naive.NFormItem, { label: "库位码 lotNo" }, {
-                                              default: function () {
-                                                return h(naive.NInput, {
-                                                  clearable: true,
-                                                  placeholder: "请扫码或输入 lotNo",
-                                                  value: self.createModel.lotNo,
-                                                  "onUpdate:value": function (v) { self.createModel.lotNo = v; },
-                                                  onKeyup: function (e) { if (e.key === "Enter") self.onCreate(); }
-                                                });
-                                              }
-                                            }),
-                                            h(naive.NFormItem, { label: "巷道灯设备（显示 IP，提交 MAC）" }, {
-                                              default: function () {
-                                                return h(naive.NSelect, {
-                                                  filterable: true,
-                                                  clearable: true,
-                                                  placeholder: self.deviceLoading ? "设备加载中..." : "请选择巷道灯设备",
-                                                  loading: self.deviceLoading,
-                                                  options: self.deviceOptions,
-                                                  value: self.createModel.ledId,
-                                                  "onUpdate:value": function (v) { self.createModel.ledId = v || ""; }
-                                                });
-                                              }
-                                            }),
-                                            h(naive.NFormItem, { label: "绑定颜色" }, {
-                                              default: function () {
-                                                return h(naive.NSelect, {
-                                                  options: self.colorOptions,
-                                                  value: self.createModel.color,
-                                                  "onUpdate:value": function (v) { self.createModel.color = v; }
-                                                });
-                                              }
-                                            }),
-                                            h(naive.NSpace, { vertical: true, size: 8 }, {
-                                              default: function () {
-                                                return [
-                                                  h(naive.NButton, {
-                                                    type: "primary",
-                                                    block: true,
-                                                    strong: true,
-                                                    loading: self.loading,
-                                                    onClick: self.onCreate
-                                                  }, { default: function () { return "提交创建"; } }),
-                                                  h(naive.NButton, {
-                                                    dashed: true,
-                                                    block: true,
-                                                    onClick: self.loadDevices,
-                                                    disabled: self.loading
-                                                  }, { default: function () { return "刷新设备列表"; } }),
-                                                  h("div", { style: "color:#64748b;font-size:13px;" }, "提示：扫码后回车可直接提交，默认绑定 RED（第1层）。")
-                                                ];
-                                              }
-                                            })
-                                          ];
-                                        }
-                                      })
-                                    ];
-                                  }
-                                }),
-                                h(naive.NTabPane, { name: "delete", tab: "删除绑定" }, {
-                                  default: function () {
-                                    return [
-                                      h(naive.NForm, { labelPlacement: "top", showFeedback: false }, {
-                                        default: function () {
-                                          return [
-                                            h(naive.NFormItem, { label: "库位码 lotNo" }, {
-                                              default: function () {
-                                                return h(naive.NInput, {
-                                                  clearable: true,
-                                                  placeholder: "请扫码或输入 lotNo",
-                                                  value: self.deleteModel.lotNo,
-                                                  "onUpdate:value": function (v) { self.deleteModel.lotNo = v; },
-                                                  onKeyup: function (e) { if (e.key === "Enter") self.onDelete(); }
-                                                });
-                                              }
-                                            }),
-                                            h(naive.NButton, {
-                                              type: "error",
-                                              block: true,
-                                              strong: true,
-                                              loading: self.loading,
-                                              onClick: self.onDelete
-                                            }, { default: function () { return "提交删除"; } }),
-                                            h("div", { style: "margin-top:8px;color:#64748b;font-size:13px;" }, "提示：删除通过 lotNo 定位绑定记录。")
-                                          ];
-                                        }
-                                      })
-                                    ];
-                                  }
-                                })
-                              ];
-                            }
-                          })
-                        ];
-                      }
-                    }),
-                    h(naive.NCard, { class: "panel", title: "操作状态", bordered: false }, {
-                      default: function () {
-                        return h(naive.NAlert, {
-                          type: self.statusAlertType,
-                          showIcon: true,
-                          bordered: false
-                        }, { default: function () { return self.statusText; } });
-                      }
-                    })
-                  ]);
-                }
-              });
-            }
+              return prev;
+            });
+          }).catch(function (err) {
+            setStatus("error", "巷道灯设备加载失败：" + err.message);
+            setDeviceOptions([]);
+          }).finally(function () {
+            setDeviceLoading(false);
           });
         }
-      }).mount("#app");
+
+        function onCreate() {
+          if (loading) return;
+          var lotNo = trim(createModel.lotNo);
+          var ledId = trim(createModel.ledId);
+          var color = trim(createModel.color);
+          if (!lotNo) {
+            setStatus("error", "创建失败：lotNo 不能为空");
+            Toast.show({ icon: "fail", content: "lotNo 不能为空" });
+            return;
+          }
+          if (!ledId) {
+            setStatus("error", "创建失败：ledId 不能为空");
+            Toast.show({ icon: "fail", content: "请选择巷道灯设备" });
+            return;
+          }
+          if (!color) {
+            setStatus("error", "创建失败：color 不能为空");
+            Toast.show({ icon: "fail", content: "请选择颜色" });
+            return;
+          }
+          setLoading(true);
+          setStatus("info", "创建中，请稍候...");
+          request("POST", "/api/location/led-mapping", {
+            lotNo: lotNo,
+            ledId: ledId,
+            color: color
+          }).then(function (result) {
+            var parsed = parseResult(result);
+            if (parsed.success) {
+              setStatus("success", "创建成功：" + (parsed.message || "success"));
+              Toast.show({ icon: "success", content: "创建成功" });
+              setCreateModel(function (prev) {
+                return { lotNo: "", ledId: prev.ledId, color: prev.color };
+              });
+            } else {
+              setStatus("error", "创建失败：" + (parsed.message || parsed.fallback));
+              Toast.show({ icon: "fail", content: "创建失败" });
+            }
+          }).catch(function (err) {
+            setStatus("error", "请求失败：" + err.message);
+            Toast.show({ icon: "fail", content: err.message });
+          }).finally(function () {
+            setLoading(false);
+          });
+        }
+
+        function onDelete() {
+          if (loading) return;
+          var lotNo = trim(deleteModel.lotNo);
+          if (!lotNo) {
+            setStatus("error", "删除失败：lotNo 不能为空");
+            Toast.show({ icon: "fail", content: "lotNo 不能为空" });
+            return;
+          }
+          setLoading(true);
+          setStatus("info", "删除中，请稍候...");
+          request("DELETE", "/api/location/led-mapping?lotNo=" + encodeURIComponent(lotNo)).then(function (result) {
+            var parsed = parseResult(result);
+            if (parsed.success && Number(parsed.data) === 0) {
+              setStatus("warning", "删除失败：库位码不存在");
+              Toast.show({ icon: "fail", content: "库位码不存在" });
+            } else if (parsed.success) {
+              setStatus("success", "删除成功：" + (parsed.message || "success"));
+              Toast.show({ icon: "success", content: "删除成功" });
+              setDeleteModel({ lotNo: "" });
+            } else {
+              setStatus("error", "删除失败：" + (parsed.message || parsed.fallback));
+              Toast.show({ icon: "fail", content: "删除失败" });
+            }
+          }).catch(function (err) {
+            setStatus("error", "请求失败：" + err.message);
+            Toast.show({ icon: "fail", content: err.message });
+          }).finally(function () {
+            setLoading(false);
+          });
+        }
+
+        useEffect(function () {
+          loadDevices();
+        }, []);
+
+        var colorOptions = [
+          { label: "1-RED（红色，第1层）", value: "RED" },
+          { label: "2-YELLOW（黄色，第2层）", value: "YELLOW" },
+          { label: "3-GREEN（绿色，第3层）", value: "GREEN" }
+        ];
+
+        return e("div", { className: "page" }, [
+          e(NavBar, {
+            key: "nav",
+            back: "返回入口导航",
+            onBack: function () { window.location.href = "./mapping-entry.html"; }
+          }, "库位-巷道灯绑定"),
+          e("div", { className: "hero", key: "hero" }, [
+            e("h1", { key: "title" }, "库位-巷道灯绑定"),
+            e("p", { key: "subtitle" }, "设备下拉显示 IP，提交使用 MAC 地址")
+          ]),
+          e(Card, {
+            key: "form-panel",
+            className: "panel",
+            title: "绑定操作"
+          }, e(Tabs, {
+            activeKey: tab,
+            onChange: function (key) { setTab(key); }
+          }, [
+            e(Tabs.Tab, { title: "创建绑定", key: "create" }, e("div", { style: { paddingTop: 8 } }, [
+              e("div", { className: "field", key: "lotNo" }, [
+                e("label", { className: "field-label", key: "label" }, "库位码 lotNo"),
+                e(Input, {
+                  key: "input",
+                  value: createModel.lotNo,
+                  placeholder: "请扫码或输入 lotNo",
+                  clearable: true,
+                  onChange: function (v) {
+                    setCreateModel({ lotNo: v, ledId: createModel.ledId, color: createModel.color });
+                  },
+                  onEnterPress: onCreate
+                })
+              ]),
+              e("div", { className: "field", key: "ledId" }, [
+                e("label", { className: "field-label", key: "label" }, "巷道灯设备（显示 IP，提交 MAC）"),
+                e("select", {
+                  key: "select",
+                  className: "native-select",
+                  value: createModel.ledId,
+                  disabled: deviceLoading,
+                  onChange: function (event) {
+                    setCreateModel({
+                      lotNo: createModel.lotNo,
+                      ledId: event.target.value,
+                      color: createModel.color
+                    });
+                  }
+                }, [
+                  e("option", { value: "", key: "default" }, deviceLoading ? "设备加载中..." : "请选择巷道灯设备")
+                ].concat(deviceOptions.map(function (opt, index) {
+                  return e("option", { value: opt.value, key: "opt-" + index }, opt.label);
+                })))
+              ]),
+              e("div", { className: "field", key: "color" }, [
+                e("label", { className: "field-label", key: "label" }, "绑定颜色"),
+                e("select", {
+                  key: "select",
+                  className: "native-select",
+                  value: createModel.color,
+                  onChange: function (event) {
+                    setCreateModel({
+                      lotNo: createModel.lotNo,
+                      ledId: createModel.ledId,
+                      color: event.target.value
+                    });
+                  }
+                }, colorOptions.map(function (opt, index) {
+                  return e("option", { value: opt.value, key: "color-" + index }, opt.label);
+                }))
+              ]),
+              e(Space, { direction: "vertical", block: true, key: "actions" }, [
+                e(Button, {
+                  key: "create-btn",
+                  color: "primary",
+                  loading: loading,
+                  block: true,
+                  onClick: onCreate
+                }, "提交创建"),
+                e(Button, {
+                  key: "refresh-btn",
+                  color: "default",
+                  fill: "outline",
+                  disabled: loading,
+                  block: true,
+                  onClick: loadDevices
+                }, deviceLoading ? e("span", null, ["刷新设备列表 ", e(DotLoading, { key: "dots" })]) : "刷新设备列表")
+              ]),
+              e("div", { className: "hint", key: "hint" }, "提示：扫码后回车可直接提交，默认绑定 RED（第1层）。")
+            ])),
+            e(Tabs.Tab, { title: "删除绑定", key: "delete" }, e("div", { style: { paddingTop: 8 } }, [
+              e("div", { className: "field", key: "delete-lotNo" }, [
+                e("label", { className: "field-label", key: "label" }, "库位码 lotNo"),
+                e(Input, {
+                  key: "input",
+                  value: deleteModel.lotNo,
+                  placeholder: "请扫码或输入 lotNo",
+                  clearable: true,
+                  onChange: function (v) { setDeleteModel({ lotNo: v }); },
+                  onEnterPress: onDelete
+                })
+              ]),
+              e(Button, {
+                key: "delete-btn",
+                color: "danger",
+                loading: loading,
+                block: true,
+                onClick: onDelete
+              }, "提交删除"),
+              e("div", { className: "hint", key: "hint" }, "提示：删除通过 lotNo 定位绑定记录。")
+            ]))
+          ])),
+          e(Card, {
+            key: "status-panel",
+            className: "panel",
+            title: "操作状态"
+          }, e("div", {
+            className: "status-text",
+            style: { color: statusColor(statusType), fontWeight: 600 }
+          }, statusText))
+        ]);
+      }
+
+      var mountNode = document.getElementById("app");
+      if (ReactDOM.createRoot) {
+        ReactDOM.createRoot(mountNode).render(e(App));
+      } else {
+        ReactDOM.render(e(App), mountNode);
+      }
     })();
   </script>
 </body>
 </html>
+
+
