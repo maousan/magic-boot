@@ -48,3 +48,21 @@ Content-Type: application/json
   "ledId": "AA:BB:CC:DD:EE:04",
   "color": "RED"
 }
+
+### 7. 测试函数-按库位码触发巷道灯亮灯
+POST {{baseUrl}}/api/location/led/light-on-function-test
+Content-Type: application/json
+
+{
+  "lotNo": "A1-11-01-01-01",
+  "timeoutMs": 3000
+}
+
+### 8. 测试函数-按库位码触发巷道灯关灯
+POST {{baseUrl}}/api/location/led/light-off-function-test
+Content-Type: application/json
+
+{
+  "lotNo": "A1-11-01-01-01",
+  "timeoutMs": 3000
+}

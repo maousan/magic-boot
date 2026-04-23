@@ -1,0 +1,14 @@
+{
+  "properties": {},
+  "id": "628f77553ba14e47ae84391269b008bb",
+  "name": "led",
+  "type": "function",
+  "parentId": "0",
+  "path": "led",
+  "createTime": 1776927318696,
+  "updateTime": null,
+  "createBy": "admin",
+  "updateBy": null,
+  "paths": [],
+  "options": []
+}

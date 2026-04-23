@@ -162,13 +162,15 @@ if(color == null) {
     exit 400, '控制等颜色不能为空'
 }
 
-const row = db.table("t_location_led").where().eq("location_code", lotNo).eq("color", color).selectOne()
+const row = db.table("t_location_led").where().eq("location_code", lotNo).selectOne()
 if (row) {
-    exit 500, `已经存在库位码的绑定关系: ${row.ledId}`
+    let existedLedId = row.ledId || row.led_id
+    exit 500, `已经存在库位码的绑定关系: ${existedLedId}`
 }
 
 return db.table("t_location_led").insert({
-    locationCode: lotNo,
-    ledId,
-    color
+    location_code: lotNo,
+    led_id: ledId,
+    color: color,
+    status: 0
 })

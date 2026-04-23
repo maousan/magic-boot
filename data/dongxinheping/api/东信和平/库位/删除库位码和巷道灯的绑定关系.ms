@@ -46,4 +46,8 @@
   "responseBodyDefinition" : null
 }
 ================================
-return db.table("t_location_led").where().eq("location_code", lotNo).eq("floor_no", floorNo).delete()
+if(lotNo == null || lotNo == ''){
+    exit 400, 'lotNo不能为空'
+}
+
+return db.table("t_location_led").where().eq("location_code", lotNo).delete()
