@@ -1,13 +1,17 @@
 ### 东信和平库位-巷道灯绑定接口测试
 @baseUrl = http://localhost:8090
 
+### 0. 查询巷道灯设备列表
+GET {{baseUrl}}/api/location/led-devices
+
 ### 1. 创建绑定-成功
 POST {{baseUrl}}/api/location/led-mapping
 Content-Type: application/json
 
 {
   "lotNo": "LOT_PDA_20260404_001",
-  "ledId": "LED_PDA_001"
+  "ledId": "AA:BB:CC:DD:EE:01",
+  "color": "RED"
 }
 
 ### 2. 创建绑定-重复绑定（预期失败）
@@ -16,7 +20,8 @@ Content-Type: application/json
 
 {
   "lotNo": "LOT_PDA_20260404_001",
-  "ledId": "LED_PDA_002"
+  "ledId": "AA:BB:CC:DD:EE:02",
+  "color": "YELLOW"
 }
 
 ### 3. 删除绑定-成功
@@ -30,7 +35,8 @@ POST {{baseUrl}}/api/location/led-mapping
 Content-Type: application/json
 
 {
-  "ledId": "LED_ONLY"
+  "ledId": "AA:BB:CC:DD:EE:03",
+  "color": "GREEN"
 }
 
 ### 6. 创建绑定-二维码格式输入（双引号开头，取 Lot 字段）
@@ -39,5 +45,6 @@ Content-Type: application/json
 
 {
   "lotNo": "\"OrdNo\":\"2025122365-1+01\";\"Lot\":\"A1-11-01-01-01\";\"Qty\":\"170\"",
-  "ledId": "LED_PDA_QR_001"
+  "ledId": "AA:BB:CC:DD:EE:04",
+  "color": "RED"
 }

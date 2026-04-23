@@ -5,7 +5,7 @@
   "groupId" : "6ce8544b21954e189dc7aeb484aeddfc",
   "name" : "创建库位码和巷道灯的绑定关系",
   "createTime" : 1775200322319,
-  "updateTime" : 1776665168831,
+  "updateTime" : 1776912474432,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -31,7 +31,7 @@
   "responseBody" : "{\n    \"code\": 500,\n    \"message\": \"已经存在库位码的绑定关系: LED01\",\n    \"data\": null,\n    \"timestamp\": 1775555700972,\n    \"executeTime\": 74\n}",
   "description" : "",
   "requestBodyDefinition" : {
-    "name" : "",
+    "name" : "root",
     "value" : "",
     "description" : "",
     "required" : false,
@@ -147,7 +147,7 @@ import '@/utils/parseLot' as parseLot
 let {
     lotNo,
     ledId,
-    floorNo
+    color
 } = body
 
 const parsedLot = parseLot(lotNo)
@@ -158,11 +158,11 @@ if(lotNo == null || lotNo == ''){
 if(ledId == null || ledId == ''){
     exit 400, 'ledId不能为空'
 }
-if(floorNo == null) {
-    exit 400, '货架层数不能为空'
+if(color == null) {
+    exit 400, '控制等颜色不能为空'
 }
 
-const row = db.table("t_location_led").where().eq("location_code", lotNo).eq("floor_no", floorNo).selectOne()
+const row = db.table("t_location_led").where().eq("location_code", lotNo).eq("color", color).selectOne()
 if (row) {
     exit 500, `已经存在库位码的绑定关系: ${row.ledId}`
 }
@@ -170,5 +170,5 @@ if (row) {
 return db.table("t_location_led").insert({
     locationCode: lotNo,
     ledId,
-    floorNo
+    color
 })
