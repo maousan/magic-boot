@@ -5,7 +5,7 @@
   "groupId" : "d7de530ea18542f2827146962f10bdb4",
   "name" : "根据articleId开关灯",
   "createTime" : 1775235016864,
-  "updateTime" : 1776743773137,
+  "updateTime" : 1776939011395,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -114,6 +114,9 @@ for(item in source){
     if(itemDuration == 'inf'){
         itemDuration = '60m'
     }
+    if(itemDuration == '0s') {
+        itemDuration = '0'
+    }
     row.put('duration', itemDuration)
 
     if(item.patternId != null){
@@ -151,4 +154,9 @@ if(!success){
     log.info("AIMS亮灯调用成功")
 }
 
-return {success}
+return {
+    success: success,
+    status: statusCode,
+    message: msg,
+    responseText: responseText
+}

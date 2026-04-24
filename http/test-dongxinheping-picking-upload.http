@@ -185,3 +185,137 @@ Content-Type: application/json
     }
   ]
 }
+
+### 11. 双用户同库位-准备 USER002 未完成（预期亮灯）
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV-UPLOAD-OFF-0001",
+  "userId": "USER002",
+  "userName": "用户2",
+  "updateTime": 1648195300000,
+  "details": [
+    {
+      "id": "U2-001",
+      "materialCode": "MAT-U2-01",
+      "batchNo": "B-U2-01",
+      "locationCode": "A-06-01",
+      "planQuantity": 10,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}
+
+### 12. 双用户同库位-准备 USER003 未完成（预期复合色）
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV-UPLOAD-OFF-0001",
+  "userId": "USER003",
+  "userName": "用户3",
+  "updateTime": 1648195301000,
+  "details": [
+    {
+      "id": "U3-001",
+      "materialCode": "MAT-U3-01",
+      "batchNo": "B-U3-01",
+      "locationCode": "A-06-01",
+      "planQuantity": 20,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}
+
+### 13. USER002 完成但 USER003 未完成（预期保持亮灯）
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV-UPLOAD-OFF-0001",
+  "userId": "USER002",
+  "userName": "用户2",
+  "updateTime": 1648195302000,
+  "details": [
+    {
+      "id": "U2-001",
+      "materialCode": "MAT-U2-01",
+      "batchNo": "B-U2-01",
+      "locationCode": "A-06-01",
+      "planQuantity": 10,
+      "actualQuantity": 10,
+      "status": 1
+    }
+  ]
+}
+
+### 14. USER003 也完成（预期触发关灯）
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV-UPLOAD-OFF-0001",
+  "userId": "USER003",
+  "userName": "用户3",
+  "updateTime": 1648195303000,
+  "details": [
+    {
+      "id": "U3-001",
+      "materialCode": "MAT-U3-01",
+      "batchNo": "B-U3-01",
+      "locationCode": "A-06-01",
+      "planQuantity": 20,
+      "actualQuantity": 20,
+      "status": 1
+    }
+  ]
+}
+
+### 15. 并发锁占用验证（预期其中一个请求返回503）
+### 执行建议：使用压测工具并发发送同一时刻两次上传，请求体可复用以下模板，仅修改 waveNo/userId。
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV-UPLOAD-LOCK-0001",
+  "userId": "USER-LOCK-01",
+  "userName": "并发用户1",
+  "updateTime": 1648195400000,
+  "details": [
+    {
+      "id": "ULOCK-001",
+      "materialCode": "MAT-LOCK-01",
+      "batchNo": "B-LOCK-01",
+      "locationCode": "A-07-01",
+      "planQuantity": 10,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}
+
+### 16. 灯控失败不回滚验证（预期接口500，但明细与 t_location_status 已更新）
+### 执行建议：临时将 aimsHost 指向不可用地址后发此请求，随后查询库表确认已提交，再恢复配置。
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV-UPLOAD-AIMS-FAIL-0001",
+  "userId": "USER-FAIL-01",
+  "userName": "灯控失败用户",
+  "updateTime": 1648195500000,
+  "details": [
+    {
+      "id": "UAIMS-001",
+      "materialCode": "MAT-FAIL-01",
+      "batchNo": "B-FAIL-01",
+      "locationCode": "A-08-01",
+      "planQuantity": 12,
+      "actualQuantity": 0,
+      "status": 0
+    }
+  ]
+}

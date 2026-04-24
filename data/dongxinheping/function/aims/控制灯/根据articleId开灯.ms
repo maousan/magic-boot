@@ -47,4 +47,4 @@ for (articleId in articleIds) {
     })
 }
 
-controlByArticleId(stationCode, items)
+return controlByArticleId(stationCode, items)

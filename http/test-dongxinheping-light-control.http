@@ -20,7 +20,8 @@ Content-Type: application/json
 {
   "waveNo": "WV-LIGHT-0002",
   "userId": "USER-LIGHT-02",
-  "mode": 4
+  "mode": 4,
+  "duration": "0"
 }
 
 ### 3. 参数错误-mode非法（预期400）

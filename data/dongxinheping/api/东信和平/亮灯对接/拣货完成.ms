@@ -256,8 +256,475 @@ import com.dtflys.forest.Forest
 import '@/aims/led/turnOnLedByArticleId' as turnOnLedByArticleId
 import '@/aims/led/turnOffLedByArticleId' as turnOffLedByArticleId
 import '@/utils/getUserLightColor' as getUserLightColor
-import '@/utils/saveLightTraceLog' as saveLightTraceLog
-import org.ssssssss.magicboot.model.CommonCountMap
+import '@/led/turnOnAisleLedByLotNo' as turnOnAisleLedByLotNo
+import '@/led/turnOffAisleLedByLotNo' as turnOffAisleLedByLotNo
+
+const stationCode = Forest.config().getVariableValue("stationCode")
+const globalLockKey = 'light:picking:upload:global'
+const lockTimeoutSeconds = 10
+const locationChunkSize = 200
+
+let ensureTraceId = (traceId) => {
+    if(traceId == null || traceId == ''){
+        return UUID.randomUUID().toString().replace('-', '')
+    }
+    return traceId
+}
+
+let addUnique = (list, setMap, value) => {
+    if(value == null || value == ''){
+        return
+    }
+    if(setMap[value] == null){
+        setMap[value] = 1
+        list.add(value)
+    }
+}
+
+let acquireGlobalLock = (lockKey, timeoutSeconds) => {
+    let maxAttempts = 20
+    if(timeoutSeconds != null && timeoutSeconds > 0){
+        maxAttempts = timeoutSeconds * 20
+    }
+    let attempt = 0
+    while(attempt < maxAttempts){
+        attempt = attempt + 1
+        try {
+            let rowObj = db.selectOne("""
+                select get_lock(#{lockKey}, 0) as lock_result
+            """, {
+                lockKey: lockKey
+            })
+            let lockResult = null
+            if(rowObj != null){
+                try {
+                    lockResult = rowObj.lock_result
+                } catch (ignore) {
+                }
+                if(lockResult == null){
+                    try {
+                        lockResult = rowObj.lockResult
+                    } catch (ignore) {
+                    }
+                }
+                if(lockResult == null){
+                    try {
+                        lockResult = rowObj['lock_result']
+                    } catch (ignore) {
+                    }
+                }
+                if(lockResult == null){
+                    lockResult = rowObj
+                }
+            }
+            if(lockResult != null && (lockResult + '') == '1'){
+                return true
+            }
+        } catch (ignoreLockQueryErr) {
+        }
+        try{
+            db.selectOne("""
+                select sleep(0.05) as wait_result
+            """)
+        } catch (ignoreSleepErr) {
+        }
+    }
+    return false
+}
+
+let releaseGlobalLock = (lockKey) => {
+    try {
+        db.selectOne("""
+            select release_lock(#{lockKey}) as release_result
+        """, {
+            lockKey: lockKey
+        })
+    } catch (ignore) {
+    }
+}
+
+let splitLocationCodeChunks = (locationCodes, chunkSize) => {
+    let chunks = []
+    if(locationCodes == null || locationCodes.size() == 0){
+        return chunks
+    }
+    let size = chunkSize
+    if(size == null || size <= 0){
+        size = 200
+    }
+    let current = []
+    for(locationCode in locationCodes){
+        current.add(locationCode)
+        if(current.size() >= size){
+            chunks.add(current)
+            current = []
+        }
+    }
+    if(current.size() > 0){
+        chunks.add(current)
+    }
+    return chunks
+}
+
+let recalcLocationStatusBatch = (locationCodes) => {
+    let statusSnapshotMap = {}
+    if(locationCodes == null || locationCodes.size() == 0){
+        return statusSnapshotMap
+    }
+
+    for(locationCode in locationCodes){
+        statusSnapshotMap[locationCode] = {
+            status0UserCount: 0,
+            status1UserCount: 0
+        }
+    }
+
+    let chunks = splitLocationCodeChunks(locationCodes, locationChunkSize)
+    for(codeChunk in chunks){
+        let params = {}
+        let inSql = ""
+        let idx = 0
+        for(locationCode in codeChunk){
+            let key = 'statusLocationCode' + idx
+            params[key] = locationCode
+            if(idx > 0){
+                inSql = inSql + ','
+            }
+            inSql = inSql + '#{' + key + '}'
+            idx = idx + 1
+        }
+
+        let rows = db.select("""
+            select
+                t.location_code,
+                sum(case when t.unpicked_cnt > 0 then 1 else 0 end) as status0_user_count,
+                sum(case when t.unpicked_cnt = 0 then 1 else 0 end) as status1_user_count
+            from (
+                select
+                    d.location_code,
+                    d.bill_id,
+                    sum(case when ifnull(d.status, 0) <> 1 then 1 else 0 end) as unpicked_cnt
+                from t_picking_upload_detail d
+                where d.location_code in (""" + inSql + """)
+                  and ifnull(d.location_code, '') <> ''
+                  and ifnull(d.bill_id, '') <> ''
+                group by d.location_code, d.bill_id
+            ) t
+            group by t.location_code
+        """, params)
+
+        if(rows != null){
+            for(row in rows){
+                let locationCode = row.location_code
+                if(locationCode == null || locationCode == ''){
+                    locationCode = row.locationCode
+                }
+                if(locationCode == null || locationCode == ''){
+                    continue
+                }
+                let status0UserCount = row.status0_user_count
+                if(status0UserCount == null){
+                    status0UserCount = row.status0UserCount
+                }
+                if(status0UserCount == null){
+                    status0UserCount = 0
+                }
+                let status1UserCount = row.status1_user_count
+                if(status1UserCount == null){
+                    status1UserCount = row.status1UserCount
+                }
+                if(status1UserCount == null){
+                    status1UserCount = 0
+                }
+                statusSnapshotMap[locationCode] = {
+                    status0UserCount: status0UserCount,
+                    status1UserCount: status1UserCount
+                }
+            }
+        }
+    }
+
+    let updatedTime = new Date()
+    for(codeChunk in chunks){
+        let upsertSql = """
+            insert into t_location_status (
+                location_code,
+                status0_user_count,
+                status1_user_count,
+                updated_time,
+                version
+            ) values
+        """
+        let upsertValuesSql = ""
+        let upsertParams = {}
+        let rowIndex = 0
+        for(locationCode in codeChunk){
+            let snapshot = statusSnapshotMap[locationCode]
+            let status0UserCount = 0
+            let status1UserCount = 0
+            if(snapshot != null){
+                if(snapshot.status0UserCount != null){
+                    status0UserCount = snapshot.status0UserCount
+                }
+                if(snapshot.status1UserCount != null){
+                    status1UserCount = snapshot.status1UserCount
+                }
+            }
+            if(rowIndex > 0){
+                upsertValuesSql = upsertValuesSql + ","
+            }
+            let suffix = "_" + rowIndex
+            upsertValuesSql = upsertValuesSql + "("
+                + "#{locationCode" + suffix + "},"
+                + "#{status0UserCount" + suffix + "},"
+                + "#{status1UserCount" + suffix + "},"
+                + "#{updatedTime" + suffix + "},"
+                + "1)"
+            upsertParams["locationCode" + suffix] = locationCode
+            upsertParams["status0UserCount" + suffix] = status0UserCount
+            upsertParams["status1UserCount" + suffix] = status1UserCount
+            upsertParams["updatedTime" + suffix] = updatedTime
+            rowIndex = rowIndex + 1
+        }
+        db.update(upsertSql + upsertValuesSql + """
+            on duplicate key update
+                status0_user_count = values(status0_user_count),
+                status1_user_count = values(status1_user_count),
+                updated_time = values(updated_time),
+                version = version + 1
+        """, upsertParams)
+    }
+
+    return statusSnapshotMap
+}
+
+let querySingleUnpickedUserMap = (locationCodes) => {
+    let result = {}
+    if(locationCodes == null || locationCodes.size() == 0){
+        return result
+    }
+
+    let params = {}
+    let inSql = ""
+    let idx = 0
+    for(locationCode in locationCodes){
+        let key = 'locationCode' + idx
+        params[key] = locationCode
+        if(idx > 0){
+            inSql = inSql + ','
+        }
+        inSql = inSql + '#{' + key + '}'
+        idx = idx + 1
+    }
+
+    let rows = db.select("""
+        select distinct
+            d.location_code as location_code,
+            m.user_id as user_id
+        from t_picking_upload_detail d
+        straight_join t_picking_upload m on m.id = d.bill_id
+        where d.location_code in (""" + inSql + """)
+          and ifnull(d.status, 0) <> 1
+    """, params)
+
+    if(rows != null){
+        for(row in rows){
+            let locationCode = row.location_code
+            if(locationCode == null || locationCode == ''){
+                locationCode = row.locationCode
+            }
+            let userId = row.user_id
+            if(userId == null || userId == ''){
+                userId = row.userId
+            }
+            if(locationCode != null && locationCode != '' && userId != null && userId != ''){
+                result[locationCode] = userId
+            }
+        }
+    }
+    return result
+}
+
+let buildInSqlParams = (values, paramPrefix) => {
+    let inSql = ""
+    let params = {}
+    let idx = 0
+    for(value in values){
+        let key = paramPrefix + idx
+        params[key] = value
+        if(idx > 0){
+            inSql = inSql + ','
+        }
+        inSql = inSql + '#{' + key + '}'
+        idx = idx + 1
+    }
+    return {
+        inSql: inSql,
+        params: params
+    }
+}
+
+let resolveAisleLedTurnOnCandidates = (turnOnLocationCodes) => {
+    let result = {
+        locationLedMap: {},
+        representativeByLed: {}
+    }
+    if(turnOnLocationCodes == null || turnOnLocationCodes.size() == 0){
+        return result
+    }
+
+    let chunks = splitLocationCodeChunks(turnOnLocationCodes, locationChunkSize)
+    for(codeChunk in chunks){
+        let inData = buildInSqlParams(codeChunk, 'aisleOnLocationCode')
+        db.update("""
+            update t_location_led
+               set status = 1
+             where location_code in (""" + inData.inSql + """)
+        """, inData.params)
+
+        let rows = db.select("""
+            select
+                location_code,
+                led_id
+            from t_location_led
+            where location_code in (""" + inData.inSql + """)
+        """, inData.params)
+        if(rows != null){
+            for(row in rows){
+                let locationCode = row.location_code
+                if(locationCode == null || locationCode == ''){
+                    locationCode = row.locationCode
+                }
+                let ledId = row.led_id
+                if(ledId == null || ledId == ''){
+                    ledId = row.ledId
+                }
+                if(locationCode != null && locationCode != '' && ledId != null && ledId != ''){
+                    result.locationLedMap[locationCode] = ledId
+                }
+            }
+        }
+    }
+
+    for(locationCode in turnOnLocationCodes){
+        let ledId = result.locationLedMap[locationCode]
+        if(ledId != null && ledId != '' && result.representativeByLed[ledId] == null){
+            result.representativeByLed[ledId] = locationCode
+        }
+    }
+    return result
+}
+
+let resolveAisleLedTurnOffCandidates = (turnOffLocationCodes) => {
+    let result = {
+        candidateLocationCodes: [],
+        candidateLocationCodeSet: {},
+        locationLedMap: {}
+    }
+    if(turnOffLocationCodes == null || turnOffLocationCodes.size() == 0){
+        return result
+    }
+
+    let affectedLedIds = []
+    let affectedLedIdSet = {}
+    let chunks = splitLocationCodeChunks(turnOffLocationCodes, locationChunkSize)
+    for(codeChunk in chunks){
+        let inData = buildInSqlParams(codeChunk, 'aisleOffLocationCode')
+        db.update("""
+            update t_location_led
+               set status = 0
+             where location_code in (""" + inData.inSql + """)
+        """, inData.params)
+
+        let rows = db.select("""
+            select
+                location_code,
+                led_id
+            from t_location_led
+            where location_code in (""" + inData.inSql + """)
+        """, inData.params)
+        if(rows != null){
+            for(row in rows){
+                let locationCode = row.location_code
+                if(locationCode == null || locationCode == ''){
+                    locationCode = row.locationCode
+                }
+                let ledId = row.led_id
+                if(ledId == null || ledId == ''){
+                    ledId = row.ledId
+                }
+                if(locationCode != null && locationCode != '' && ledId != null && ledId != ''){
+                    result.locationLedMap[locationCode] = ledId
+                    addUnique(affectedLedIds, affectedLedIdSet, ledId)
+                }
+            }
+        }
+    }
+
+    for(locationCode in turnOffLocationCodes){
+        let ledId = result.locationLedMap[locationCode]
+        if(ledId == null || ledId == ''){
+            addUnique(result.candidateLocationCodes, result.candidateLocationCodeSet, locationCode)
+        }
+    }
+
+    if(affectedLedIds.size() == 0){
+        return result
+    }
+
+    let ledChunks = splitLocationCodeChunks(affectedLedIds, locationChunkSize)
+    for(ledChunk in ledChunks){
+        let inData = buildInSqlParams(ledChunk, 'aisleLedId')
+        let rows = db.select("""
+            select
+                led_id,
+                sum(case when ifnull(status, 0) = 1 then 1 else 0 end) as active_cnt,
+                min(location_code) as representative_location_code
+            from t_location_led
+            where led_id in (""" + inData.inSql + """)
+            group by led_id
+        """, inData.params)
+
+        if(rows != null){
+            for(row in rows){
+                let activeCnt = row.active_cnt
+                if(activeCnt == null){
+                    activeCnt = row.activeCnt
+                }
+                if(activeCnt == null){
+                    activeCnt = 0
+                }
+                if(activeCnt > 0){
+                    continue
+                }
+                let representativeLocationCode = row.representative_location_code
+                if(representativeLocationCode == null || representativeLocationCode == ''){
+                    representativeLocationCode = row.representativeLocationCode
+                }
+                if(representativeLocationCode != null && representativeLocationCode != ''){
+                    addUnique(result.candidateLocationCodes, result.candidateLocationCodeSet, representativeLocationCode)
+                }
+            }
+        }
+    }
+    return result
+}
+
+let assertLightControlSuccess = (action, result) => {
+    if(result == null){
+        throw new RuntimeException('灯控调用失败(' + action + '): result is null')
+    }
+    if(result.success == false){
+        let failMessage = result.message
+        if(failMessage == null || failMessage == ''){
+            failMessage = result.msg
+        }
+        if(failMessage == null || failMessage == ''){
+            failMessage = 'unknown'
+        }
+        throw new RuntimeException('灯控调用失败(' + action + '): ' + failMessage)
+    }
+}
 
 if(body == null){
     exit 400, '请求体不能为空'
@@ -265,10 +732,7 @@ if(body == null){
 
 let payload = body
 let details = payload.details
-let traceId = payload.traceId
-if(traceId == null || traceId == ''){
-    traceId = UUID.randomUUID().toString().replace('-', '')
-}
+let traceId = ensureTraceId(payload.traceId)
 payload.traceId = traceId
 
 if(!payload.waveNo){
@@ -283,7 +747,6 @@ if(details == null || details.size() == 0){
 
 let index = 0
 let detailUniqMap = {}
-let locationCodeSet = {}
 for(item in details){
     if(!item.id) {
         exit 400, 'details[' + index + '].id不能为空'
@@ -318,9 +781,6 @@ for(item in details){
         exit 400, 'details[' + index + ']与前序明细重复(物料+批次+库位)'
     }
     detailUniqMap[uniqKey] = 1
-    if(locationCodeSet[item.locationCode] == null){
-        locationCodeSet[item.locationCode] = 1
-    }
     index = index + 1
 }
 
@@ -328,120 +788,28 @@ let waveNo = payload.waveNo
 let userId = payload.userId
 let now = new Date()
 let logPrefix = 'traceId=' + traceId + ', api=complete, waveNo=' + waveNo + ', userId=' + userId
+
 let transState = null
-let shouldTurnOffLocationCodes = []
-let shouldTurnOnLocationCodes = []
-let singleUserColor = 'GREEN'
-let multiUserColor = 'BLUE'
-let stationCode = Forest.config().getVariableValue("stationCode")
-if(stationCode == null || stationCode == ''){
-    stationCode = '10001'
-}
-let oldUnpickedCountMap = {}
-let incrementLocations = []
-let decrementLocations = []
-let formatLocationLog = (locationCodes, limit) => {
-    if(locationCodes == null){
-        return 'size=0,sample=[]'
-    }
-    let max = limit
-    if(max == null || max <= 0){
-        max = 10
-    }
-    let sample = []
-    let i = 0
-    for(code in locationCodes){
-        if(i >= max){
-            break
-        }
-        sample.add(code)
-        i = i + 1
-    }
-    return 'size=' + locationCodes.size() + ',sample=' + sample
-}
-let mergeLocationCodes = (firstCodes, secondCodes) => {
-    let result = []
-    let uniq = {}
-    if(firstCodes != null){
-        for(code in firstCodes){
-            if(code != null && code != '' && uniq[code] == null){
-                uniq[code] = 1
-                result.add(code)
-            }
-        }
-    }
-    if(secondCodes != null){
-        for(code in secondCodes){
-            if(code != null && code != '' && uniq[code] == null){
-                uniq[code] = 1
-                result.add(code)
-            }
-        }
-    }
-    return result
-}
-let persistTraceLog = (stage, actionType, locationCodes, extraData) => {
-    let ok = saveLightTraceLog(traceId, 'complete', stage, actionType, waveNo, userId, locationCodes, extraData)
-    if(!ok){
-        log.error(logPrefix + ', stage=trace_persist_error, persistOk=false')
-    }
-}
+let lockAcquired = false
+let affectedLocationCodes = []
+let affectedLocationCodeSet = {}
 
 try {
     log.info(logPrefix + ', stage=receive, detailCount=' + details.size())
+
+    // 事务1：完成明细落库
     transState = anyline.beginTrans()
 
     let master = db.table('t_picking_upload').where().eq('wave_no', waveNo).eq('user_id', userId).selectOne()
     if(master == null || master.id == null || master.id == ''){
         anyline.rollbackTrans(transState)
+        transState = null
         exit 400, '未找到对应拣货上传主单'
     }
 
     let masterId = master.id
-    let currentLocationCodes = []
-    for(locationCode in locationCodeSet.keySet()){
-        currentLocationCodes.add(locationCode)
-        oldUnpickedCountMap[locationCode] = 0
-    }
-    if(currentLocationCodes.size() > 0){
-        let oldCountSql = """
-            select location_code, count(1) as unpicked_count
-              from t_picking_upload_detail
-             where bill_id = #{billId}
-               and ifnull(status, 0) <> 1
-        """
-        let oldCountParams = {
-            billId: masterId
-        }
-        let oldInSql = ""
-        let oldIndex = 0
-        for(locationCode in currentLocationCodes){
-            let paramKey = 'locationCode' + oldIndex
-            oldCountParams[paramKey] = locationCode
-            if(oldIndex > 0){
-                oldInSql = oldInSql + ','
-            }
-            oldInSql = oldInSql + '#{' + paramKey + '}'
-            oldIndex = oldIndex + 1
-        }
-        oldCountSql = oldCountSql + " and location_code in (" + oldInSql + ") group by location_code"
-        let oldCountRows = db.select(oldCountSql, oldCountParams)
-        if(oldCountRows != null){
-            for(row in oldCountRows){
-                let locationCode = row.location_code
-                if(locationCode == null || locationCode == ''){
-                    locationCode = row.locationCode
-                }
-                let unpickedCount = row.unpicked_count
-                if(unpickedCount == null){
-                    unpickedCount = row.unpickedCount
-                }
-                if(locationCode != null && locationCode != ''){
-                    oldUnpickedCountMap[locationCode] = unpickedCount
-                }
-            }
-        }
-    }
+    let detailRows = []
+    let latestUpdateTime = 0
 
     for(item in details){
         let actualQty = item.actualQuantity
@@ -450,11 +818,29 @@ try {
         if(actualQty >= planQty){
             statusVal = 1
         }
-        log.info(logPrefix + ', stage=detail_calc, locationCode=' + item.locationCode + ', materialCode=' + item.materialCode + ', actualQty=' + actualQty + ', planQty=' + planQty + ', status=' + statusVal)
+        let locationCode = item.locationCode
+        addUnique(affectedLocationCodes, affectedLocationCodeSet, locationCode)
 
-        // let detailId = UUID.randomUUID().toString().replace('-', '')
-        let detailId = item.id
-        db.update("""
+        if(item.updateTime != null && item.updateTime > latestUpdateTime){
+            latestUpdateTime = item.updateTime
+        }
+
+        detailRows.add({
+            id: item.id,
+            wave_no: waveNo,
+            bill_id: masterId,
+            material_code: item.materialCode,
+            batch_no: item.batchNo,
+            location_code: locationCode,
+            plan_quantity: planQty,
+            actual_quantity: actualQty,
+            status: statusVal,
+            create_time: now
+        })
+    }
+
+    if(detailRows.size() > 0){
+        let batchUpsertSql = """
             insert into t_picking_upload_detail (
                 id,
                 wave_no,
@@ -466,42 +852,47 @@ try {
                 actual_quantity,
                 status,
                 create_time
-            ) values (
-                #{id},
-                #{waveNo},
-                #{billId},
-                #{materialCode},
-                #{batchNo},
-                #{locationCode},
-                #{planQuantity},
-                #{actualQuantity},
-                #{status},
-                #{createTime}
-            )
+            ) values
+        """
+        let batchUpsertValuesSql = ""
+        let batchUpsertParams = {}
+        let rowIndex = 0
+        for(detailRow in detailRows){
+            if(rowIndex > 0){
+                batchUpsertValuesSql = batchUpsertValuesSql + ","
+            }
+            let suffix = "_" + rowIndex
+            batchUpsertValuesSql = batchUpsertValuesSql + "("
+                + "#{id" + suffix + "},"
+                + "#{waveNo" + suffix + "},"
+                + "#{billId" + suffix + "},"
+                + "#{materialCode" + suffix + "},"
+                + "#{batchNo" + suffix + "},"
+                + "#{locationCode" + suffix + "},"
+                + "#{planQuantity" + suffix + "},"
+                + "#{actualQuantity" + suffix + "},"
+                + "#{status" + suffix + "},"
+                + "#{createTime" + suffix + "})"
+            batchUpsertParams["id" + suffix] = detailRow.id
+            batchUpsertParams["waveNo" + suffix] = detailRow.wave_no
+            batchUpsertParams["billId" + suffix] = detailRow.bill_id
+            batchUpsertParams["materialCode" + suffix] = detailRow.material_code
+            batchUpsertParams["batchNo" + suffix] = detailRow.batch_no
+            batchUpsertParams["locationCode" + suffix] = detailRow.location_code
+            batchUpsertParams["planQuantity" + suffix] = detailRow.plan_quantity
+            batchUpsertParams["actualQuantity" + suffix] = detailRow.actual_quantity
+            batchUpsertParams["status" + suffix] = detailRow.status
+            batchUpsertParams["createTime" + suffix] = detailRow.create_time
+            rowIndex = rowIndex + 1
+        }
+        db.update(batchUpsertSql + batchUpsertValuesSql + """
             on duplicate key update
                 plan_quantity = values(plan_quantity),
                 actual_quantity = values(actual_quantity),
                 status = values(status)
-        """, {
-            id: detailId,
-            waveNo: waveNo,
-            billId: masterId,
-            materialCode: item.materialCode,
-            batchNo: item.batchNo,
-            locationCode: item.locationCode,
-            planQuantity: planQty,
-            actualQuantity: actualQty,
-            status: statusVal,
-            createTime: now
-        })
+        """, batchUpsertParams)
     }
 
-    let latestUpdateTime = 0
-    for(item in details){
-        if(item.updateTime != null && item.updateTime > latestUpdateTime){
-            latestUpdateTime = item.updateTime
-        }
-    }
     if(latestUpdateTime == 0){
         latestUpdateTime = new Date().getTime()
     }
@@ -511,281 +902,192 @@ try {
         wave_no: waveNo,
         user_id: userId,
         user_name: payload.userName,
-        detail_count: details.size(),
+        detail_count: master.detail_count,
         update_time: latestUpdateTime
     })
 
-    let mappedColor = getUserLightColor(userId)
-    if(mappedColor != null && mappedColor != ''){
-        singleUserColor = mappedColor
-    }
-
-    let waveLocationUnpickedMap = {}
-    let billLocationUnpickedMap = {}
-    if(currentLocationCodes.size() > 0){
-        let inSql = ""
-        let index1 = 0
-        let locationInParams = {}
-        for(locationCode in currentLocationCodes){
-            let paramKey = 'locationCode' + index1
-            locationInParams[paramKey] = locationCode
-            if(index1 > 0){
-                inSql = inSql + ','
-            }
-            inSql = inSql + '#{' + paramKey + '}'
-            index1 = index1 + 1
-        }
-
-        let waveCountSql = """
-            select location_code, count(1) as unpicked_count
-              from t_picking_upload_detail
-             where wave_no = #{waveNo}
-               and ifnull(status, 0) <> 1
-               and location_code in (""" + inSql + """)
-             group by location_code
-        """
-        let waveCountParams = {
-            waveNo: waveNo
-        }
-        for(paramKey in locationInParams.keySet()){
-            waveCountParams[paramKey] = locationInParams[paramKey]
-        }
-        let waveCountRows = db.select(waveCountSql, waveCountParams)
-        if(waveCountRows != null){
-            for(row in waveCountRows){
-                let locationCode = row.location_code
-                if(locationCode == null || locationCode == ''){
-                    locationCode = row.locationCode
-                }
-                let unpickedCount = row.unpicked_count
-                if(unpickedCount == null){
-                    unpickedCount = row.unpickedCount
-                }
-                if(locationCode != null && locationCode != ''){
-                    waveLocationUnpickedMap[locationCode] = unpickedCount
-                }
-            }
-        }
-
-        let billCountSql = """
-            select location_code, count(1) as unpicked_count
-              from t_picking_upload_detail
-             where bill_id = #{billId}
-               and ifnull(status, 0) <> 1
-               and location_code in (""" + inSql + """)
-             group by location_code
-        """
-        let billCountParams = {
-            billId: masterId
-        }
-        for(paramKey in locationInParams.keySet()){
-            billCountParams[paramKey] = locationInParams[paramKey]
-        }
-        let billCountRows = db.select(billCountSql, billCountParams)
-        if(billCountRows != null){
-            for(row in billCountRows){
-                let locationCode = row.location_code
-                if(locationCode == null || locationCode == ''){
-                    locationCode = row.locationCode
-                }
-                let unpickedCount = row.unpicked_count
-                if(unpickedCount == null){
-                    unpickedCount = row.unpickedCount
-                }
-                if(locationCode != null && locationCode != ''){
-                    billLocationUnpickedMap[locationCode] = unpickedCount
-                }
-            }
-        }
-    }
-
-    for(locationCode in currentLocationCodes){
-        let unpickedCount = waveLocationUnpickedMap[locationCode]
-        if(unpickedCount == null){
-            unpickedCount = 0
-        }
-        log.info(logPrefix + ', stage=location_evaluate, locationCode=' + locationCode + ', unpickedCount=' + unpickedCount)
-        if(unpickedCount == 0){
-            shouldTurnOffLocationCodes.add(locationCode)
-        } else {
-            shouldTurnOnLocationCodes.add(locationCode)
-        }
-
-        let newUnpickedCount = billLocationUnpickedMap[locationCode]
-        if(newUnpickedCount == null){
-            newUnpickedCount = 0
-        }
-
-        let oldUnpickedCount = oldUnpickedCountMap[locationCode]
-        if(oldUnpickedCount == null){
-            oldUnpickedCount = 0
-        }
-        if(oldUnpickedCount > 0 && newUnpickedCount == 0){
-            decrementLocations.add(locationCode)
-        } else if(oldUnpickedCount == 0 && newUnpickedCount > 0){
-            incrementLocations.add(locationCode)
-        }
-    }
-    log.info(logPrefix + ', stage=light_decision, turnOn=' + formatLocationLog(shouldTurnOnLocationCodes, 20) + ', turnOff=' + formatLocationLog(shouldTurnOffLocationCodes, 20) + ', increment=' + formatLocationLog(incrementLocations, 20) + ', decrement=' + formatLocationLog(decrementLocations, 20))
-
     anyline.commitTrans(transState)
+    transState = null
 
-    let affectedLocationCodeSet = {}
-    let affectedLocationCodes = []
-    for(locationCode in incrementLocations){
-        if(affectedLocationCodeSet[locationCode] == null){
-            affectedLocationCodeSet[locationCode] = 1
-            affectedLocationCodes.add(locationCode)
-        }
-    }
-    for(locationCode in decrementLocations){
-        if(affectedLocationCodeSet[locationCode] == null){
-            affectedLocationCodeSet[locationCode] = 1
-            affectedLocationCodes.add(locationCode)
-        }
-    }
-    // 本次完成接口涉及的库位（用于处理差量=0但缓存为空的重启场景）
-    for(locationCode in locationCodeSet.keySet()){
-        if(affectedLocationCodeSet[locationCode] == null){
-            affectedLocationCodeSet[locationCode] = 1
-            affectedLocationCodes.add(locationCode)
-        }
-    }
-    log.info(logPrefix + ', stage=reconcile_start, increment=' + formatLocationLog(incrementLocations, 20) + ', decrement=' + formatLocationLog(decrementLocations, 20) + ', affected=' + formatLocationLog(affectedLocationCodes, 20))
-    // 自愈逻辑：按数据库实值批量回填 CommonCountMap（防止重启后缓存为空）
-    let locationUserCountMap = {}
-    if(affectedLocationCodes.size() > 0){
-        let reconcileSql = """
-            select d.location_code as location_code, count(distinct d.bill_id) as user_count
-              from t_picking_upload_detail d
-             where ifnull(d.status, 0) <> 1
-        """
-        let reconcileParams = {}
-        let inSql2 = ""
-        let index3 = 0
-        for(locationCode in affectedLocationCodes){
-            let paramKey = 'locationCode' + index3
-            reconcileParams[paramKey] = locationCode
-            if(index3 > 0){
-                inSql2 = inSql2 + ','
-            }
-            inSql2 = inSql2 + '#{' + paramKey + '}'
-            index3 = index3 + 1
-        }
-        reconcileSql = reconcileSql + " and d.location_code in (" + inSql2 + ") group by d.location_code"
-        let reconcileRows = db.select(reconcileSql, reconcileParams)
-        if(reconcileRows != null){
-            for(row in reconcileRows){
-                let locationCode = row.location_code
-                if(locationCode == null || locationCode == ''){
-                    locationCode = row.locationCode
-                }
-                let locationUserCount = row.user_count
-                if(locationUserCount == null){
-                    locationUserCount = row.userCount
-                }
-                if(locationCode != null && locationCode != ''){
-                    locationUserCountMap[locationCode] = locationUserCount
-                }
-            }
-        }
-    }
-    for(locationCode in affectedLocationCodes){
-        let locationUserCount = locationUserCountMap[locationCode]
-        if(locationUserCount == null || locationUserCount <= 0){
-            CommonCountMap.remove(locationCode)
-            log.info(logPrefix + ', stage=reconcile_remove, locationCode=' + locationCode + ', dbCount=0, memCount=' + CommonCountMap.get(locationCode))
-        } else {
-            CommonCountMap.set(locationCode, locationUserCount)
-            log.info(logPrefix + ', stage=reconcile_set, locationCode=' + locationCode + ', dbCount=' + locationUserCount + ', memCount=' + CommonCountMap.get(locationCode))
-        }
-    }
-    log.info(logPrefix + ', stage=reconcile_done, size=' + CommonCountMap.size() + ', total=' + CommonCountMap.totalCount())
+    log.info(logPrefix + ', stage=persist_done, affectedCount=' + affectedLocationCodes.size())
 
-    if(shouldTurnOffLocationCodes.size() > 0){
-        try {
-            log.info('dispatch async turnOff, waveNo=' + waveNo + `, stationCode=${stationCode}, articleIds=` + shouldTurnOffLocationCodes)
-            let turnOffFuture = async turnOffLedByArticleId({
-                stationCode,
-                articleIds: shouldTurnOffLocationCodes,
-                traceId: traceId,
-                waveNo: waveNo,
-                userId: userId
-            })
-        } catch (asyncErr) {
-            log.error(logPrefix + ', stage=dispatch_error, action=turnOff, message=' + asyncErr.message)
-        }
+    // 全局同步锁
+    lockAcquired = acquireGlobalLock(globalLockKey, lockTimeoutSeconds)
+    if(!lockAcquired){
+        log.warn(logPrefix + ', stage=lock_busy, lockKey=' + globalLockKey)
+        exit 503, '系统繁忙，请稍后重试'
     }
+    log.info(logPrefix + ', stage=lock_acquired, lockKey=' + globalLockKey)
 
-    let singleUserLocationCodes = []
+    // 锁内事务2：更新 t_location_status
+    transState = anyline.beginTrans()
+    let statusSnapshotMap = recalcLocationStatusBatch(affectedLocationCodes)
+    anyline.commitTrans(transState)
+    transState = null
+
+    log.info(logPrefix + ', stage=status_updated, affectedCount=' + affectedLocationCodes.size())
+
+    // 锁内同步灯控
+    let turnOffLocationCodes = []
     let multiUserLocationCodes = []
-    for(locationCode in shouldTurnOnLocationCodes){
-        let locationUserCount = CommonCountMap.get(locationCode)
-        if(locationUserCount > 1){
+    let singleUserCandidateCodes = []
+    for(locationCode in affectedLocationCodes){
+        let snapshot = statusSnapshotMap[locationCode]
+        let status0UserCount = 0
+        if(snapshot != null && snapshot.status0UserCount != null){
+            status0UserCount = snapshot.status0UserCount
+        }
+        if(status0UserCount <= 0){
+            turnOffLocationCodes.add(locationCode)
+        } else if(status0UserCount > 1){
             multiUserLocationCodes.add(locationCode)
         } else {
-            singleUserLocationCodes.add(locationCode)
+            singleUserCandidateCodes.add(locationCode)
         }
     }
 
-    if(singleUserLocationCodes.size() > 0){
-        try {
-            log.info('dispatch async turnOn(single user) from complete, waveNo=' + waveNo + `, stationCode=${stationCode}, color=` + singleUserColor + ', articleIds=' + singleUserLocationCodes)
-            let turnOnSingleFuture = async turnOnLedByArticleId({
-                stationCode,
-                color: singleUserColor,
-                articleIds: singleUserLocationCodes,
+    let singleUserLocationOwnerMap = querySingleUnpickedUserMap(singleUserCandidateCodes)
+    let singleLocationColorMap = {}
+    for(locationCode in singleUserCandidateCodes){
+        let ownerUserId = singleUserLocationOwnerMap[locationCode]
+        let singleColor = 'GREEN'
+        if(ownerUserId != null && ownerUserId != ''){
+            let mappedColor = getUserLightColor(ownerUserId)
+            if(mappedColor != null && mappedColor != ''){
+                singleColor = mappedColor
+            }
+        }
+        singleLocationColorMap[locationCode] = singleColor
+    }
+
+    let turnOnLocationCodes = []
+    let turnOnLocationCodeSet = {}
+    for(locationCode in multiUserLocationCodes){
+        addUnique(turnOnLocationCodes, turnOnLocationCodeSet, locationCode)
+    }
+    for(locationCode in singleUserCandidateCodes){
+        addUnique(turnOnLocationCodes, turnOnLocationCodeSet, locationCode)
+    }
+
+    let turnOnAisleResult = resolveAisleLedTurnOnCandidates(turnOnLocationCodes)
+    let turnOffAisleResult = resolveAisleLedTurnOffCandidates(turnOffLocationCodes)
+
+    let turnOnMultiDispatchCodes = []
+    let turnOnMultiDispatchCodeSet = {}
+    let ledMultiSet = {}
+    let turnOnLocationLedMap = turnOnAisleResult.locationLedMap
+    let representativeByLed = turnOnAisleResult.representativeByLed
+    for(locationCode in multiUserLocationCodes){
+        let ledId = turnOnLocationLedMap[locationCode]
+        if(ledId != null && ledId != ''){
+            if(ledMultiSet[ledId] == null){
+                ledMultiSet[ledId] = 1
+                let representativeLocationCode = representativeByLed[ledId]
+                if(representativeLocationCode == null || representativeLocationCode == ''){
+                    representativeLocationCode = locationCode
+                }
+                addUnique(turnOnMultiDispatchCodes, turnOnMultiDispatchCodeSet, representativeLocationCode)
+            }
+        } else {
+            addUnique(turnOnMultiDispatchCodes, turnOnMultiDispatchCodeSet, locationCode)
+        }
+    }
+
+    let singleColorLocationMap = {}
+    let singleColorKeys = []
+    let singleColorKeySet = {}
+    let singleLedSet = {}
+    let singleLocationCodeSet = {}
+    let turnOnSingleDispatchCount = 0
+    let turnOnAisleDispatchCodes = []
+    let turnOnAisleDispatchCodeSet = {}
+    for(locationCode in turnOnMultiDispatchCodes){
+        addUnique(turnOnAisleDispatchCodes, turnOnAisleDispatchCodeSet, locationCode)
+    }
+    for(locationCode in singleUserCandidateCodes){
+        let singleColor = singleLocationColorMap[locationCode]
+        let ledId = turnOnLocationLedMap[locationCode]
+        if(ledId != null && ledId != ''){
+            if(ledMultiSet[ledId] != null){
+                continue
+            }
+            if(singleLedSet[ledId] != null){
+                continue
+            }
+            singleLedSet[ledId] = 1
+        } else {
+            if(singleLocationCodeSet[locationCode] != null){
+                continue
+            }
+            singleLocationCodeSet[locationCode] = 1
+        }
+        if(singleColorLocationMap[singleColor] == null){
+            singleColorLocationMap[singleColor] = []
+            addUnique(singleColorKeys, singleColorKeySet, singleColor)
+        }
+        singleColorLocationMap[singleColor].add(locationCode)
+        addUnique(turnOnAisleDispatchCodes, turnOnAisleDispatchCodeSet, locationCode)
+        turnOnSingleDispatchCount = turnOnSingleDispatchCount + 1
+    }
+
+    let turnOffDispatchCodes = turnOffAisleResult.candidateLocationCodes
+
+    // 锁外执行灯控，缩短全局锁占用时间
+    if(lockAcquired){
+        releaseGlobalLock(globalLockKey)
+        lockAcquired = false
+    }
+
+    if(turnOffDispatchCodes.size() > 0){
+        let turnOffResult = turnOffLedByArticleId({
+            stationCode: stationCode,
+            articleIds: turnOffDispatchCodes,
+            traceId: traceId,
+            waveNo: waveNo,
+            userId: userId
+        })
+        assertLightControlSuccess('TURN_OFF', turnOffResult)
+    }
+
+    if(turnOnMultiDispatchCodes.size() > 0){
+        let turnOnMultiResult = turnOnLedByArticleId({
+            stationCode: stationCode,
+            color: 'BLUE',
+            articleIds: turnOnMultiDispatchCodes,
+            traceId: traceId,
+            waveNo: waveNo,
+            userId: userId
+        })
+        assertLightControlSuccess('TURN_ON_MULTI', turnOnMultiResult)
+    }
+
+    for(colorKey in singleColorKeys){
+        let locationList = singleColorLocationMap[colorKey]
+        if(locationList != null && locationList.size() > 0){
+            let turnOnSingleResult = turnOnLedByArticleId({
+                stationCode: stationCode,
+                color: colorKey,
+                articleIds: locationList,
                 traceId: traceId,
                 waveNo: waveNo,
                 userId: userId
             })
-        } catch (asyncErr2) {
-            log.error(logPrefix + ', stage=dispatch_error, action=turnOnSingle, message=' + asyncErr2.message)
+            assertLightControlSuccess('TURN_ON_SINGLE', turnOnSingleResult)
         }
     }
 
-    if(multiUserLocationCodes.size() > 0){
-        try {
-            log.info('dispatch async turnOn(multi user) from complete, waveNo=' + waveNo + `, stationCode=${stationCode}, color=` + multiUserColor + ', articleIds=' + multiUserLocationCodes)
-            let turnOnMultiFuture = async turnOnLedByArticleId({
-                stationCode,
-                color: multiUserColor,
-                articleIds: multiUserLocationCodes,
-                traceId: traceId,
-                waveNo: waveNo,
-                userId: userId
-            })
-        } catch (asyncErr3) {
-            log.error(logPrefix + ', stage=dispatch_error, action=turnOnMulti, message=' + asyncErr3.message)
-        }
+    for(locationCode in turnOffDispatchCodes){
+        turnOffAisleLedByLotNo({
+            lotNo: locationCode
+        })
+    }
+    for(locationCode in turnOnAisleDispatchCodes){
+        turnOnAisleLedByLotNo({
+            lotNo: locationCode
+        })
     }
 
-    log.info(logPrefix + ', stage=done, turnOn=' + formatLocationLog(shouldTurnOnLocationCodes, 20) + ', turnOff=' + formatLocationLog(shouldTurnOffLocationCodes, 20))
-    let completeActionType = 'none'
-    let completeTraceLocationCodes = []
-    let hasTurnOn = singleUserLocationCodes.size() > 0 || multiUserLocationCodes.size() > 0
-    let hasTurnOff = shouldTurnOffLocationCodes.size() > 0
-    if(hasTurnOn && hasTurnOff){
-        completeActionType = 'mix'
-        completeTraceLocationCodes = mergeLocationCodes(shouldTurnOnLocationCodes, shouldTurnOffLocationCodes)
-    } else if(hasTurnOn){
-        completeActionType = 'turn_on'
-        completeTraceLocationCodes = shouldTurnOnLocationCodes
-    } else if(hasTurnOff){
-        completeActionType = 'turn_off'
-        completeTraceLocationCodes = shouldTurnOffLocationCodes
-    } else {
-        completeTraceLocationCodes = affectedLocationCodes
-    }
-    persistTraceLog('done', completeActionType, completeTraceLocationCodes, {
-        turnOnSingle: singleUserLocationCodes,
-        turnOnMulti: multiUserLocationCodes,
-        turnOff: shouldTurnOffLocationCodes,
-        increment: incrementLocations,
-        decrement: decrementLocations,
-        commonCountSize: CommonCountMap.size(),
-        commonCountTotal: CommonCountMap.totalCount()
-    })
+    log.info(logPrefix + ', stage=dispatch_done, turnOff=' + turnOffDispatchCodes.size() + ', turnOnMulti=' + turnOnMultiDispatchCodes.size() + ', turnOnSingle=' + turnOnSingleDispatchCount + ', aisleTurnOn=' + turnOnAisleDispatchCodes.size() + ', aisleTurnOff=' + turnOffDispatchCodes.size())
     exit 200, '拣货完成同步成功'
 } catch (e) {
     if(transState != null){
@@ -795,8 +1097,11 @@ try {
         }
     }
     log.error(logPrefix + ', stage=error, message=' + e.message)
-    persistTraceLog('error', 'error', [], {
-        errorMessage: e.message
-    })
     exit 500, '拣货完成同步失败: ' + e.message
+} finally {
+    if(lockAcquired){
+        releaseGlobalLock(globalLockKey)
+        log.info(logPrefix + ', stage=lock_released, lockKey=' + globalLockKey)
+    }
 }
+
