@@ -52,11 +52,27 @@ import com.dtflys.forest.Forest
 const aimsHost = Forest.config().getVariableValue("aimsHost")
 const stationCode = Forest.config().getVariableValue("stationCode")
 
+if(aimsHost == null || aimsHost == ''){
+    exit 500, 'aimsHost未配置'
+}
+
+let buildAimsBaseUrl = (hostValue) => {
+    let host = (hostValue + '').trim()
+    if(!host.startsWith('http://') && !host.startsWith('https://')){
+        host = 'http://' + host
+    }
+    if(!host.matches('^https?://[^/]+:[0-9]+$')){
+        host = host + ':9002'
+    }
+    return host
+}
+
 if(labelCode == null || labelCode == ''){
     exit 400, 'labelCode不能为空'
 }
 
-let unlinkUrl = `http://${aimsHost}:9002/labels/unlink?labelCode=${labelCode}`
+let aimsBaseUrl = buildAimsBaseUrl(aimsHost)
+let unlinkUrl = `${aimsBaseUrl}/labels/unlink?labelCode=${labelCode}`
 let unlinkResponse = Forest.post(unlinkUrl)
     .contentType('application/json;charset=UTF-8')
     .addHeader('Accept', 'application/json;charset=UTF-8')

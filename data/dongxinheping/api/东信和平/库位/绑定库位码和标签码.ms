@@ -42,6 +42,53 @@ import '@/utils/parseLot' as parseLot
 const aimsHost = Forest.config().getVariableValue("aimsHost")
 const stationCode = Forest.config().getVariableValue("stationCode")
 
+if(aimsHost == null || aimsHost == ''){
+    exit 500, 'aimsHost未配置'
+}
+
+let buildAimsBaseUrl = (hostValue) => {
+    let host = (hostValue + '').trim()
+    if(!host.startsWith('http://') && !host.startsWith('https://')){
+        host = 'http://' + host
+    }
+    if(!host.matches('^https?://[^/]+:[0-9]+$')){
+        host = host + ':9002'
+    }
+    return host
+}
+
+let extractAimsReturnMsg = (text) => {
+    if(text == null){
+        return null
+    }
+    let raw = text + ''
+    let key = '"returnMsg":"'
+    let start = raw.indexOf(key)
+    if(start < 0){
+        return null
+    }
+    start = start + key.length()
+    let end = raw.indexOf('"', start)
+    if(end < 0){
+        return null
+    }
+    return raw.substring(start, end)
+}
+
+let toFriendlyAimsMessage = (rawMessage, fallbackText) => {
+    let msg = extractAimsReturnMsg(rawMessage)
+    if(msg == null || msg == ''){
+        msg = fallbackText
+    }
+    if(msg == null || msg == ''){
+        msg = '请求AIMS失败'
+    }
+    if(msg == 'Checksum of label code is not matched'){
+        return '标签码校验位不匹配，请确认标签码是否正确'
+    }
+    return msg
+}
+
 let parsedLocationCode = parseLot(body.locationCode)
 let locationCode = parsedLocationCode != null && parsedLocationCode.Lot != null ? parsedLocationCode.Lot : parsedLocationCode
 let labelCode = body.labelCode
@@ -69,19 +116,28 @@ let requestBody = {
     arrowDirection: body.arrowDirection
 }
 
-let url = `http://${aimsHost}:9002/labels/link/${stationCode}`
-let response = Forest.post(url)
-    .contentType('application/json;charset=UTF-8')
-    .addHeader('Accept', 'application/json;charset=UTF-8')
-    .addBody(requestBody)
-    .executeAsResponse()
-
-let statusCode = response.statusCode()
-let responseText = response.readAsString()
+let aimsBaseUrl = buildAimsBaseUrl(aimsHost)
+let url = `${aimsBaseUrl}/labels/link/${stationCode}`
+let response = null
+let statusCode = null
+let responseText = ''
+try {
+    response = Forest.post(url)
+        .contentType('application/json;charset=UTF-8')
+        .addHeader('Accept', 'application/json;charset=UTF-8')
+        .addBody(requestBody)
+        .executeAsResponse()
+    statusCode = response.statusCode()
+    responseText = response.readAsString()
+} catch (e) {
+    let friendlyMsg = toFriendlyAimsMessage(e.message, '调用AIMS接口失败')
+    log.warn('AIMS link request error, stationCode=' + stationCode + ', locationCode=' + locationCode + ', labelCode=' + labelCode + ', error=' + e.message)
+    exit 502, 'AIMS绑定失败: ' + friendlyMsg
+}
 
 if(statusCode < 200 || statusCode >= 300){
     log.warn('AIMS link failed, stationCode=' + stationCode + ', locationCode=' + locationCode + ', labelCode=' + labelCode + ', status=' + statusCode + ', response=' + responseText)
-    exit 502, 'AIMS绑定失败: ' + responseText
+    exit 502, 'AIMS绑定失败: ' + toFriendlyAimsMessage(responseText, 'AIMS返回状态异常(' + statusCode + ')')
 }
 
 log.info('AIMS link success, stationCode=' + stationCode + ', locationCode=' + locationCode + ', labelCode=' + labelCode + ', status=' + statusCode)
