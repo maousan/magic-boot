@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>库位码-电子标签绑定</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/antd-mobile@5/es/global/global.css" />
+  <link rel="stylesheet" href="../vendor/antd-mobile/global.css" />
   <style>
     * { box-sizing: border-box; }
     html, body, #app {
@@ -69,9 +69,9 @@
 </head>
 <body>
   <div id="app"></div>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/antd-mobile@5/umd/antd-mobile.min.js"></script>
+  <script src="../vendor/react/react.production.min.js"></script>
+  <script src="../vendor/react-dom/react-dom.production.min.js"></script>
+  <script src="../vendor/antd-mobile/antd-mobile.min.js"></script>
   <script>
     (function () {
       var e = React.createElement;
@@ -239,7 +239,7 @@
           e(NavBar, {
             key: "nav",
             back: "返回入口导航",
-            onBack: function () { window.location.href = "./mapping-entry.html"; }
+            onBack: function () { window.location.href = "./index.html"; }
           }, "库位码-电子标签绑定"),
           e("div", { className: "hero", key: "hero" }, [
             e("h1", { key: "title" }, "库位码-电子标签绑定"),
@@ -332,5 +332,4 @@
   </script>
 </body>
 </html>
-
 

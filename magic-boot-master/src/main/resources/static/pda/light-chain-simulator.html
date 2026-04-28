@@ -240,7 +240,7 @@
 <body>
 <div class="wrap">
   <h1 class="title">亮灯链路模拟测试（PC）</h1>
-  <p class="sub">业务模拟链路：波次单列表 -> 点击波次自动上传 -> 修改明细 -> 完成调用拣货完成接口。</p>
+  <p class="sub">业务模拟链路：波次单列表 -> 点击波次选择 -> 手动上传拣货数据 -> 修改明细 -> 完成调用拣货完成接口。</p>
 
   <div class="panel">
     <h2 class="section-title">通用配置</h2>
@@ -352,7 +352,7 @@
           <button id="btnCompleteCurrent" type="button" class="btn success">完成（调用拣货完成）</button>
           <button id="btnControlCurrent" type="button" class="btn secondary">调用亮灯控制</button>
         </div>
-        <div class="hint">流程：点击左侧波次（自动上传） -> 修改明细字段 -> 点击“完成”。</div>
+        <div class="hint">流程：点击左侧波次（仅选择） -> 点击“上传拣货数据” -> 修改明细字段 -> 点击“完成”。</div>
       </div>
     </div>
   </div>
@@ -571,7 +571,7 @@
       div.innerHTML = '<div class="wave-main">' + wave.waveNo + '</div>'
         + '<div class="wave-sub">userId: ' + wave.userId + ' / ' + wave.userName + '</div>'
         + '<div class="wave-sub">details: ' + wave.details.length + '</div>';
-      div.onclick = function () { onWaveSelected(wave.id, true); };
+      div.onclick = function () { onWaveSelected(wave.id); };
       el.waveList.appendChild(div);
     });
   }
@@ -690,15 +690,12 @@
     await postJson("/api/light/control", payload);
   }
 
-  async function onWaveSelected(waveId, autoUpload) {
+  async function onWaveSelected(waveId) {
     persistWaveMetaToWave(false);
     persistTableToWave();
     state.activeWaveId = waveId;
     renderWaveList();
     renderDetailTable();
-    if (autoUpload) {
-      await guardedRun("点击波次后自动上传拣货数据", uploadCurrentWave);
-    }
   }
 
   function randomInt(min, max) {
@@ -794,7 +791,7 @@
     el.apiBase.value = window.location.origin;
     resetWaves();
     bindEvents();
-    setStatus("", "就绪：可先“生成模拟数据”，再点击任一波次开始链路测试。点击波次会自动上传拣货数据。");
+    setStatus("", "就绪：可先“生成模拟数据”，点击任一波次后手动执行“上传拣货数据”。");
   }
 
   init();

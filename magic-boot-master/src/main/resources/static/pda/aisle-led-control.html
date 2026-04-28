@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>巷道灯设备控制</title>
+  <link rel="stylesheet" href="../vendor/antd-mobile/global.css" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body, #app {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      background: linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%);
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, sans-serif;
+    }
+    .page { max-width: 680px; margin: 0 auto; padding: 0 12px 12px; }
+    .hero {
+      margin: 10px 0 12px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #0f766e 0%, #0ea5a4 60%, #14b8a6 100%);
+      color: #fff;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(15, 118, 110, 0.25);
+    }
+    .hero h1 { margin: 0; font-size: 22px; line-height: 1.2; }
+    .hero p { margin: 8px 0 0; font-size: 14px; opacity: 0.95; }
+    .panel {
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
+      margin-bottom: 12px;
+      background: #fff;
+      padding: 12px;
+    }
+    .panel-title { margin: 0 0 10px; color: #0f172a; font-size: 16px; font-weight: 600; }
+    .field { margin-bottom: 10px; }
+    .field-label { display: block; margin-bottom: 6px; color: #334155; font-size: 13px; font-weight: 600; }
+    .native-select {
+      width: 100%;
+      height: 38px;
+      border: 1px solid #dbe2ea;
+      border-radius: 10px;
+      padding: 0 8px;
+      color: #1f2937;
+      background: #fff;
+    }
+    .hint { margin: 8px 0 0; color: #64748b; font-size: 13px; }
+    .status-text { font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
+    .json-box {
+      margin-top: 8px;
+      border: 1px solid #dbe2ea;
+      border-radius: 10px;
+      background: #0b1220;
+      color: #dbeafe;
+      padding: 10px;
+      font-size: 12px;
+      line-height: 1.45;
+      max-height: 240px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      font-family: "JetBrains Mono", "Consolas", monospace;
+    }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../vendor/react/react.production.min.js"></script>
+<script src="../vendor/react-dom/react-dom.production.min.js"></script>
+<script src="../vendor/antd-mobile/antd-mobile.min.js"></script>
+<script>
+(function () {
+  var e = React.createElement;
+  var useState = React.useState;
+  var useEffect = React.useEffect;
+
+  var antd = window.antdMobile || window.antd;
+  if (!antd) { throw new Error("Ant Design Mobile CDN 加载失败"); }
+
+  var NavBar = antd.NavBar;
+  var Card = antd.Card;
+  var Button = antd.Button;
+  var Space = antd.Space;
+  var Toast = antd.Toast;
+  var DotLoading = antd.DotLoading;
+
+  function trim(value) {
+    if (value == null) return "";
+    return String(value).replace(/^\s+|\s+$/g, "");
+  }
+
+  function request(method, url, payload) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open(method, url, true);
+      xhr.timeout = 15000;
+      if (method === "POST") {
+        xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+      }
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+        var text = xhr.responseText || "";
+        var json = null;
+        try { json = JSON.parse(text); } catch (ignore) {}
+        resolve({ status: xhr.status, text: text, json: json });
+      };
+      xhr.onerror = function () { reject(new Error("网络异常，请检查服务是否可用")); };
+      xhr.ontimeout = function () { reject(new Error("请求超时(15s)")); };
+      if (method === "POST") xhr.send(JSON.stringify(payload));
+      else xhr.send();
+    });
+  }
+
+  function parseResult(result) {
+    var json = result.json;
+    var code = json && json.code;
+    var msg = json && json.message;
+    var data = json && json.data;
+    var isHttpOk = result.status >= 200 && result.status < 300;
+    var isApiOk = json ? Number(code) === 200 : false;
+    return {
+      success: isHttpOk && isApiOk,
+      message: msg || "",
+      data: data,
+      fallback: result.text || ("HTTP " + result.status),
+      raw: result
+    };
+  }
+
+  function statusColor(statusType) {
+    if (statusType === "success") return "#16a34a";
+    if (statusType === "error") return "#dc2626";
+    if (statusType === "warning") return "#d97706";
+    return "#2563eb";
+  }
+
+  function App() {
+    var _a = useState(false);
+    var loading = _a[0];
+    var setLoading = _a[1];
+
+    var _b = useState(false);
+    var deviceLoading = _b[0];
+    var setDeviceLoading = _b[1];
+
+    var _c = useState([]);
+    var deviceOptions = _c[0];
+    var setDeviceOptions = _c[1];
+
+    var _d = useState({ ledId: "", command: "ON", port: "ALL", timeoutMs: 3000 });
+    var model = _d[0];
+    var setModel = _d[1];
+
+    var _e = useState("info");
+    var statusType = _e[0];
+    var setStatusType = _e[1];
+
+    var _f = useState("就绪，等待操作。");
+    var statusText = _f[0];
+    var setStatusText = _f[1];
+
+    var _g = useState("");
+    var latestJson = _g[0];
+    var setLatestJson = _g[1];
+
+    function setStatus(type, text) {
+      setStatusType(type);
+      setStatusText(text);
+    }
+
+    function loadDevices() {
+      setDeviceLoading(true);
+      request("GET", "/api/location/led-devices").then(function (result) {
+        var parsed = parseResult(result);
+        if (!parsed.success) {
+          setStatus("error", "设备加载失败：" + (parsed.message || parsed.fallback));
+          setDeviceOptions([]);
+          return;
+        }
+        var list = parsed.data || [];
+        var options = [];
+        for (var i = 0; i < list.length; i++) {
+          var item = list[i] || {};
+          var macAddress = trim(item.macAddress || item.mac_address);
+          var ip = trim(item.ip || item.ipAddress || item.ip_address);
+          var remark = trim(item.remark);
+          if (!macAddress) continue;
+          var label = remark ? (remark + "（" + (ip || "未知IP") + "）") : (ip || "未知IP");
+          options.push({ label: label, value: macAddress });
+        }
+        setDeviceOptions(options);
+        setModel(function (prev) {
+          if (!prev.ledId && options.length > 0) {
+            return { ledId: options[0].value, command: prev.command, port: prev.port, timeoutMs: prev.timeoutMs };
+          }
+          return prev;
+        });
+        setStatus("success", "设备列表加载成功，共 " + options.length + " 台。");
+      }).catch(function (err) {
+        setStatus("error", "设备加载失败：" + err.message);
+        setDeviceOptions([]);
+      }).finally(function () {
+        setDeviceLoading(false);
+      });
+    }
+
+    function executeControl() {
+      var ledId = trim(model.ledId);
+      if (!ledId) {
+        setStatus("error", "请先选择设备");
+        Toast.show({ icon: "fail", content: "请先选择设备" });
+        return;
+      }
+      setLoading(true);
+      var payload = {
+        ledId: ledId,
+        command: model.command,
+        port: model.port,
+        timeoutMs: Number(model.timeoutMs || 3000)
+      };
+
+      request("POST", "/api/location/led-device-control", payload).then(function (result) {
+        var parsed = parseResult(result);
+        setLatestJson(result.text || "");
+        if (!parsed.success) {
+          setStatus("error", "执行失败：" + (parsed.message || parsed.fallback));
+          Toast.show({ icon: "fail", content: "执行失败" });
+          return;
+        }
+        setStatus("success", "执行成功：设备=" + ledId + "，指令=" + model.command + "，端口=" + model.port);
+        Toast.show({ icon: "success", content: "执行成功" });
+      }).catch(function (err) {
+        setLatestJson("");
+        setStatus("error", "执行失败：" + err.message);
+        Toast.show({ icon: "fail", content: "执行失败" });
+      }).finally(function () {
+        setLoading(false);
+      });
+    }
+
+    useEffect(function () {
+      loadDevices();
+    }, []);
+
+    return e("div", { className: "page" }, [
+      e(NavBar, {
+        key: "back",
+        backArrow: true,
+        onBack: function () { window.location.href = "./index.html"; }
+      }, "返回导航"),
+
+      e("div", { className: "hero", key: "hero" }, [
+        e("h1", { key: "title" }, "巷道灯设备控制"),
+        e("p", { key: "sub" }, "选择设备 -> 指令（开灯/关灯）-> 控制端口（全部/红/黄/绿）")
+      ]),
+
+      e(Card, { className: "panel", key: "panel" }, e("div", null, [
+        e("h3", { className: "panel-title", key: "title" }, "控制参数"),
+
+        e("div", { className: "field", key: "device" }, [
+          e("label", { className: "field-label", key: "label" }, "设备"),
+          e("select", {
+            className: "native-select",
+            value: model.ledId,
+            disabled: deviceLoading,
+            onChange: function (event) {
+              setModel({ ledId: event.target.value, command: model.command, port: model.port, timeoutMs: model.timeoutMs });
+            }
+          }, [
+            e("option", { value: "", key: "default" }, deviceLoading ? "设备加载中..." : "请选择设备")
+          ].concat(deviceOptions.map(function (opt, index) {
+            return e("option", { key: "device-" + index, value: opt.value }, opt.label);
+          })))
+        ]),
+
+        e("div", { className: "field", key: "command" }, [
+          e("label", { className: "field-label", key: "label" }, "指令"),
+          e("select", {
+            className: "native-select",
+            value: model.command,
+            onChange: function (event) {
+              setModel({ ledId: model.ledId, command: event.target.value, port: model.port, timeoutMs: model.timeoutMs });
+            }
+          }, [
+            e("option", { value: "ON", key: "on" }, "开灯"),
+            e("option", { value: "OFF", key: "off" }, "关灯")
+          ])
+        ]),
+
+        e("div", { className: "field", key: "port" }, [
+          e("label", { className: "field-label", key: "label" }, "控制端口"),
+          e("select", {
+            className: "native-select",
+            value: model.port,
+            onChange: function (event) {
+              setModel({ ledId: model.ledId, command: model.command, port: event.target.value, timeoutMs: model.timeoutMs });
+            }
+          }, [
+            e("option", { value: "ALL", key: "all" }, "全部"),
+            e("option", { value: "RED", key: "red" }, "红"),
+            e("option", { value: "YELLOW", key: "yellow" }, "黄"),
+            e("option", { value: "GREEN", key: "green" }, "绿")
+          ])
+        ]),
+
+        e("div", { className: "field", key: "timeout" }, [
+          e("label", { className: "field-label", key: "label" }, "超时毫秒（可选）"),
+          e("input", {
+            className: "native-select",
+            type: "number",
+            min: "1",
+            value: model.timeoutMs,
+            onChange: function (event) {
+              setModel({ ledId: model.ledId, command: model.command, port: model.port, timeoutMs: event.target.value });
+            }
+          })
+        ]),
+
+        e(Space, { direction: "vertical", block: true, key: "actions" }, [
+          e(Button, {
+            key: "exec",
+            color: "primary",
+            block: true,
+            loading: loading,
+            onClick: executeControl
+          }, loading ? e("span", null, ["执行中 ", e(DotLoading, { key: "dots" })]) : "执行控制"),
+          e(Button, {
+            key: "refresh",
+            block: true,
+            onClick: loadDevices,
+            disabled: deviceLoading
+          }, deviceLoading ? e("span", null, ["刷新中 ", e(DotLoading, { key: "dots" })]) : "刷新设备列表")
+        ]),
+
+        e("p", { className: "hint", key: "hint" }, "端口=全部时会依次执行红/黄/绿三个端口。")
+      ])),
+
+      e(Card, { className: "panel", key: "status" }, e("div", null, [
+        e("h3", { className: "panel-title", key: "title" }, "执行状态"),
+        e("div", { className: "status-text", style: { color: statusColor(statusType) }, key: "text" }, statusText),
+        latestJson ? e("pre", { className: "json-box", key: "json" }, latestJson) : null
+      ]))
+    ]);
+  }
+
+  var mountNode = document.getElementById("app");
+  if (ReactDOM.createRoot) {
+    ReactDOM.createRoot(mountNode).render(e(App));
+  } else {
+    ReactDOM.render(e(App), mountNode);
+  }
+})();
+</script>
+</body>
+</html>
+

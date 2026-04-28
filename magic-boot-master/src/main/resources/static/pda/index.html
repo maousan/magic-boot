@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>PDA 绑定导航</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/antd-mobile@5/es/global/global.css" />
+  <link rel="stylesheet" href="../vendor/antd-mobile/global.css" />
   <style>
     * { box-sizing: border-box; }
     html, body, #app {
@@ -60,9 +60,9 @@
 </head>
 <body>
   <div id="app"></div>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/antd-mobile@5/umd/antd-mobile.min.js"></script>
+  <script src="../vendor/react/react.production.min.js"></script>
+  <script src="../vendor/react-dom/react-dom.production.min.js"></script>
+  <script src="../vendor/antd-mobile/antd-mobile.min.js"></script>
   <script>
     (function () {
       var e = React.createElement;
@@ -84,6 +84,12 @@
           desc: "维护库位码与电子标签条码的绑定关系。",
           href: "./location-label-mapping.html",
           btn: "进入库位-电子标签绑定"
+        },
+        {
+          title: "巷道灯设备控制",
+          desc: "按设备执行开灯/关灯，支持端口：全部、红、黄、绿。",
+          href: "./aisle-led-control.html",
+          btn: "进入巷道灯设备控制"
         }
       ];
 
@@ -122,5 +128,6 @@
   </script>
 </body>
 </html>
+
 
 
