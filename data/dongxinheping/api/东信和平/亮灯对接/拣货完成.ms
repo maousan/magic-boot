@@ -5,7 +5,7 @@
   "groupId" : "l5kl0q2xiqa4ryz349c3fkzj3hzm07vw",
   "name" : "拣货完成",
   "createTime" : null,
-  "updateTime" : 1776930898575,
+  "updateTime" : 1777018647086,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -25,10 +25,10 @@
     "expression" : null,
     "children" : null
   } ],
-  "requestBody" : "{\n    \"waveNo\": \"WV202603250001\",\n    \"userId\": \"USER002\",\n    \"details\": [\n        {\n            \"id\": \"DTL001\",\n            \"materialCode\": \"MAT001\",\n            \"batchNo\": \"B20260325\",\n            \"locationCode\": \"A1-11-02-01-01\",\n            \"planQuantity\": 100,\n            \"actualQuantity\": 100,\n            \"updateTime\": 1648195200000\n        }\n    ]\n}",
+  "requestBody" : "{\n    \"waveNo\": \"WV202603250001\",\n    \"userId\": \"USER001\",\n    \"details\": [\n        {\n            \"id\": \"DTL001\",\n            \"materialCode\": \"MAT001\",\n            \"batchNo\": \"B20260325\",\n            \"locationCode\": \"A1-11-02-01-01\",\n            \"planQuantity\": 100,\n            \"actualQuantity\": 100,\n            \"updateTime\": 1648195200000\n        }\n    ]\n}",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"拣货完成同步成功\",\n    \"data\": null,\n    \"timestamp\": 1776672767274,\n    \"executeTime\": 153\n}",
+  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"拣货完成同步成功\",\n    \"data\": null,\n    \"timestamp\": 1777018646441,\n    \"executeTime\": 157\n}",
   "description" : "当用户完成某一个物料拣选后，WMS 向亮灯系统同步完成信息。",
   "requestBodyDefinition" : {
     "name" : "",
@@ -710,9 +710,10 @@ let resolveAisleLedTurnOffCandidates = (turnOffLocationCodes) => {
     return result
 }
 
-let assertLightControlSuccess = (action, result) => {
+let recordLightControlResult = (action, result) => {
     if(result == null){
-        throw new RuntimeException('灯控调用失败(' + action + '): result is null')
+        log.warn(logPrefix + ', stage=light_control_failed, action=' + action + ', reason=result is null')
+        return false
     }
     if(result.success == false){
         let failMessage = result.message
@@ -722,8 +723,11 @@ let assertLightControlSuccess = (action, result) => {
         if(failMessage == null || failMessage == ''){
             failMessage = 'unknown'
         }
-        throw new RuntimeException('灯控调用失败(' + action + '): ' + failMessage)
+        log.warn(logPrefix + ', stage=light_control_failed, action=' + action + ', status=' + result.status + ', message=' + failMessage + ', responseText=' + result.responseText)
+        return false
     }
+    log.info(logPrefix + ', stage=light_control_success, action=' + action + ', status=' + result.status + ', message=' + result.message)
+    return true
 }
 
 if(body == null){
@@ -1039,52 +1043,72 @@ try {
     }
 
     if(turnOffDispatchCodes.size() > 0){
-        let turnOffResult = turnOffLedByArticleId({
-            stationCode: stationCode,
-            articleIds: turnOffDispatchCodes,
-            traceId: traceId,
-            waveNo: waveNo,
-            userId: userId
-        })
-        assertLightControlSuccess('TURN_OFF', turnOffResult)
+        try {
+            let turnOffResult = turnOffLedByArticleId({
+                stationCode: stationCode,
+                articleIds: turnOffDispatchCodes,
+                traceId: traceId,
+                waveNo: waveNo,
+                userId: userId
+            })
+            recordLightControlResult('TURN_OFF', turnOffResult)
+        } catch (lightErr) {
+            log.warn(logPrefix + ', stage=dispatch_turn_off_failed, message=' + lightErr.message)
+        }
     }
 
     if(turnOnMultiDispatchCodes.size() > 0){
-        let turnOnMultiResult = turnOnLedByArticleId({
-            stationCode: stationCode,
-            color: 'BLUE',
-            articleIds: turnOnMultiDispatchCodes,
-            traceId: traceId,
-            waveNo: waveNo,
-            userId: userId
-        })
-        assertLightControlSuccess('TURN_ON_MULTI', turnOnMultiResult)
+        try {
+            let turnOnMultiResult = turnOnLedByArticleId({
+                stationCode: stationCode,
+                color: 'BLUE',
+                articleIds: turnOnMultiDispatchCodes,
+                traceId: traceId,
+                waveNo: waveNo,
+                userId: userId
+            })
+            recordLightControlResult('TURN_ON_MULTI', turnOnMultiResult)
+        } catch (lightErr) {
+            log.warn(logPrefix + ', stage=dispatch_turn_on_multi_failed, message=' + lightErr.message)
+        }
     }
 
     for(colorKey in singleColorKeys){
         let locationList = singleColorLocationMap[colorKey]
         if(locationList != null && locationList.size() > 0){
-            let turnOnSingleResult = turnOnLedByArticleId({
-                stationCode: stationCode,
-                color: colorKey,
-                articleIds: locationList,
-                traceId: traceId,
-                waveNo: waveNo,
-                userId: userId
-            })
-            assertLightControlSuccess('TURN_ON_SINGLE', turnOnSingleResult)
+            try {
+                let turnOnSingleResult = turnOnLedByArticleId({
+                    stationCode: stationCode,
+                    color: colorKey,
+                    articleIds: locationList,
+                    traceId: traceId,
+                    waveNo: waveNo,
+                    userId: userId
+                })
+                recordLightControlResult('TURN_ON_SINGLE', turnOnSingleResult)
+            } catch (lightErr) {
+                log.warn(logPrefix + ', stage=dispatch_turn_on_single_failed, color=' + colorKey + ', message=' + lightErr.message)
+            }
         }
     }
 
     for(locationCode in turnOffDispatchCodes){
-        turnOffAisleLedByLotNo({
-            lotNo: locationCode
-        })
+        try {
+            turnOffAisleLedByLotNo({
+                lotNo: locationCode
+            })
+        } catch (lightErr) {
+            log.warn(logPrefix + ', stage=dispatch_aisle_turn_off_failed, locationCode=' + locationCode + ', message=' + lightErr.message)
+        }
     }
     for(locationCode in turnOnAisleDispatchCodes){
-        turnOnAisleLedByLotNo({
-            lotNo: locationCode
-        })
+        try {
+            turnOnAisleLedByLotNo({
+                lotNo: locationCode
+            })
+        } catch (lightErr) {
+            log.warn(logPrefix + ', stage=dispatch_aisle_turn_on_failed, locationCode=' + locationCode + ', message=' + lightErr.message)
+        }
     }
 
     log.info(logPrefix + ', stage=dispatch_done, turnOff=' + turnOffDispatchCodes.size() + ', turnOnMulti=' + turnOnMultiDispatchCodes.size() + ', turnOnSingle=' + turnOnSingleDispatchCount + ', aisleTurnOn=' + turnOnAisleDispatchCodes.size() + ', aisleTurnOff=' + turnOffDispatchCodes.size())

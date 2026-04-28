@@ -5,7 +5,7 @@
   "groupId" : "l5kl0q2xiqa4ryz349c3fkzj3hzm07vw",
   "name" : "拣货数据上传",
   "createTime" : null,
-  "updateTime" : 1776999135792,
+  "updateTime" : 1777020545208,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -693,17 +693,21 @@ let resolveAisleDispatchPlan = (affectedLocationCodes) => {
     return result
 }
 
-let assertLightControlSuccess = (action, result) => {
+let recordLightControlResult = (action, result) => {
     if(result == null){
-        throw new RuntimeException('灯控调用失败(' + action + '): 返回为空')
+        log.warn(logPrefix + ', stage=light_control_failed, action=' + action + ', reason=返回为空')
+        return false
     }
     if(result.success == false){
         let message = '灯控调用失败(' + action + ')'
         if(result.message != null && result.message != ''){
             message = message + ': ' + result.message
         }
-        throw new RuntimeException(message)
+        log.warn(logPrefix + ', stage=light_control_failed, action=' + action + ', status=' + result.status + ', message=' + message + ', responseText=' + result.responseText)
+        return false
     }
+    log.info(logPrefix + ', stage=light_control_success, action=' + action + ', status=' + result.status + ', message=' + result.message)
+    return true
 }
 
 if(body == null){
@@ -958,53 +962,73 @@ try {
     }
 
     if(turnOffLocationCodes.size() > 0){
-        let turnOffResult = turnOffLedByArticleId({
-            stationCode: stationCode,
-            articleIds: turnOffLocationCodes,
-            traceId: traceId,
-            waveNo: waveNo,
-            userId: userId
-        })
-        assertLightControlSuccess('TURN_OFF', turnOffResult)
+        try {
+            let turnOffResult = turnOffLedByArticleId({
+                stationCode: stationCode,
+                articleIds: turnOffLocationCodes,
+                traceId: traceId,
+                waveNo: waveNo,
+                userId: userId
+            })
+            recordLightControlResult('TURN_OFF', turnOffResult)
+        } catch (lightErr) {
+            log.warn(logPrefix + ', stage=dispatch_turn_off_failed, message=' + lightErr.message)
+        }
     }
 
     if(multiUserLocationCodes.size() > 0){
-        let turnOnMultiResult = turnOnLedByArticleId({
-            stationCode: stationCode,
-            color: 'BLUE',
-            articleIds: multiUserLocationCodes,
-            traceId: traceId,
-            waveNo: waveNo,
-            userId: userId
-        })
-        assertLightControlSuccess('TURN_ON_MULTI', turnOnMultiResult)
+        try {
+            let turnOnMultiResult = turnOnLedByArticleId({
+                stationCode: stationCode,
+                color: 'BLUE',
+                articleIds: multiUserLocationCodes,
+                traceId: traceId,
+                waveNo: waveNo,
+                userId: userId
+            })
+            recordLightControlResult('TURN_ON_MULTI', turnOnMultiResult)
+        } catch (lightErr) {
+            log.warn(logPrefix + ', stage=dispatch_turn_on_multi_failed, message=' + lightErr.message)
+        }
     }
 
     for(colorKey in singleColorKeys){
         let locationList = singleColorLocationMap[colorKey]
         if(locationList != null && locationList.size() > 0){
-            let turnOnSingleResult = turnOnLedByArticleId({
-                stationCode: stationCode,
-                color: colorKey,
-                articleIds: locationList,
-                traceId: traceId,
-                waveNo: waveNo,
-                userId: userId
-            })
-            assertLightControlSuccess('TURN_ON_SINGLE', turnOnSingleResult)
+            try {
+                let turnOnSingleResult = turnOnLedByArticleId({
+                    stationCode: stationCode,
+                    color: colorKey,
+                    articleIds: locationList,
+                    traceId: traceId,
+                    waveNo: waveNo,
+                    userId: userId
+                })
+                recordLightControlResult('TURN_ON_SINGLE', turnOnSingleResult)
+            } catch (lightErr) {
+                log.warn(logPrefix + ', stage=dispatch_turn_on_single_failed, color=' + colorKey + ', message=' + lightErr.message)
+            }
         }
     }
 
     let aisleDispatchPlan = resolveAisleDispatchPlan(affectedLocationCodes)
     for(locationCode in aisleDispatchPlan.turnOffLocationCodes){
-        turnOffAisleLedByLotNo({
-            lotNo: locationCode
-        })
+        try {
+            turnOffAisleLedByLotNo({
+                lotNo: locationCode
+            })
+        } catch (lightErr) {
+            log.warn(logPrefix + ', stage=dispatch_aisle_turn_off_failed, locationCode=' + locationCode + ', message=' + lightErr.message)
+        }
     }
     for(locationCode in aisleDispatchPlan.turnOnLocationCodes){
-        turnOnAisleLedByLotNo({
-            lotNo: locationCode
-        })
+        try {
+            turnOnAisleLedByLotNo({
+                lotNo: locationCode
+            })
+        } catch (lightErr) {
+            log.warn(logPrefix + ', stage=dispatch_aisle_turn_on_failed, locationCode=' + locationCode + ', message=' + lightErr.message)
+        }
     }
 
     log.info(logPrefix + ', stage=dispatch_done, turnOff=' + turnOffLocationCodes.size() + ', turnOnMulti=' + multiUserLocationCodes.size() + ', turnOnSingle=' + singleUserCandidateCodes.size())
