@@ -1,0 +1,27 @@
+### 东信和平库存查询函数测试
+@baseUrl = http://localhost:8090
+
+### 1. 测试函数-按库位查询库存返回
+POST {{baseUrl}}/api/location/inventory/query-by-location-function-test
+Content-Type: application/json
+
+{
+  "warehouseId": "WMS001",
+  "locationId": "A1-11-01-01-01,A1-11-01-01-02"
+}
+
+### 2. 缺少 warehouseId（预期失败）
+POST {{baseUrl}}/api/location/inventory/query-by-location-function-test
+Content-Type: application/json
+
+{
+  "locationId": "A1-11-01-01-01"
+}
+
+### 3. 缺少 locationId（预期失败）
+POST {{baseUrl}}/api/location/inventory/query-by-location-function-test
+Content-Type: application/json
+
+{
+  "warehouseId": "WMS001"
+}
