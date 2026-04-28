@@ -138,6 +138,12 @@
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
 
+        <!-- Netty WebSocket (RFID 插件需要 netty-codec-http) -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-codec-http</artifactId>
+        </dependency>
+
 
         <!--start anyline -->
         <!--8.7.2开始驱动运行环境，如果是spring环境需要添加这个依赖-->

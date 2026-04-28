@@ -47,6 +47,12 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<TextWebS
         if (evt instanceof IdleStateEvent idleStateEvent
                 && idleStateEvent.state() == IdleState.READER_IDLE) {
             String deviceId = ctx.channel().attr(DEVICE_ID_KEY).get();
+            if (deviceId == null) {
+                log.warn("Read idle timeout for unregistered WebSocket connection from {}, closing",
+                        ctx.channel().remoteAddress());
+                ctx.close();
+                return;
+            }
             log.warn("Read idle timeout for device: {}, closing", deviceId);
             ctx.close();
             return;

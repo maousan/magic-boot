@@ -22,13 +22,9 @@ public class DataPersistenceService {
     private final ObjectMapper objectMapper;
     private final RfidWebSocketProperties properties;
 
-    public void cacheRfidData(String deviceId, String payload, long timestamp) {
+    public void cacheRfidData(String deviceId, Object payload, long timestamp) {
         try {
-            String data = objectMapper.writeValueAsString(Map.of(
-                    "deviceId", deviceId,
-                    "payload", payload,
-                    "timestamp", timestamp
-            ));
+            String data = objectMapper.writeValueAsString(payload);
             redisTemplate.opsForZSet().add("rfid:pending:" + deviceId, data, timestamp);
         } catch (Exception e) {
             log.error("Failed to cache RFID data for {}: {}", deviceId, e.getMessage());
@@ -59,13 +55,21 @@ public class DataPersistenceService {
             redisTemplate.opsForZSet().removeRange(key, 0, 0);
 
             try {
-                Map map = objectMapper.readValue(data, Map.class);
+                Map<?, ?> map = objectMapper.readValue(data, Map.class);
+                String epc = map.get("epc") != null ? map.get("epc").toString() : "unknown";
+                int rssi = map.get("rssi") != null ? ((Number) map.get("rssi")).intValue() : 0;
+                String timestampStr = map.get("timestamp") != null ? map.get("timestamp").toString() : null;
+
+                java.sql.Timestamp readTime;
+                if (timestampStr != null) {
+                    readTime = java.sql.Timestamp.valueOf(timestampStr.replace("T", " ").replace("Z", ""));
+                } else {
+                    readTime = new java.sql.Timestamp((long) score);
+                }
+
                 jdbcTemplate.update(
                         "INSERT INTO rfid_record (device_id, epc, rssi, read_time) VALUES (?, ?, ?, ?)",
-                        deviceId,
-                        map.get("epc") != null ? map.get("epc") : "unknown",
-                        map.get("rssi") != null ? map.get("rssi") : 0,
-                        new java.sql.Timestamp((long) score)
+                        deviceId, epc, rssi, readTime
                 );
             } catch (Exception e) {
                 log.error("Failed to persist RFID record for {}: {}", deviceId, e.getMessage());

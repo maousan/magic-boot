@@ -63,7 +63,7 @@ public class MessageService {
         String ack = buildAckMsg(msg.getMsgId());
 
         if (msg.getPayload() != null) {
-            persistenceService.cacheRfidData(deviceId, msg.getPayload().toString(), System.currentTimeMillis());
+            persistenceService.cacheRfidData(deviceId, msg.getPayload(), System.currentTimeMillis());
         }
 
         return ack;

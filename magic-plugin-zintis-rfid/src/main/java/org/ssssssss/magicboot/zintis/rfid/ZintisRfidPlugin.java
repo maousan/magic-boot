@@ -3,7 +3,11 @@ package org.ssssssss.magicboot.zintis.rfid;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.PluginWrapper;
 import org.pf4j.spring.SpringPlugin;
+import org.pf4j.spring.SpringPluginManager;
+import org.ssssssss.magicboot.zintis.rfid.config.RfidWebSocketProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -21,9 +25,24 @@ public class ZintisRfidPlugin extends SpringPlugin {
     public ApplicationContext createApplicationContext() {
         applicationContext = new AnnotationConfigApplicationContext();
         applicationContext.setClassLoader(getWrapper().getPluginClassLoader());
+        inheritMainApplicationContext();
         applicationContext.register(PluginConfig.class);
         applicationContext.refresh();
         return applicationContext;
+    }
+
+    private void inheritMainApplicationContext() {
+        if (!(getWrapper().getPluginManager() instanceof SpringPluginManager pluginManager)) {
+            return;
+        }
+        ApplicationContext mainContext = pluginManager.getApplicationContext();
+        if (mainContext == null) {
+            return;
+        }
+        applicationContext.setParent(mainContext);
+        if (mainContext instanceof ConfigurableApplicationContext configurableContext) {
+            applicationContext.setEnvironment(configurableContext.getEnvironment());
+        }
     }
 
     @Override
@@ -46,6 +65,7 @@ public class ZintisRfidPlugin extends SpringPlugin {
     }
 
     @Configuration
+    @EnableConfigurationProperties(RfidWebSocketProperties.class)
     @ComponentScan(basePackages = "org.ssssssss.magicboot.zintis.rfid")
     public static class PluginConfig {
     }

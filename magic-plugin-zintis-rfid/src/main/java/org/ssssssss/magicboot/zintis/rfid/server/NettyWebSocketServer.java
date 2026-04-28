@@ -75,7 +75,8 @@ public class NettyWebSocketServer {
                                     .addLast(new HttpServerCodec())
                                     .addLast(new HttpObjectAggregator(properties.getMaxFrameSize()))
                                     .addLast(new IdleStateHandler(properties.getIdleTimeoutSeconds(), 0, 0))
-                                    .addLast(new WebSocketServerProtocolHandler("/ws", null, true, properties.getMaxFrameSize()))
+                                    .addLast(new WebSocketServerProtocolHandler(
+                                            "/ws", null, true, properties.getMaxFrameSize(), false, true))
                                     .addLast(new WebSocketServerHandler(deviceManager, messageService, properties.getMaxConnections()));
                         }
                     })
