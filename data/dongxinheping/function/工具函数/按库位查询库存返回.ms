@@ -5,7 +5,7 @@
   "groupId" : "89d74bcccfbc468a8dfcd06d6cc2fc56",
   "name" : "按库位查询库存返回",
   "createTime" : null,
-  "updateTime" : 1777012970949,
+  "updateTime" : 1777429724406,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -14,18 +14,6 @@
   "returnType" : null,
   "mappingPath" : null,
   "parameters" : [ {
-    "name" : "EDIGROUPID",
-    "value" : null,
-    "description" : "接口ID",
-    "required" : false,
-    "dataType" : "String",
-    "type" : "java.lang.String",
-    "defaultValue" : "DZJH004",
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  }, {
     "name" : "warehouseId",
     "value" : null,
     "description" : "仓库ID",
@@ -56,9 +44,7 @@ import log
 import java.util.ArrayList
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import java.text.SimpleDateFormat
 import com.dtflys.forest.Forest
-import '@/utils/buildWmsInterfaceSign' as buildWmsInterfaceSign
 
 let fail = (message) => {
     return {
@@ -74,18 +60,6 @@ let valueOrConfig = (configName, defaultValue) => {
         return defaultValue
     }
     return value
-}
-
-let escapeJson = (value) => {
-    if(value == null){
-        return ''
-    }
-    return (value + '')
-        .replace('\\', '\\\\')
-        .replace('"', '\\"')
-        .replace('\r', '\\r')
-        .replace('\n', '\\n')
-        .replace('\t', '\\t')
 }
 
 let normalizeLocationIds = (rawLocationId) => {
@@ -115,7 +89,12 @@ let encodeParam = (value) => {
     return URLEncoder.encode(value + '', StandardCharsets.UTF_8.name())
 }
 
-let targetUrl = valueOrConfig('Url', 'http://192.168.1.237:18080/datahub/FluxWmsDzjh')
+let appendQuery = (url, name, value) => {
+    let separator = url.contains('?') ? '&' : '?'
+    return url + separator + encodeParam(name) + '=' + encodeParam(value)
+}
+
+let targetUrl = valueOrConfig('Url', 'http://192.168.1.237:18080/datahub/FluxWmsDzjh/')
 if(targetUrl == null || targetUrl == ''){
     return fail('缺少配置 forest.variables.Url')
 }
@@ -138,80 +117,38 @@ if(locations.size() > 50){
     return fail('库位查询条件超出50组限制')
 }
 
-let clientCustomerId = valueOrConfig('ClientCustomerId', null)
-let clientDb = valueOrConfig('ClientDb', warehouseId)
-let appToken = valueOrConfig('AppToken', null)
-let appKey = valueOrConfig('AppKey', null)
-let appSecret = valueOrConfig('AppSecret', null)
-
-if(clientCustomerId == null || clientCustomerId == ''){
-    return fail('缺少配置 forest.variables.ClientCustomerId')
-}
-if(clientDb == null || clientDb == ''){
-    return fail('缺少配置 forest.variables.ClientDb')
-}
-if(appToken == null || appToken == ''){
-    return fail('缺少配置 forest.variables.AppToken')
-}
-if(appKey == null || appKey == ''){
-    return fail('缺少配置 forest.variables.AppKey')
-}
-if(appSecret == null || appSecret == ''){
-    return fail('缺少配置 forest.variables.AppSecret')
-}
-
-let locationJson = ''
+let normalizedLocationId = ''
 let idx = 0
 for(code in locations){
     if(idx > 0){
-        locationJson = locationJson + ','
+        normalizedLocationId = normalizedLocationId + ','
     }
-    locationJson = locationJson + '{"locationId":"' + escapeJson(code) + '"}'
+    normalizedLocationId = normalizedLocationId + code
     idx = idx + 1
 }
 
-let businessData = '{"data":{"header":{"EDIGROUPID":"' + escapeJson(interfaceId) + '","warehouseId":"' + escapeJson(warehouseId) + '","locationdetail":[' + locationJson + ']}}}'
-let signResult = buildWmsInterfaceSign(appSecret, businessData)
-if(signResult == null || signResult.success != true){
-    let signMessage = '生成签名失败'
-    if(signResult != null && signResult.message != null){
-        signMessage = signResult.message
-    }
-    return fail(signMessage)
-}
-
-let timestamp = new SimpleDateFormat('yyyy-MM-dd HH:mm:ss').format(new Date())
-let formBody = ''
-formBody = formBody + 'method=' + encodeParam(interfaceId)
-formBody = formBody + '&client_customerid=' + encodeParam(clientCustomerId)
-formBody = formBody + '&client_db=' + encodeParam(clientDb)
-formBody = formBody + '&messageid=' + encodeParam(interfaceId)
-formBody = formBody + '&apptoken=' + encodeParam(appToken)
-formBody = formBody + '&appkey=' + encodeParam(appKey)
-formBody = formBody + '&sign=' + signResult.sign
-formBody = formBody + '&timestamp=' + encodeParam(timestamp)
-formBody = formBody + '&format=json'
-formBody = formBody + '&data=' + encodeParam(businessData)
+let queryUrl = targetUrl
+queryUrl = appendQuery(queryUrl, 'method', interfaceId)
+queryUrl = appendQuery(queryUrl, 'warehouseId', warehouseId)
+queryUrl = appendQuery(queryUrl, 'locationId', normalizedLocationId)
 
 try {
-    let response = Forest.post(targetUrl)
-        .contentType('application/x-www-form-urlencoded;charset=UTF-8')
+    let response = Forest.get(queryUrl)
         .addHeader('Accept', 'application/json;charset=UTF-8')
-        .addBody(formBody)
         .executeAsResponse()
 
     let statusCode = response.statusCode()
     let responseText = response.readAsString()
     let success = statusCode >= 200 && statusCode < 300
     if(success){
-        log.info('DZJH004 inventory query success, status=' + statusCode + ', targetUrl=' + targetUrl)
+        log.info('DZJH004 inventory query success, status=' + statusCode + ', targetUrl=' + targetUrl + ', locationCount=' + locations.size())
     } else {
         log.warn('DZJH004 inventory query failed, status=' + statusCode + ', targetUrl=' + targetUrl + ', response=' + responseText)
     }
     return {
         success: success,
         status: statusCode,
-        requestData: businessData,
+        requestUrl: queryUrl,
         response: responseText
     }
 } catch (e) {
@@ -220,6 +157,6 @@ try {
         success: false,
         status: 500,
         message: '调用DZJH004接口失败: ' + e.message,
-        requestData: businessData
+        requestUrl: queryUrl
     }
 }

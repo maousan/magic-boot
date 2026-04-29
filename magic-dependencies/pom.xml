@@ -57,7 +57,7 @@
         <liteflow.version>2.15.3</liteflow.version>
 
         <!-- Excel 相关 -->
-        <poi.version>4.1.2</poi.version>
+        <poi.version>5.2.3</poi.version>
         <easyexcel.version>3.3.2</easyexcel.version>
 
         <!-- 云服务 -->

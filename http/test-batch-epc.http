@@ -1,0 +1,58 @@
+### ============================================
+### 批次EPC绑定管理 - 接口测试
+### ============================================
+
+@baseUrl = http://localhost:9999
+
+### 1. 绑定 - 正常绑定
+POST {{baseUrl}}/api/location/batch-epc/bind
+Content-Type: application/json
+
+{
+  "batchId": "BATCH-001",
+  "epc": "EPC-2000ABCD"
+}
+
+### 2. 绑定 - 重复绑定（应失败）
+POST {{baseUrl}}/api/location/batch-epc/bind
+Content-Type: application/json
+
+{
+  "batchId": "BATCH-001",
+  "epc": "EPC-OTHER"
+}
+
+### 3. 按批次查询
+GET {{baseUrl}}/api/location/batch-epc/query-by-batch?batchId=BATCH-001
+
+### 4. 按EPC查询
+GET {{baseUrl}}/api/location/batch-epc/query-by-epc?epc=EPC-2000ABCD
+
+### 5. 列表查询 - 全部
+GET {{baseUrl}}/api/location/batch-epc/list
+
+### 6. 列表查询 - 仅绑定中
+GET {{baseUrl}}/api/location/batch-epc/list?status=1
+
+### 7. 解绑
+POST {{baseUrl}}/api/location/batch-epc/unbind
+Content-Type: application/json
+
+{
+  "batchId": "BATCH-001"
+}
+
+### 8. 解绑后查询（应返回 null）
+GET {{baseUrl}}/api/location/batch-epc/query-by-batch?batchId=BATCH-001
+
+### 9. 重新绑定（解绑后应能重新绑定）
+POST {{baseUrl}}/api/location/batch-epc/bind
+Content-Type: application/json
+
+{
+  "batchId": "BATCH-001",
+  "epc": "EPC-NEW-TAG"
+}
+
+### 10. 列表查询 - 包含历史
+GET {{baseUrl}}/api/location/batch-epc/list

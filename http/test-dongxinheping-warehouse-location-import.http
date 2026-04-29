@@ -1,0 +1,14 @@
+### 东信和平仓库库位Excel导入测试
+@baseUrl = http://localhost:8090
+
+### 1. 上传Excel批量导入仓库库位
+### Excel表头支持：仓库编码 / warehouse_code / warehouseCode，库位ID / location_id / locationId / 库位id
+POST {{baseUrl}}/api/location/warehouse-location/import
+Content-Type: multipart/form-data; boundary=warehouse-location-boundary
+
+--warehouse-location-boundary
+Content-Disposition: form-data; name="file"; filename="warehouse-location.xlsx"
+Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+
+< ./warehouse-location.xlsx
+--warehouse-location-boundary--

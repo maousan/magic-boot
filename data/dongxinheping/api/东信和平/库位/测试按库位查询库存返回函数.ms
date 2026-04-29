@@ -10,8 +10,32 @@
   "createBy" : "admin",
   "updateBy" : "admin",
   "path" : "/inventory/query-by-location-function-test",
-  "method" : "POST",
-  "parameters" : [ ],
+  "method" : "GET",
+  "parameters" : [ {
+    "name" : "warehouseId",
+    "value" : "WMS001",
+    "description" : "仓库ID",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  }, {
+    "name" : "locationId",
+    "value" : "A1-11-01-01-01,A1-11-01-01-02",
+    "description" : "库位编码，多个库位用逗号分隔，最多50个",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  } ],
   "options" : [ {
     "name" : "require_login",
     "value" : "false",
@@ -25,10 +49,10 @@
     "expression" : null,
     "children" : null
   } ],
-  "requestBody" : "{\n  \"warehouseId\": \"WMS001\",\n  \"locationId\": \"A1-11-01-01-01,A1-11-01-01-02\"\n}",
+  "requestBody" : "",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n  \"success\": true,\n  \"status\": 200,\n  \"requestData\": \"{...}\",\n  \"response\": \"{...}\"\n}",
+  "responseBody" : "{\n  \"success\": true,\n  \"status\": 200,\n  \"requestUrl\": \"http://...?...\",\n  \"response\": \"{...}\"\n}",
   "description" : "测试接口：调用函数 /utils/queryInventoryByLocations，按仓库和库位查询库存返回。",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
@@ -36,24 +60,14 @@
 ================================
 import '@/utils/queryInventoryByLocations' as queryInventoryByLocations
 
-if (body == null) {
-    exit 400, '请求体不能为空'
-}
-
-let warehouseId = body.warehouseId
 if (warehouseId == null || warehouseId == '') {
     exit 400, 'warehouseId不能为空'
 }
 
-let locationId = body.locationId
 if (locationId == null || locationId == '') {
     exit 400, 'locationId不能为空'
 }
 
-const result = queryInventoryByLocations({
-    EDIGROUPID: body.EDIGROUPID,
-    warehouseId: warehouseId,
-    locationId: locationId
-})
+const result = queryInventoryByLocations(warehouseId, locationId)
 
 return result

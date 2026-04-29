@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>批次EPC绑定管理</title>
+  <link rel="stylesheet" href="../vendor/antd-mobile/global.css" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body, #app {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      background: #ecfdf5;
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, sans-serif;
+      color: #064e3b;
+    }
+    .page { max-width: 680px; margin: 0 auto; padding: 0 12px 14px; }
+    .hero {
+      margin: 10px 0 12px;
+      border-radius: 12px;
+      background: #059669;
+      color: #fff;
+      padding: 16px;
+    }
+    .hero h1 { margin: 0; font-size: 22px; line-height: 1.2; }
+    .hero p { margin: 8px 0 0; color: #d1fae5; font-size: 14px; line-height: 1.45; }
+    .panel {
+      margin-bottom: 12px;
+      border: 1px solid #a7f3d0;
+      border-radius: 10px;
+      background: #fff;
+      padding: 12px;
+    }
+    .panel-title { margin: 0 0 10px; color: #064e3b; font-size: 16px; font-weight: 700; }
+    .input-row { margin-bottom: 8px; }
+    .input-label { display: block; margin-bottom: 4px; color: #065f46; font-size: 13px; font-weight: 700; }
+    .input-field {
+      width: 100%;
+      height: 42px;
+      border: 1px solid #a7f3d0;
+      border-radius: 8px;
+      background: #fff;
+      padding: 0 10px;
+      color: #064e3b;
+      font-size: 14px;
+      outline: none;
+    }
+    .input-field:focus { border-color: #10b981; }
+    .result-card {
+      border: 1px solid #d1fae5;
+      border-radius: 8px;
+      background: #f0fdf4;
+      padding: 12px;
+    }
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      font-size: 14px;
+    }
+    .result-row + .result-row { border-top: 1px solid #d1fae5; }
+    .result-label { color: #047857; }
+    .result-value { color: #064e3b; font-weight: 700; }
+    .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+    .empty-text { color: #6b7280; font-size: 14px; text-align: center; padding: 20px 0; }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../vendor/react/react.production.min.js"></script>
+<script src="../vendor/react-dom/react-dom.production.min.js"></script>
+<script src="../vendor/antd-mobile/antd-mobile.min.js"></script>
+<script>
+(function () {
+  var e = React.createElement;
+  var useState = React.useState;
+
+  var antd = window.antdMobile || window.antd;
+  if (!antd) { throw new Error("Ant Design Mobile 加载失败"); }
+
+  var NavBar = antd.NavBar;
+  var Button = antd.Button;
+  var Toast = antd.Toast;
+  var Dialog = antd.Dialog;
+
+  function apiPost(path, params) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/location/batch-epc" + path, true);
+      xhr.setRequestHeader("Content-Type", "application/json");
+      xhr.timeout = 15000;
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+        var json = null;
+        try { json = JSON.parse(xhr.responseText); } catch (ignore) {}
+        resolve({ status: xhr.status, json: json });
+      };
+      xhr.onerror = function () { reject(new Error("网络异常")); };
+      xhr.ontimeout = function () { reject(new Error("请求超时")); };
+      xhr.send(JSON.stringify(params));
+    });
+  }
+
+  function apiGet(path) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("GET", "/api/location/batch-epc" + path, true);
+      xhr.timeout = 15000;
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+        var json = null;
+        try { json = JSON.parse(xhr.responseText); } catch (ignore) {}
+        resolve({ status: xhr.status, json: json });
+      };
+      xhr.onerror = function () { reject(new Error("网络异常")); };
+      xhr.ontimeout = function () { reject(new Error("请求超时")); };
+      xhr.send();
+    });
+  }
+
+  function App() {
+    var sBindBatch = useState("");
+    var bindBatch = sBindBatch[0]; var setBindBatch = sBindBatch[1];
+    var sBindEpc = useState("");
+    var bindEpc = sBindEpc[0]; var setBindEpc = sBindEpc[1];
+    var sQueryKeyword = useState("");
+    var queryKeyword = sQueryKeyword[0]; var setQueryKeyword = sQueryKeyword[1];
+    var sResult = useState(null);
+    var result = sResult[0]; var setResult = sResult[1];
+    var sLoading = useState(false);
+    var loading = sLoading[0]; var setLoading = sLoading[1];
+
+    function handleBind() {
+      if (!bindBatch.trim() || !bindEpc.trim()) {
+        Toast.show({ icon: "fail", content: "请输入批次ID和EPC" });
+        return;
+      }
+      setLoading(true);
+      apiPost("/bind", { batchId: bindBatch, epc: bindEpc }).then(function (res) {
+        var j = res.json || {};
+        if (Number(j.code) === 200) {
+          Toast.show({ icon: "success", content: "绑定成功" });
+          setResult(j.data);
+          setQueryKeyword(bindBatch);
+        } else {
+          Toast.show({ icon: "fail", content: j.message || "绑定失败" });
+        }
+      }).catch(function (err) {
+        Toast.show({ icon: "fail", content: err.message });
+      }).finally(function () { setLoading(false); });
+    }
+
+    function handleQuery() {
+      if (!queryKeyword.trim()) {
+        Toast.show({ icon: "fail", content: "请输入批次ID或EPC" });
+        return;
+      }
+      setLoading(true);
+      setResult(null);
+      apiGet("/query-by-batch?batchId=" + encodeURIComponent(queryKeyword)).then(function (res) {
+        var j = res.json || {};
+        if (Number(j.code) === 200 && j.data) {
+          setResult(j.data);
+          return null;
+        }
+        return apiGet("/query-by-epc?epc=" + encodeURIComponent(queryKeyword));
+      }).then(function (res2) {
+        if (res2) {
+          var j2 = res2.json || {};
+          setResult((Number(j2.code) === 200) ? j2.data : null);
+        }
+      }).catch(function (err) {
+        Toast.show({ icon: "fail", content: err.message });
+      }).finally(function () { setLoading(false); });
+    }
+
+    function handleUnbind() {
+      if (!result) return;
+      Dialog.confirm({
+        content: "确认解绑？",
+        onConfirm: function () {
+          setLoading(true);
+          apiPost("/unbind", { batchId: result.batchId }).then(function (res) {
+            var j = res.json || {};
+            if (Number(j.code) === 200) {
+              Toast.show({ icon: "success", content: "解绑成功" });
+              setResult(null);
+            } else {
+              Toast.show({ icon: "fail", content: j.message || "解绑失败" });
+            }
+          }).catch(function (err) {
+            Toast.show({ icon: "fail", content: err.message });
+          }).finally(function () { setLoading(false); });
+        }
+      });
+    }
+
+    return e("div", { className: "page" }, [
+      e(NavBar, {
+        key: "nav",
+        back: "返回入口导航",
+        onBack: function () { window.location.href = "./index.html"; }
+      }, "批次EPC绑定管理"),
+      e("div", { className: "hero", key: "hero" }, [
+        e("h1", { key: "title" }, "批次 EPC 绑定管理"),
+        e("p", { key: "sub" }, "维护业务批次ID与RFID标签EPC的绑定关系，用于跟踪批次寻物。")
+      ]),
+      e("div", { className: "panel", key: "bind" }, [
+        e("h2", { className: "panel-title", key: "title" }, "绑定"),
+        e("div", { className: "input-row", key: "batch" }, [
+          e("label", { className: "input-label", key: "label" }, "批次ID"),
+          e("input", {
+            className: "input-field", key: "input",
+            placeholder: "输入业务批次ID",
+            value: bindBatch,
+            onChange: function (ev) { setBindBatch(ev.target.value); }
+          })
+        ]),
+        e("div", { className: "input-row", key: "epc" }, [
+          e("label", { className: "input-label", key: "label" }, "EPC"),
+          e("input", {
+            className: "input-field", key: "input",
+            placeholder: "输入RFID标签EPC",
+            value: bindEpc,
+            onChange: function (ev) { setBindEpc(ev.target.value); }
+          })
+        ]),
+        e(Button, {
+          key: "btn", block: true, color: "primary",
+          disabled: loading, onClick: handleBind
+        }, "绑定")
+      ]),
+      e("div", { className: "panel", key: "query" }, [
+        e("h2", { className: "panel-title", key: "title" }, "查询"),
+        e("div", { className: "input-row", key: "search" }, [
+          e("input", {
+            className: "input-field", key: "input",
+            placeholder: "输入批次ID或EPC查询",
+            value: queryKeyword,
+            onChange: function (ev) { setQueryKeyword(ev.target.value); }
+          })
+        ]),
+        e(Button, {
+          key: "btn", block: true, color: "primary", fill: "outline",
+          disabled: loading, onClick: handleQuery
+        }, "查询"),
+        result ? e("div", { className: "result-card", key: "result", style: { marginTop: 10 } }, [
+          e("div", { className: "result-row", key: "batch" }, [
+            e("span", { className: "result-label", key: "l" }, "批次ID"),
+            e("span", { className: "result-value", key: "v" }, result.batchId)
+          ]),
+          e("div", { className: "result-row", key: "epc" }, [
+            e("span", { className: "result-label", key: "l" }, "EPC"),
+            e("span", { className: "result-value", key: "v" }, result.epc)
+          ]),
+          e("div", { className: "result-row", key: "time" }, [
+            e("span", { className: "result-label", key: "l" }, "绑定时间"),
+            e("span", { className: "result-value", key: "v" }, result.bindTime || "-")
+          ]),
+          e("div", { className: "btn-row", key: "actions" }, [
+            e(Button, {
+              key: "unbind", color: "danger", fill: "outline",
+              size: "small", onClick: handleUnbind
+            }, "解绑")
+          ])
+        ]) : e("div", { className: "empty-text", key: "empty" }, "暂无查询结果")
+      ])
+    ]);
+  }
+
+  var mountNode = document.getElementById("app");
+  if (ReactDOM.createRoot) {
+    ReactDOM.createRoot(mountNode).render(e(App));
+  } else {
+    ReactDOM.render(e(App), mountNode);
+  }
+})();
+</script>
+</body>
+</html>

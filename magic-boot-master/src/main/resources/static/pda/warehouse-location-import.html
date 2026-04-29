@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>仓库库位导入</title>
+  <link rel="stylesheet" href="../vendor/antd-mobile/global.css" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body, #app {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      background: #ecfdf5;
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, sans-serif;
+      color: #064e3b;
+    }
+    .page { max-width: 680px; margin: 0 auto; padding: 0 12px 14px; }
+    .hero {
+      margin: 10px 0 12px;
+      border-radius: 12px;
+      background: #059669;
+      color: #fff;
+      padding: 16px;
+    }
+    .hero h1 { margin: 0; font-size: 22px; line-height: 1.2; }
+    .hero p { margin: 8px 0 0; color: #d1fae5; font-size: 14px; line-height: 1.45; }
+    .panel {
+      margin-bottom: 12px;
+      border: 1px solid #a7f3d0;
+      border-radius: 10px;
+      background: #fff;
+      padding: 12px;
+    }
+    .panel-title { margin: 0 0 10px; color: #064e3b; font-size: 16px; font-weight: 700; }
+    .actions { display: grid; grid-template-columns: 1fr; gap: 8px; }
+    .file-box {
+      border: 1px dashed #10b981;
+      border-radius: 10px;
+      background: #f0fdf4;
+      padding: 12px;
+    }
+    .file-label { display: block; margin-bottom: 8px; color: #065f46; font-size: 13px; font-weight: 700; }
+    .file-input {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid #a7f3d0;
+      border-radius: 8px;
+      background: #fff;
+      padding: 9px;
+      color: #064e3b;
+    }
+    .hint { margin: 8px 0 0; color: #047857; font-size: 13px; line-height: 1.5; }
+    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .metric {
+      border: 1px solid #d1fae5;
+      border-radius: 8px;
+      background: #f0fdf4;
+      padding: 10px;
+    }
+    .metric-label { color: #047857; font-size: 12px; }
+    .metric-value { margin-top: 4px; color: #064e3b; font-size: 20px; font-weight: 700; }
+    .status-text { color: #064e3b; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
+    .error-list { margin: 8px 0 0; padding-left: 18px; color: #b45309; font-size: 13px; line-height: 1.5; }
+    .template-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #10b981;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      color: #047857;
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+    }
+    .template-link:active {
+      transform: scale(0.97);
+      box-shadow: 0 1px 4px rgba(5,150,105,0.15);
+    }
+    .template-link:focus,
+    .template-link:hover {
+      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+      box-shadow: 0 2px 8px rgba(5,150,105,0.18);
+    }
+    .template-link-icon {
+      flex-shrink: 0;
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      background: #059669;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .template-link-icon svg { width: 20px; height: 20px; fill: #fff; }
+    .template-link-body { flex: 1; min-width: 0; }
+    .template-link-title { display: block; font-size: 14px; font-weight: 700; color: #064e3b; line-height: 1.3; }
+    .template-link-desc { display: block; font-size: 12px; color: #047857; margin-top: 2px; opacity: 0.75; }
+    .template-link-arrow { flex-shrink: 0; width: 18px; height: 18px; fill: #059669; }
+    @media (min-width: 560px) {
+      .actions { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../vendor/react/react.production.min.js"></script>
+<script src="../vendor/react-dom/react-dom.production.min.js"></script>
+<script src="../vendor/antd-mobile/antd-mobile.min.js"></script>
+<script>
+(function () {
+  var e = React.createElement;
+  var useRef = React.useRef;
+  var useState = React.useState;
+
+  var antd = window.antdMobile || window.antd;
+  if (!antd) { throw new Error("Ant Design Mobile 加载失败"); }
+
+  var NavBar = antd.NavBar;
+  var Button = antd.Button;
+  var Toast = antd.Toast;
+  var DotLoading = antd.DotLoading;
+
+  function requestUpload(file) {
+    return new Promise(function (resolve, reject) {
+      var formData = new FormData();
+      formData.append("file", file);
+
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/location/warehouse-location/import", true);
+      xhr.timeout = 60000;
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+        var text = xhr.responseText || "";
+        var json = null;
+        try { json = JSON.parse(text); } catch (ignore) {}
+        resolve({ status: xhr.status, text: text, json: json });
+      };
+      xhr.onerror = function () { reject(new Error("网络异常，请检查服务是否可用")); };
+      xhr.ontimeout = function () { reject(new Error("上传超时(60s)")); };
+      xhr.send(formData);
+    });
+  }
+
+  function unwrapResult(result) {
+    var json = result.json;
+    if (!json) {
+      return { ok: false, data: null, message: result.text || ("HTTP " + result.status) };
+    }
+    if (json.code != null) {
+      return {
+        ok: result.status >= 200 && result.status < 300 && Number(json.code) === 200,
+        data: json.data,
+        message: json.message || ""
+      };
+    }
+    return {
+      ok: result.status >= 200 && result.status < 300 && json.success !== false,
+      data: json,
+      message: json.message || ""
+    };
+  }
+
+  function App() {
+    var fileRef = useRef(null);
+    var stateFile = useState(null);
+    var selectedFile = stateFile[0];
+    var setSelectedFile = stateFile[1];
+
+    var stateLoading = useState(false);
+    var loading = stateLoading[0];
+    var setLoading = stateLoading[1];
+
+    var stateStatus = useState("请选择 Excel 文件后上传。");
+    var statusText = stateStatus[0];
+    var setStatusText = stateStatus[1];
+
+    var stateResult = useState(null);
+    var resultData = stateResult[0];
+    var setResultData = stateResult[1];
+
+    function onFileChange(event) {
+      var file = event.target.files && event.target.files[0];
+      setSelectedFile(file || null);
+      setResultData(null);
+      setStatusText(file ? ("已选择：" + file.name) : "请选择 Excel 文件后上传。");
+    }
+
+    function upload() {
+      if (!selectedFile) {
+        Toast.show({ icon: "fail", content: "请先选择Excel文件" });
+        setStatusText("请先选择Excel文件。");
+        return;
+      }
+      setLoading(true);
+      setStatusText("正在上传并导入，请稍候...");
+      requestUpload(selectedFile).then(function (result) {
+        var parsed = unwrapResult(result);
+        if (!parsed.ok) {
+          setStatusText("导入失败：" + (parsed.message || "服务器异常，请稍后重试"));
+          setResultData(parsed.data || result.json || result.text);
+          Toast.show({ icon: "fail", content: "导入失败" });
+          return;
+        }
+        setResultData(parsed.data);
+        var successCount = parsed.data && parsed.data.successCount != null ? parsed.data.successCount : 0;
+        var failCount = parsed.data && parsed.data.failCount != null ? parsed.data.failCount : 0;
+        setStatusText("导入完成：成功 " + successCount + " 条，失败 " + failCount + " 条。");
+        Toast.show({ icon: "success", content: "导入完成" });
+        if (fileRef.current) {
+          fileRef.current.value = "";
+        }
+        setSelectedFile(null);
+      }).catch(function (err) {
+        setStatusText("导入失败：" + err.message);
+        setResultData(null);
+        Toast.show({ icon: "fail", content: "导入失败" });
+      }).finally(function () {
+        setLoading(false);
+      });
+    }
+
+    var totalRows = resultData && resultData.totalRows != null ? resultData.totalRows : "-";
+    var successCount = resultData && resultData.successCount != null ? resultData.successCount : "-";
+    var failCount = resultData && resultData.failCount != null ? resultData.failCount : "-";
+    var errors = resultData && resultData.errors ? resultData.errors : [];
+
+    return e("div", { className: "page" }, [
+      e(NavBar, {
+        key: "nav",
+        back: "返回入口导航",
+        onBack: function () { window.location.href = "./index.html"; }
+      }, "仓库库位导入"),
+      e("div", { className: "hero", key: "hero" }, [
+        e("h1", { key: "title" }, "仓库库位 Excel 导入"),
+        e("p", { key: "sub" }, "上传包含仓库编码和库位ID的 Excel 文件，批量导入仓库库位数据。")
+      ]),
+      e("div", { className: "panel", key: "upload" }, [
+        e("h2", { className: "panel-title", key: "title" }, "上传文件"),
+        e("div", { className: "actions", key: "actions" }, [
+          e("a", {
+            className: "template-link",
+            key: "template",
+            href: "./templates/warehouse-location.xlsx",
+            download: "warehouse-location.xlsx"
+          }, [
+            e("span", { className: "template-link-icon", key: "icon" },
+              e("svg", { viewBox: "0 0 24 24" },
+                e("path", { d: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM8 17h8v-2H8v2zm0-4h8v-2H8v2z" })
+              )
+            ),
+            e("span", { className: "template-link-body", key: "body" }, [
+              e("span", { className: "template-link-title", key: "title" }, "下载导入模板"),
+              e("span", { className: "template-link-desc", key: "desc" }, ".xlsx 格式，含示例表头")
+            ]),
+            e("svg", { className: "template-link-arrow", key: "arrow", viewBox: "0 0 24 24" },
+              e("path", { d: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" })
+            )
+          ]),
+          e("div", { className: "file-box", key: "file" }, [
+            e("label", { className: "file-label", htmlFor: "excel-file", key: "label" }, "选择 Excel 文件"),
+            e("input", {
+              className: "file-input",
+              id: "excel-file",
+              key: "input",
+              ref: fileRef,
+              type: "file",
+              accept: ".xlsx,.xls",
+              onChange: onFileChange
+            })
+          ])
+        ]),
+        e("p", { className: "hint", key: "hint" }, "请先下载模板，按格式填写后上传。"),
+        e(Button, {
+          key: "submit",
+          block: true,
+          color: "primary",
+          disabled: loading,
+          style: { marginTop: 12 },
+          onClick: upload
+        }, loading ? e("span", null, ["导入中 ", e(DotLoading, { key: "loading" })]) : "上传并导入")
+      ]),
+      e("div", { className: "panel", key: "result" }, [
+        e("h2", { className: "panel-title", key: "title" }, "导入结果"),
+        e("div", { className: "summary-grid", key: "metrics" }, [
+          e("div", { className: "metric", key: "total" }, [
+            e("div", { className: "metric-label", key: "label" }, "总行数"),
+            e("div", { className: "metric-value", key: "value" }, totalRows)
+          ]),
+          e("div", { className: "metric", key: "success" }, [
+            e("div", { className: "metric-label", key: "label" }, "成功"),
+            e("div", { className: "metric-value", key: "value" }, successCount)
+          ]),
+          e("div", { className: "metric", key: "fail" }, [
+            e("div", { className: "metric-label", key: "label" }, "失败"),
+            e("div", { className: "metric-value", key: "value" }, failCount)
+          ])
+        ]),
+        e("p", { className: "status-text", key: "status" }, statusText),
+        errors.length > 0 ? e("ul", { className: "error-list", key: "errors" }, errors.slice(0, 20).map(function (item, index) {
+          return e("li", { key: "error-" + index }, "第 " + item.rowNo + " 行：" + item.message);
+        })) : null
+      ])
+    ]);
+  }
+
+  var mountNode = document.getElementById("app");
+  if (ReactDOM.createRoot) {
+    ReactDOM.createRoot(mountNode).render(e(App));
+  } else {
+    ReactDOM.render(e(App), mountNode);
+  }
+})();
+</script>
+</body>
+</html>
