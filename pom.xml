@@ -30,6 +30,7 @@
         <module>magic-script</module>
         <module>tiga-engine</module>
         <module>tiga-engine-spring</module>
+        <module>magic-plugin-dongxinheping</module>
         <module>magic-plugin-zintis-rfid</module>
     </modules>
 

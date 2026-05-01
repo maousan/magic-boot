@@ -26,7 +26,6 @@ import java.io.InputStream;
 public class PluginStaticResourceController {
 
     private final PluginManager pluginManager;
-    private final FrontendExtensionProcessor processor;
 
     /**
      * 服务插件静态资源
@@ -40,13 +39,6 @@ public class PluginStaticResourceController {
         PluginWrapper plugin = pluginManager.getPlugin(pluginId);
         if (plugin == null) {
             log.warn("静态资源请求失败：插件 [{}] 不存在", pluginId);
-            return ResponseEntity.notFound().build();
-        }
-
-        // 获取元数据
-        FrontendMetadata metadata = processor.getMetadata(pluginId);
-        if (metadata == null) {
-            log.warn("静态资源请求失败：插件 [{}] 没有前端扩展", pluginId);
             return ResponseEntity.notFound().build();
         }
 

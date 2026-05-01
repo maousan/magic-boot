@@ -31,9 +31,6 @@ class PluginStaticResourceControllerTest {
     private PluginManager pluginManager;
 
     @Mock
-    private FrontendExtensionProcessor processor;
-
-    @Mock
     private PluginWrapper pluginWrapper;
 
     @Mock
@@ -46,7 +43,7 @@ class PluginStaticResourceControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new PluginStaticResourceController(pluginManager, processor);
+        controller = new PluginStaticResourceController(pluginManager);
     }
 
     @Test
@@ -62,24 +59,27 @@ class PluginStaticResourceControllerTest {
     }
 
     @Test
-    @DisplayName("插件没有前端扩展时应返回 404")
-    void serveStaticResource_whenPluginHasNoFrontend_shouldReturn404() {
+    @DisplayName("插件没有前端扩展但资源存在时应返回静态资源")
+    void serveStaticResource_whenPluginHasNoFrontend_shouldReturnResource() {
+        InputStream mockStream = new ByteArrayInputStream("<html></html>".getBytes());
+
         when(pluginManager.getPlugin("demo-plugin")).thenReturn(pluginWrapper);
-        when(processor.getMetadata("demo-plugin")).thenReturn(null);
+        when(request.getRequestURI()).thenReturn("/plugin/demo-plugin/static/pda/index.html");
+        when(pluginWrapper.getPluginClassLoader()).thenReturn(classLoader);
+        when(classLoader.getResourceAsStream("static/pda/index.html")).thenReturn(mockStream);
 
         ResponseEntity<InputStreamResource> response = controller.serveStaticResource(
             "demo-plugin", request
         );
 
-        assertEquals(404, response.getStatusCode().value());
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals(MediaType.TEXT_HTML, response.getHeaders().getContentType());
     }
 
     @Test
     @DisplayName("请求路径无效时应返回 400")
     void serveStaticResource_whenInvalidPath_shouldReturn400() {
-        FrontendMetadata metadata = createTestMetadata();
         when(pluginManager.getPlugin("demo-plugin")).thenReturn(pluginWrapper);
-        when(processor.getMetadata("demo-plugin")).thenReturn(metadata);
         when(request.getRequestURI()).thenReturn("/invalid/path");
 
         ResponseEntity<InputStreamResource> response = controller.serveStaticResource(
@@ -92,9 +92,7 @@ class PluginStaticResourceControllerTest {
     @Test
     @DisplayName("路径穿越攻击应返回 400")
     void serveStaticResource_whenPathTraversalAttack_shouldReturn400() {
-        FrontendMetadata metadata = createTestMetadata();
         when(pluginManager.getPlugin("demo-plugin")).thenReturn(pluginWrapper);
-        when(processor.getMetadata("demo-plugin")).thenReturn(metadata);
         when(request.getRequestURI()).thenReturn("/plugin/demo-plugin/static/../secret.txt");
 
         ResponseEntity<InputStreamResource> response = controller.serveStaticResource(
@@ -107,9 +105,7 @@ class PluginStaticResourceControllerTest {
     @Test
     @DisplayName("反斜杠路径攻击应返回 400")
     void serveStaticResource_whenBackslashInPath_shouldReturn400() {
-        FrontendMetadata metadata = createTestMetadata();
         when(pluginManager.getPlugin("demo-plugin")).thenReturn(pluginWrapper);
-        when(processor.getMetadata("demo-plugin")).thenReturn(metadata);
         when(request.getRequestURI()).thenReturn("/plugin/demo-plugin/static/..\\secret.txt");
 
         ResponseEntity<InputStreamResource> response = controller.serveStaticResource(
@@ -122,9 +118,7 @@ class PluginStaticResourceControllerTest {
     @Test
     @DisplayName("资源不存在时应返回 404")
     void serveStaticResource_whenResourceNotExists_shouldReturn404() {
-        FrontendMetadata metadata = createTestMetadata();
         when(pluginManager.getPlugin("demo-plugin")).thenReturn(pluginWrapper);
-        when(processor.getMetadata("demo-plugin")).thenReturn(metadata);
         when(request.getRequestURI()).thenReturn("/plugin/demo-plugin/static/console.js");
         when(pluginWrapper.getPluginClassLoader()).thenReturn(classLoader);
         when(classLoader.getResourceAsStream("static/console.js")).thenReturn(null);
@@ -139,11 +133,9 @@ class PluginStaticResourceControllerTest {
     @Test
     @DisplayName("有效 JS 资源应正确返回")
     void serveStaticResource_whenValidJsResource_shouldReturnCorrectly() {
-        FrontendMetadata metadata = createTestMetadata();
         InputStream mockStream = new ByteArrayInputStream("console.log('test');".getBytes());
 
         when(pluginManager.getPlugin("demo-plugin")).thenReturn(pluginWrapper);
-        when(processor.getMetadata("demo-plugin")).thenReturn(metadata);
         when(request.getRequestURI()).thenReturn("/plugin/demo-plugin/static/console.js");
         when(pluginWrapper.getPluginClassLoader()).thenReturn(classLoader);
         when(classLoader.getResourceAsStream("static/console.js")).thenReturn(mockStream);
@@ -160,11 +152,9 @@ class PluginStaticResourceControllerTest {
     @Test
     @DisplayName("应设置缓存控制头")
     void serveStaticResource_shouldSetCacheControlHeader() {
-        FrontendMetadata metadata = createTestMetadata();
         InputStream mockStream = new ByteArrayInputStream("test".getBytes());
 
         when(pluginManager.getPlugin("demo-plugin")).thenReturn(pluginWrapper);
-        when(processor.getMetadata("demo-plugin")).thenReturn(metadata);
         when(request.getRequestURI()).thenReturn("/plugin/demo-plugin/static/console.js");
         when(pluginWrapper.getPluginClassLoader()).thenReturn(classLoader);
         when(classLoader.getResourceAsStream("static/console.js")).thenReturn(mockStream);
@@ -195,11 +185,9 @@ class PluginStaticResourceControllerTest {
     })
     @DisplayName("不同文件类型应返回正确的 Content-Type")
     void serveStaticResource_shouldReturnCorrectContentType(String filename, String expectedContentType) {
-        FrontendMetadata metadata = createTestMetadata();
         InputStream mockStream = new ByteArrayInputStream("test".getBytes());
 
         when(pluginManager.getPlugin("demo-plugin")).thenReturn(pluginWrapper);
-        when(processor.getMetadata("demo-plugin")).thenReturn(metadata);
         when(request.getRequestURI()).thenReturn("/plugin/demo-plugin/static/" + filename);
         when(pluginWrapper.getPluginClassLoader()).thenReturn(classLoader);
         when(classLoader.getResourceAsStream("static/" + filename)).thenReturn(mockStream);
@@ -218,11 +206,9 @@ class PluginStaticResourceControllerTest {
     @Test
     @DisplayName("子目录资源应正确加载")
     void serveStaticResource_whenResourceInSubdirectory_shouldLoadCorrectly() {
-        FrontendMetadata metadata = createTestMetadata();
         InputStream mockStream = new ByteArrayInputStream("img data".getBytes());
 
         when(pluginManager.getPlugin("demo-plugin")).thenReturn(pluginWrapper);
-        when(processor.getMetadata("demo-plugin")).thenReturn(metadata);
         when(request.getRequestURI()).thenReturn("/plugin/demo-plugin/static/assets/logo.png");
         when(pluginWrapper.getPluginClassLoader()).thenReturn(classLoader);
         when(classLoader.getResourceAsStream("static/assets/logo.png")).thenReturn(mockStream);
@@ -238,11 +224,9 @@ class PluginStaticResourceControllerTest {
     @Test
     @DisplayName("深层嵌套路径应正确处理")
     void serveStaticResource_whenDeepNestedPath_shouldHandleCorrectly() {
-        FrontendMetadata metadata = createTestMetadata();
         InputStream mockStream = new ByteArrayInputStream("nested".getBytes());
 
         when(pluginManager.getPlugin("demo-plugin")).thenReturn(pluginWrapper);
-        when(processor.getMetadata("demo-plugin")).thenReturn(metadata);
         when(request.getRequestURI()).thenReturn("/plugin/demo-plugin/static/a/b/c/d/file.js");
         when(pluginWrapper.getPluginClassLoader()).thenReturn(classLoader);
         when(classLoader.getResourceAsStream("static/a/b/c/d/file.js")).thenReturn(mockStream);
@@ -257,17 +241,9 @@ class PluginStaticResourceControllerTest {
     @Test
     @DisplayName("插件 ID 包含特殊字符时应正确处理")
     void serveStaticResource_whenPluginIdHasSpecialChars_shouldHandleCorrectly() {
-        FrontendMetadata metadata = new FrontendMetadata(
-            "my-demo-plugin_v2", "测试插件", "console.js",
-            new org.ssssssss.magicboot.plugin.api.frontend.PluginRoute[0],
-            new org.ssssssss.magicboot.plugin.api.frontend.PluginMenuItem[0],
-            new String[0],
-            null, null
-        );
         InputStream mockStream = new ByteArrayInputStream("test".getBytes());
 
         when(pluginManager.getPlugin("my-demo-plugin_v2")).thenReturn(pluginWrapper);
-        when(processor.getMetadata("my-demo-plugin_v2")).thenReturn(metadata);
         when(request.getRequestURI()).thenReturn("/plugin/my-demo-plugin_v2/static/console.js");
         when(pluginWrapper.getPluginClassLoader()).thenReturn(classLoader);
         when(classLoader.getResourceAsStream("static/console.js")).thenReturn(mockStream);
@@ -279,18 +255,4 @@ class PluginStaticResourceControllerTest {
         assertEquals(200, response.getStatusCode().value());
     }
 
-    /**
-     * 创建测试用的 FrontendMetadata
-     */
-    private FrontendMetadata createTestMetadata() {
-        return new FrontendMetadata(
-            "demo-plugin",
-            "演示插件",
-            "console.js",
-            new org.ssssssss.magicboot.plugin.api.frontend.PluginRoute[0],
-            new org.ssssssss.magicboot.plugin.api.frontend.PluginMenuItem[0],
-            new String[0],
-            null, null
-        );
-    }
 }
