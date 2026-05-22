@@ -1,0 +1,32 @@
+import client from './request'
+import type { ImportResult, WarehouseLocation, ApiResponse, PageResult } from '@/types'
+
+export function getWarehouseLocations(params: {
+  page?: number
+  pageSize?: number
+  warehouseCode?: string
+  locationId?: string
+}): Promise<PageResult<WarehouseLocation>> {
+  return client
+    .get<ApiResponse<PageResult<WarehouseLocation>>>('/location/warehouse-location/list', { params })
+    .then((r) => r.data.data)
+}
+
+export function addWarehouseLocation(data: {
+  warehouseCode: string
+  locationId: string
+}): Promise<string> {
+  return client
+    .post<ApiResponse<string>>('/location/warehouse-location/add', data)
+    .then((r) => r.data.data)
+}
+
+export function importWarehouseLocations(file: File): Promise<ImportResult> {
+  const form = new FormData()
+  form.append('file', file)
+  return client
+    .post<ApiResponse<ImportResult>>('/location/warehouse-location/import', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    .then((r) => r.data.data)
+}
