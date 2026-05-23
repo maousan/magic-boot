@@ -11,6 +11,7 @@ public class DongxinhepingFrontendExtension implements FrontendExtension {
 
     private static final String PLUGIN_ID = "dongxinheping-plugin";
     private static final String PDA_INDEX = "/plugin/dongxinheping-plugin/static/pda/index.html";
+    private static final String ADMIN_INDEX = "/plugin/dongxinheping-plugin/static/admin/index.html";
 
     @Override
     public String getPluginId() {
@@ -30,6 +31,7 @@ public class DongxinhepingFrontendExtension implements FrontendExtension {
     @Override
     public PluginRoute[] getRoutes() {
         return new PluginRoute[] {
+                new PluginRoute("/dongxinheping-admin", "DongxinhepingAdmin", "东信和平管理", "settings-outline", true),
                 new PluginRoute("/pda", "DongxinhepingPda", "PDA 首页", "mobile", true)
         };
     }
@@ -37,6 +39,7 @@ public class DongxinhepingFrontendExtension implements FrontendExtension {
     @Override
     public PluginMenuItem[] getMenuItems() {
         return new PluginMenuItem[] {
+                new PluginMenuItem("dongxinheping-admin", null, "东信和平管理", "settings-outline", "/dongxinheping-admin", 100),
                 new PluginMenuItem("dongxinheping-pda", null, "东信和平 PDA", "mobile", "/pda", 200)
         };
     }
@@ -53,6 +56,6 @@ public class DongxinhepingFrontendExtension implements FrontendExtension {
 
     @Override
     public String getExternalUrl() {
-        return PDA_INDEX;
+        return ADMIN_INDEX;
     }
 }

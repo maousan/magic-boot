@@ -41,7 +41,7 @@ Content-Type: application/json
   "devicePort": 9527,
   "hostAddress": 102,
   "dataCommand": 186,
-  "timeoutMs": 3000
+  "timeoutMs": 10000
 }
 
 ### 1.3 Pulse (0x36)
@@ -88,7 +88,7 @@ Content-Type: application/json
   "deviceIp": "192.168.2.102",
   "devicePort": 9527,
   "hostAddress": 102,
-  "timeoutMs": 3000
+  "timeoutMs": 6000
 }
 
 ### 1.7 Query system network (MAC + IP)
@@ -181,7 +181,7 @@ POST {{baseUrl}}{{pluginApiPrefix}}/netty/server/send
 Content-Type: application/json
 
 {
-  "remoteAddress": "192.168.2.102:53915",
+  "remoteAddress": "192.168.2.102:52314",
   "payload": "PING_FROM_SERVER",
   "payloadFormat": "ascii"
 }
@@ -191,9 +191,10 @@ POST {{baseUrl}}{{pluginApiPrefix}}/netty/server/send
 Content-Type: application/json
 
 {
-  "remoteAddress": "192.168.2.102:51853",
+  "remoteAddress": "192.168.2.102:53373",
   "payload": "0x66 0x35 0xBA 0x3C 0x07",
-  "payloadFormat": "hex"
+  "payloadFormat": "hex",
+  "waitResponse": true
 }
 
 ### 4.3 Send to one client (HEX payload, plain hex string)
@@ -201,7 +202,7 @@ POST {{baseUrl}}{{pluginApiPrefix}}/netty/server/send
 Content-Type: application/json
 
 {
-  "remoteAddress": "192.168.2.102:51853",
+  "remoteAddress": "192.168.2.102:53373",
   "payload": "66 35 BA 3C 07",
   "payloadFormat": "hex"
 }
@@ -211,7 +212,7 @@ POST {{baseUrl}}{{pluginApiPrefix}}/netty/server/send
 Content-Type: application/json
 
 {
-  "remoteAddress": "192.168.2.102:51857",
+  "remoteAddress": "192.168.2.102:56948",
   "payloadArray": [102, 53, 186, 60, 7],
   "payloadFormat": "hex"
 }
@@ -221,9 +222,10 @@ POST {{baseUrl}}{{pluginApiPrefix}}/netty/server/send
 Content-Type: application/json
 
 {
-  "remoteAddress": "192.168.2.102:51857",
+  "remoteAddress": "192.168.2.102:53373",
   "payload": "0x66 0xFA 0xBA 0xCC 0x52",
-  "payloadFormat": "hex"
+  "payloadFormat": "hex",
+  "waitResponse": true
 }
 
 ### 4.6 Broadcast (ASCII payload)

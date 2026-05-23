@@ -80,6 +80,20 @@
       </template>
     </n-modal>
 
+    <!-- 控灯弹窗 -->
+    <n-modal v-model:show="showLight" :title="'控灯 - ' + (lightDevice?.macAddress || '') + '（' + (lightDevice?.ip || '') + '）'" preset="card" style="width: 420px">
+      <n-grid :cols="4" :x-gap="8" :y-gap="8">
+        <n-gi><n-button block type="success" :loading="lightLoading" @click="sendLight('ON', 'GREEN')">开绿灯</n-button></n-gi>
+        <n-gi><n-button block type="warning" :loading="lightLoading" @click="sendLight('ON', 'YELLOW')">开黄灯</n-button></n-gi>
+        <n-gi><n-button block type="error" :loading="lightLoading" @click="sendLight('ON', 'RED')">开红灯</n-button></n-gi>
+        <n-gi><n-button block type="primary" :loading="lightLoading" @click="sendLight('ON', 'ALL')">全部开</n-button></n-gi>
+        <n-gi><n-button block type="success" :loading="lightLoading" @click="sendLight('OFF', 'GREEN')">关绿灯</n-button></n-gi>
+        <n-gi><n-button block type="warning" :loading="lightLoading" @click="sendLight('OFF', 'YELLOW')">关黄灯</n-button></n-gi>
+        <n-gi><n-button block type="error" :loading="lightLoading" @click="sendLight('OFF', 'RED')">关红灯</n-button></n-gi>
+        <n-gi><n-button block type="primary" :loading="lightLoading" @click="sendLight('OFF', 'ALL')">全部关</n-button></n-gi>
+      </n-grid>
+    </n-modal>
+
     <!-- 高级控制弹窗 -->
     <n-modal v-model:show="showControl" :title="'设备控制 - ' + (controlDevice?.macAddress || '')" preset="card" style="width: 600px">
       <n-space vertical>
@@ -151,7 +165,7 @@
 import { ref, reactive, onMounted, h } from 'vue'
 import {
   NCard, NDataTable, NButton, NModal, NSpace, NFormItem, NInput, NInputNumber,
-  NFlex, NPagination, NDivider, NDescriptions, NDescriptionsItem, NText, NEllipsis, NGrid, NGi, NDropdown,
+  NFlex, NPagination, NDivider, NDescriptions, NDescriptionsItem, NText, NEllipsis, NGrid, NGi,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import {
@@ -172,8 +186,10 @@ const showCreate = ref(false)
 const showEdit = ref(false)
 const showDelete = ref(false)
 const showControl = ref(false)
+const showLight = ref(false)
 const deleteTarget = ref<LedDevice | null>(null)
 const controlDevice = ref<LedDevice | null>(null)
+const lightDevice = ref<LedDevice | null>(null)
 const ctrlResult = ref<Record<string, any> | null>(null)
 
 const query = reactive({ macAddress: '', ip: '', remark: '' })
@@ -190,14 +206,6 @@ const ctrl = reactive<ZintisLedControlRequest>({
 
 const devices = reactive<{ list: LedDevice[]; total: number }>({ list: [], total: 0 })
 
-const lightOptions = [
-  { label: '开灯（绿灯）', key: 'on-green' },
-  { label: '开灯（黄灯）', key: 'on-yellow' },
-  { label: '开灯（红灯）', key: 'on-red' },
-  { label: '开灯（全部）', key: 'on-all' },
-  { label: '关灯（全部）', key: 'off-all' },
-]
-
 const columns: DataTableColumns<LedDevice> = [
   { title: 'MAC 地址', key: 'macAddress', width: 180 },
   { title: 'IP 地址', key: 'ip', width: 160 },
@@ -209,10 +217,7 @@ const columns: DataTableColumns<LedDevice> = [
     fixed: 'right',
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
-        h(NDropdown, {
-          options: lightOptions,
-          onSelect: (key: string) => handleLightCommand(row, key),
-        }, () => h(NButton, { size: 'small', type: 'primary' }, () => '控灯')),
+        h(NButton, { size: 'small', type: 'primary', onClick: () => openLight(row) }, () => '控灯'),
         h(NButton, { size: 'small', type: 'warning', onClick: () => openControl(row) }, () => '高级'),
         h(NButton, { size: 'small', onClick: () => openEdit(row) }, () => '编辑'),
         h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '删除'),
@@ -298,21 +303,22 @@ async function handleDelete() {
   }
 }
 
-// 快捷控灯
-async function handleLightCommand(row: LedDevice, key: string) {
-  const map: Record<string, { command: 'ON' | 'OFF'; port: 'ALL' | 'RED' | 'YELLOW' | 'GREEN' }> = {
-    'on-green': { command: 'ON', port: 'GREEN' },
-    'on-yellow': { command: 'ON', port: 'YELLOW' },
-    'on-red': { command: 'ON', port: 'RED' },
-    'on-all': { command: 'ON', port: 'ALL' },
-    'off-all': { command: 'OFF', port: 'ALL' },
-  }
-  const cfg = map[key]
-  if (!cfg) return
+// 控灯弹窗
+const lightLoading = ref(false)
+
+function openLight(row: LedDevice) {
+  lightDevice.value = row
+  showLight.value = true
+}
+
+async function sendLight(command: 'ON' | 'OFF', port: 'ALL' | 'RED' | 'YELLOW' | 'GREEN') {
+  if (!lightDevice.value) return
+  lightLoading.value = true
   try {
-    await controlLedDevice({ mode: 'client', ledId: row.macAddress, command: cfg.command, port: cfg.port })
-    await fetchData()
-  } catch {}
+    await controlLedDevice({ mode: 'client', ledId: lightDevice.value.macAddress, command, port })
+  } finally {
+    lightLoading.value = false
+  }
 }
 
 // 高级控制

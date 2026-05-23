@@ -1,0 +1,27 @@
+### RFID控制 - 寻卡
+POST http://localhost:9999/api/rfid
+Content-Type: application/json
+
+{
+  "mode": "on",
+  "data": {
+    "locationId": "A001",
+    "sku": "SKU-10001"
+  }
+}
+
+### RFID控制 - 停止寻卡
+POST http://localhost:9999/api/rfid
+Content-Type: application/json
+
+{
+  "mode": "off"
+}
+
+### RFID控制 - on缺少data
+POST http://localhost:9999/api/rfid
+Content-Type: application/json
+
+{
+  "mode": "on"
+}
