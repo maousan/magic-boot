@@ -1,41 +1,17 @@
 {
   "properties" : { },
-  "id" : "f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1",
+  "id" : "qzx68n1754desrpjnnsa3fdk0p6uwj6n",
   "script" : null,
-  "groupId" : "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
-  "name" : "列表查询",
+  "groupId" : "6ce8544b21954e189dc7aeb484aeddfc",
+  "name" : "标签绑定列表查询",
   "createTime" : null,
-  "updateTime" : 1779416616936,
+  "updateTime" : null,
   "lock" : null,
   "createBy" : null,
-  "updateBy" : "admin",
-  "path" : "/list",
+  "updateBy" : null,
+  "path" : "/label-mapping/list",
   "method" : "GET",
   "parameters" : [ {
-    "name" : "status",
-    "value" : "",
-    "description" : "状态过滤: 1=绑定中, 0=已解绑, 不传则全部",
-    "required" : false,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  }, {
-    "name" : "keyword",
-    "value" : "",
-    "description" : "关键词搜索(匹配batchId或epc)",
-    "required" : false,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  }, {
     "name" : "page",
     "value" : "1",
     "description" : "页码",
@@ -59,6 +35,30 @@
     "error" : null,
     "expression" : null,
     "children" : null
+  }, {
+    "name" : "locationCode",
+    "value" : "",
+    "description" : "库位编码（模糊查询）",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  }, {
+    "name" : "labelCode",
+    "value" : "",
+    "description" : "标签编码（模糊查询）",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
   } ],
   "options" : [ {
     "name" : "require_login",
@@ -76,24 +76,24 @@
   "requestBody" : "",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n  \"success\": true,\n  \"data\": {\n    \"list\": [],\n    \"total\": 0\n  }\n}",
-  "description" : "分页查询批次EPC绑定记录。",
+  "responseBody" : "{\n  \"code\": 200,\n  \"message\": \"success\",\n  \"data\": {\n    \"list\": [],\n    \"total\": 0\n  }\n}",
+  "description" : "分页查询库位-标签绑定记录（本地表）",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
 }
 ================================
 let sql = """
-    select id, batch_id, epc, status, bind_time, unbind_time
-    from t_batch_epc
+    select id, location_code, label_code, bind_time
+    from t_location_label
     <where>
-    <if test="status != null and status != ''">
-    and status = #{status}
-    </if>
-    <if test="keyword != null and keyword != ''">
-    and (batch_id like concat('%', #{keyword}, '%') or epc like concat('%', #{keyword}, '%'))
-    </if>
+        <if test="locationCode != null and locationCode != ''">
+            and location_code like concat('%', #{locationCode}, '%')
+        </if>
+        <if test="labelCode != null and labelCode != ''">
+            and label_code like concat('%', #{labelCode}, '%')
+        </if>
     </where>
-    order by create_time desc
+    order by bind_time desc
 """
 
-return db.page(sql, pageSize, (page-1)*pageSize)
+return db.page(sql)

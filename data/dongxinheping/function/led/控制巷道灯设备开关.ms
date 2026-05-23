@@ -1,21 +1,22 @@
 {
   "properties" : { },
-  "id" : "7c8d2f2d8be2452aa1c9f86f6e0f56a1",
+  "id" : "yeko1lgerm2ofrxmz2dotnn7f59gnacv",
   "script" : null,
-  "groupId" : "6ce8544b21954e189dc7aeb484aeddfc",
+  "groupId" : "628f77553ba14e47ae84391269b008bb",
   "name" : "控制巷道灯设备开关",
-  "createTime" : null,
-  "updateTime" : 1779425652109,
-  "lock" : "0",
-  "createBy" : null,
+  "createTime" : 1779427000000,
+  "updateTime" : 1779427000000,
+  "lock" : null,
+  "createBy" : "admin",
   "updateBy" : "admin",
-  "path" : "/led-device-control",
-  "method" : "POST",
-  "parameters" : [ ],
-  "options" : [ {
-    "name" : "require_login",
-    "value" : "false",
-    "description" : "该接口需要登录才允许访问",
+  "path" : "/controlAisleLedDevice",
+  "description" : "按设备、模式、指令和端口控制巷道灯，支持server/client模式。",
+  "returnType" : null,
+  "mappingPath" : null,
+  "parameters" : [ {
+    "name" : "data",
+    "value" : null,
+    "description" : "入参对象，包含mode、ledId、command、port、timeoutMs、waitResponse",
     "required" : false,
     "dataType" : "String",
     "type" : null,
@@ -24,14 +25,7 @@
     "error" : null,
     "expression" : null,
     "children" : null
-  } ],
-  "requestBody" : "{\n  \"mode\": \"client\",\n  \"ledId\": \"3A:69:7A:08:D0:A5\",\n  \"command\": \"OFF\",\n  \"port\": \"ALL\",\n  \"timeoutMs\": 10000,\n  \"waitResponse\": false\n}",
-  "headers" : [ ],
-  "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": {\n        \"mode\": \"client\",\n        \"ledId\": \"3A:69:7A:08:D0:A5\",\n        \"deviceIp\": \"192.168.2.102\",\n        \"remoteAddress\": \"192.168.2.102:53373\",\n        \"command\": \"ON\",\n        \"port\": \"ALL\",\n        \"timeoutMs\": 10000,\n        \"executedCount\": 1,\n        \"executed\": [\n            {\n                \"color\": \"ALL\",\n                \"dataCommand\": 156,\n                \"remoteAddress\": \"192.168.2.102:53373\",\n                \"macAddress\": \"3A:69:7A:08:D0:A5\",\n                \"frame\": [\n                    102,\n                    53,\n                    156,\n                    230,\n                    134\n                ],\n                \"sendResult\": {\n                    \"code\": 200,\n                    \"message\": \"success\",\n                    \"status\": 200,\n                    \"responseText\": \"{\\\"success\\\":true,\\\"message\\\":\\\"Send completed\\\",\\\"totalTargets\\\":1,\\\"successCount\\\":1,\\\"failedCount\\\":0,\\\"failedTargets\\\":[],\\\"waitResponse\\\":false,\\\"responseCount\\\":0,\\\"responses\\\":[]}\"\n                }\n            }\n        ],\n        \"failed\": []\n    },\n    \"timestamp\": 1779425646193,\n    \"executeTime\": 154\n}",
-  "description" : "按设备 + 指令 + 端口直接控制巷道灯。",
-  "requestBodyDefinition" : null,
-  "responseBodyDefinition" : null
+  } ]
 }
 ================================
 import log
@@ -40,8 +34,8 @@ import org.ssssssss.magicapi.utils.JsonUtils
 import java.util.Map
 import '@/led/sendToClient' as sendToClient
 
-if (body == null) {
-    exit 400, '请求体不能为空'
+if (data == null) {
+    return { code: 400, message: 'data不能为空' }
 }
 
 let normalizeMac = (value) => {
@@ -143,48 +137,48 @@ let parseSendSuccess = (result) => {
     return true
 }
 
-let mode = body.mode
+let mode = data.mode
 if (mode == null || mode == '') {
     mode = 'server'
 }
 mode = (mode + '').trim().toUpperCase()
 if (mode != 'SERVER' && mode != 'CLIENT') {
-    exit 400, 'mode仅支持server/client'
+    return { code: 400, message: 'mode仅支持server/client' }
 }
 
-let ledId = body.ledId
+let ledId = data.ledId
 if (ledId == null || ledId == '') {
-    ledId = body.macAddress
+    ledId = data.macAddress
 }
 if (ledId == null || ledId == '') {
-    exit 400, 'ledId不能为空'
+    return { code: 400, message: 'ledId不能为空' }
 }
 ledId = (ledId + '').trim()
 
-let command = body.command
+let command = data.command
 if (command == null || command == '') {
     command = 'ON'
 }
 command = (command + '').trim().toUpperCase()
 if (command != 'ON' && command != 'OFF') {
-    exit 400, 'command仅支持ON/OFF'
+    return { code: 400, message: 'command仅支持ON/OFF' }
 }
 
-let port = body.port
+let port = data.port
 if (port == null || port == '') {
     port = 'ALL'
 }
 port = (port + '').trim().toUpperCase()
 if (port != 'ALL' && port != 'RED' && port != 'YELLOW' && port != 'GREEN') {
-    exit 400, 'port仅支持ALL/RED/YELLOW/GREEN'
+    return { code: 400, message: 'port仅支持ALL/RED/YELLOW/GREEN' }
 }
 
-let timeoutMs = body.timeoutMs
+let timeoutMs = data.timeoutMs
 if (timeoutMs == null) {
     timeoutMs = 10000
 }
 if (timeoutMs <= 0) {
-    exit 400, 'timeoutMs必须大于0'
+    return { code: 400, message: 'timeoutMs必须大于0' }
 }
 
 const device = db.selectOne("""
@@ -198,28 +192,28 @@ const device = db.selectOne("""
 """, { ledId: ledId })
 
 if (device == null) {
-    exit 404, '未找到巷道灯设备'
+    return { code: 404, message: '未找到巷道灯设备' }
 }
 
 let deviceIp = device.ip
 if (deviceIp == null || deviceIp == '') {
-    exit 500, '设备IP为空'
+    return { code: 500, message: '设备IP为空' }
 }
 deviceIp = (deviceIp + '').trim()
 
 let ipText = deviceIp
 let lastDotIndex = ipText.lastIndexOf('.')
 if (lastDotIndex < 0 || lastDotIndex >= ipText.length() - 1) {
-    exit 500, '设备IP格式非法: ' + ipText
+    return { code: 500, message: '设备IP格式非法: ' + ipText }
 }
 let hostAddress = ipText.substring(lastDotIndex + 1)
 hostAddress = (hostAddress + '').trim()
 if (hostAddress == '' || !hostAddress.matches('^[0-9]+$')) {
-    exit 500, 'hostAddress不是有效数字: ' + hostAddress
+    return { code: 500, message: 'hostAddress不是有效数字: ' + hostAddress }
 }
 hostAddress = Integer.parseInt(hostAddress)
 if (hostAddress <= 0 || hostAddress > 255) {
-    exit 500, 'hostAddress不合法'
+    return { code: 500, message: 'hostAddress不合法' }
 }
 
 let ports = []
@@ -246,8 +240,8 @@ if (mode == 'SERVER') {
 } else {
     activeClient = findActiveClientByMac(ledId)
     if (activeClient.success != true) {
-        log.warn('led-device-control client mode active client not found, ledId=' + ledId + ', result=' + activeClient)
-        exit 404, activeClient.message + ': ' + activeClient.macAddress
+        log.warn('controlAisleLedDevice client mode active client not found, ledId=' + ledId + ', result=' + activeClient)
+        return { code: 404, message: activeClient.message + ': ' + activeClient.macAddress, detail: activeClient }
     }
 }
 
@@ -327,7 +321,7 @@ for (color in ports) {
     } else {
         let controlCommand = command == 'ON' ? 0x35 : 0xFA
         let frame = buildControlFrame(hostAddress, controlCommand, dataCommand)
-        let sendResult = sendToClient(activeClient.remoteAddress, null, null, frame, 'json', body.waitResponse)
+        let sendResult = sendToClient(activeClient.remoteAddress, null, null, frame, 'json', data.waitResponse)
         row.remoteAddress = activeClient.remoteAddress
         row.macAddress = activeClient.macAddress
         row.frame = frame
@@ -342,8 +336,8 @@ for (color in ports) {
 }
 
 if (failed.size() > 0) {
-    log.warn('led-device-control failed, ledId=' + ledId + ', command=' + command + ', port=' + port + ', failed=' + failed)
-    exit 502, '部分端口执行失败: ' + failed
+    log.warn('controlAisleLedDevice failed, ledId=' + ledId + ', command=' + command + ', port=' + port + ', failed=' + failed)
+    return { code: 502, message: '部分端口执行失败: ' + failed, failed: failed, executed: executed }
 }
 
 let newStatus = 0
@@ -373,13 +367,18 @@ if (port == 'ALL') {
 }
 
 return {
+    code: 200,
+    message: 'success',
     mode: mode.toLowerCase(),
     ledId: ledId,
     deviceIp: deviceIp,
+    devicePort: 9527,
+    hostAddress: hostAddress,
     remoteAddress: activeClient == null ? null : activeClient.remoteAddress,
     command: command,
     port: port,
     timeoutMs: timeoutMs,
+    status: newStatus,
     executedCount: executed.size(),
     executed: executed,
     failed: failed

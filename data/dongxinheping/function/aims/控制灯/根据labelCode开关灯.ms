@@ -33,6 +33,8 @@ import cn.hutool.extra.spring.SpringUtil
 import java.util.ArrayList
 import java.util.HashMap
 import java.util.List
+import java.nio.charset.StandardCharsets
+import cn.hutool.json.JSONUtil
 import com.dtflys.forest.Forest;
 
 const aimsHost = Forest.config().getVariableValue("aimsHost")
@@ -121,7 +123,7 @@ if(ledItems.size() == 0){
 let response = Forest.put(`http://${aimsHost}/labels/contents/led`)
     .contentType('application/json;charset=UTF-8')
     .addHeader('Accept', 'application/json;charset=UTF-8')
-    .addBody(ledItems)
+    .addBody(JSONUtil.toJsonStr(ledItems).getBytes(StandardCharsets.UTF_8))
     .executeAsResponse()
 
 let statusCode = response.statusCode()

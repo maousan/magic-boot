@@ -5,13 +5,13 @@
   "groupId" : "999006442fb54aebbb2015e4a23bdba8",
   "name" : "定时同步article数据",
   "createTime" : 1776664436822,
-  "updateTime" : 1778229841843,
+  "updateTime" : 1779434034656,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
   "path" : "/articles",
-  "cron" : "0 */5 * * *",
-  "enabled" : false,
+  "cron" : "0 */30 * * * ?",
+  "enabled" : true,
   "description" : "",
   "params" : "",
   "misfirePolicy" : "SMART",
@@ -66,7 +66,8 @@ let putIndexedField = (data, fieldName, pageIndex, rowIndex, value) => {
     if(text == ''){
         return
     }
-    data[fieldName + '_' + pageIndex + '_' + rowIndex] = text
+    let globalRowIndex = ((pageIndex - 1) * batchSize) + rowIndex
+    data[fieldName + '_' + globalRowIndex] = text
 }
 
 let queryLocationBatch = (offset) => {

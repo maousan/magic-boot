@@ -5,7 +5,7 @@
   "groupId" : "03a2d754c617417cb68306951d6f8cf6",
   "name" : "更新article信息",
   "createTime" : null,
-  "updateTime" : 1776138168999,
+  "updateTime" : 1778051189315,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -30,9 +30,11 @@
 ================================
 import log
 import java.util.List
+import com.google.common.collect.Lists
 import com.dtflys.forest.Forest
 
 const aimsHost = Forest.config().getVariableValue("aimsHost")
+const batchSize = 100
 
 if(dataList == null){
     return {
@@ -76,24 +78,61 @@ for(item in dataList){
     }
 }
 
-let response = Forest.post(`http://${aimsHost}:9002/articles`)
-    .contentType('application/json;charset=UTF-8')
-    .addHeader('Accept', 'application/json;charset=UTF-8')
-    .addBody(payload)
-    .executeAsResponse()
+let callUpdateArticleBatch = (batchDataList, batchIndex) => {
+    let response = Forest.post(`http://${aimsHost}/articles`)
+        .contentTypeJson()
+        .addBody("dataList", batchDataList)
+        .executeAsResponse()
 
-let statusCode = response.statusCode()
-let responseText = response.readAsString()
-let success = statusCode >= 200 && statusCode < 300
+    let statusCode = response.statusCode()
+    let responseText = response.readAsString()
+    let success = statusCode >= 200 && statusCode < 300
+    if(success){
+        log.info('AIMS update article batch success, batchIndex=' + batchIndex + ', batchSize=' + batchDataList.size() + ', status=' + statusCode)
+    } else {
+        log.warn('AIMS update article batch failed, batchIndex=' + batchIndex + ', batchSize=' + batchDataList.size() + ', status=' + statusCode + ', response=' + responseText)
+    }
+    return {
+        success: success,
+        batchIndex: batchIndex,
+        batchSize: batchDataList.size(),
+        status: statusCode,
+        response: responseText
+    }
+}
 
-if(success){
-    log.info('AIMS update article success, status=' + statusCode)
-} else {
-    log.warn('AIMS update article failed, status=' + statusCode + ', response=' + responseText)
+let batches = Lists.partition(dataList, batchSize)
+let successCount = 0
+let failedBatches = []
+let batchIndex = 0
+
+for(batch in batches){
+    batchIndex = batchIndex + 1
+    try {
+        let batchResult = callUpdateArticleBatch(batch, batchIndex)
+        if(batchResult.success){
+            successCount = successCount + batch.size()
+        } else {
+            failedBatches.add(batchResult)
+        }
+    } catch (batchErr) {
+        log.warn('AIMS update article batch error, batchIndex=' + batchIndex + ', batchSize=' + batch.size() + ', message=' + batchErr.message)
+        failedBatches.add({
+            success: false,
+            batchIndex: batchIndex,
+            batchSize: batch.size(),
+            status: 500,
+            response: batchErr.message
+        })
+    }
 }
 
 return {
-    success: success,
-    status: statusCode,
-    response: responseText
+    success: failedBatches.size() == 0,
+    status: failedBatches.size() == 0 ? 200 : 500,
+    totalCount: dataList.size(),
+    batchCount: batches.size(),
+    successCount: successCount,
+    failCount: dataList.size() - successCount,
+    failedBatches: failedBatches
 }

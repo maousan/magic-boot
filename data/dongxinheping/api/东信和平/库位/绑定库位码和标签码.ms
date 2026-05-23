@@ -35,6 +35,7 @@
 }
 ================================
 import log
+import java.util.UUID
 import java.util.ArrayList
 import com.dtflys.forest.Forest
 import '@/utils/parseLot' as parseLot
@@ -141,4 +142,13 @@ if(statusCode < 200 || statusCode >= 300){
 }
 
 log.info('AIMS link success, stationCode=' + stationCode + ', locationCode=' + locationCode + ', labelCode=' + labelCode + ', status=' + statusCode)
+
+db.table("t_location_label").where().eq("label_code", labelCode).delete()
+db.table("t_location_label").insert({
+    id: UUID.randomUUID().toString().replace('-', ''),
+    location_code: locationCode,
+    label_code: labelCode,
+    bind_time: new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date())
+})
+
 return 1

@@ -5,7 +5,7 @@
   "groupId" : "628f77553ba14e47ae84391269b008bb",
   "name" : "根据库位码亮巷道灯",
   "createTime" : 1777000000000,
-  "updateTime" : 1777000000000,
+  "updateTime" : 1779257692878,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -28,158 +28,78 @@
   } ]
 }
 ================================
-import log
-import com.dtflys.forest.Forest
 import '@/utils/parseLot' as parseLot
+import '@/led/controlAisleLedDevice' as controlAisleLedDevice
 
 if (data == null) {
-    exit 400, 'data不能为空'
+    return { code: 400, message: 'data不能为空' }
 }
 
 let lotNo = data.lotNo
 let timeoutMs = data.timeoutMs
+let mode = data.mode
+let waitResponse = data.waitResponse
 
 const parsedLot = parseLot(lotNo)
 lotNo = parsedLot != null && parsedLot.Lot != null ? parsedLot.Lot : parsedLot
 if (lotNo == null || lotNo == '') {
-    exit 400, 'lotNo不能为空'
+    return { code: 400, message: 'lotNo不能为空' }
 }
 
 if (timeoutMs == null) {
     timeoutMs = 3000
 }
 if (timeoutMs <= 0) {
-    exit 400, 'timeoutMs必须大于0'
+    return { code: 400, message: 'timeoutMs必须大于0' }
 }
 
 const mapping = db.table("t_location_led").where().eq("location_code", lotNo).selectOne()
 if (mapping == null) {
-    exit 404, '未找到库位码对应的巷道灯绑定关系'
+    return { code: 404, message: '未找到库位码对应的巷道灯绑定关系' }
 }
 
 let ledId = mapping.ledId || mapping.led_id
 let color = mapping.color
 if (ledId == null || ledId == '') {
-    exit 500, '绑定关系缺少ledId'
+    return { code: 500, message: '绑定关系缺少ledId' }
 }
 if (color == null || color == '') {
-    exit 500, '绑定关系缺少color'
+    return { code: 500, message: '绑定关系缺少color' }
 }
 color = (color + '').trim().toUpperCase()
 
-const device = db.selectOne("""
-    select
-        mac_address as macAddress,
-        ip
-    from t_led_device
-    where mac_address = #{ledId}
-    limit 1
-""", {ledId: ledId})
+const controlResult = controlAisleLedDevice({
+    mode: mode,
+    ledId: ledId,
+    command: 'ON',
+    port: color,
+    timeoutMs: timeoutMs,
+    waitResponse: waitResponse
+})
 
-if (device == null) {
-    exit 404, '未找到绑定巷道灯设备信息'
+if (controlResult == null) {
+    return { code: 500, message: '调用巷道灯控制函数无返回' }
+}
+if (controlResult.code != 200) {
+    return controlResult
 }
 
-let deviceIp = device.ip
-if (deviceIp == null || deviceIp == '') {
-    exit 500, '设备IP为空'
+let firstExecuted = null
+if (controlResult.executed != null && controlResult.executed.size() > 0) {
+    firstExecuted = controlResult.executed[0]
 }
 
-let ipText = (deviceIp + '').trim()
-let lastDotIndex = ipText.lastIndexOf('.')
-if (lastDotIndex < 0 || lastDotIndex >= ipText.length() - 1) {
-    exit 500, '设备IP格式非法: ' + ipText
-}
-let hostAddress = ipText.substring(lastDotIndex + 1)
-hostAddress = (hostAddress + '').trim()
-if (hostAddress == '') {
-    exit 500, '无法计算hostAddress'
-}
-if (!hostAddress.matches('^[0-9]+$')) {
-    exit 500, 'hostAddress不是有效数字: ' + hostAddress
-}
-hostAddress = Integer.parseInt(hostAddress)
-if (hostAddress <= 0 || hostAddress > 255) {
-    exit 500, 'hostAddress不合法'
-}
-
-const colorRow = db.selectOne("""
-    select
-        code,
-        color
-    from t_led_color
-    where color = #{color}
-    order by id desc
-    limit 1
-""", {color: color})
-
-if (colorRow == null) {
-    exit 404, '未找到颜色对应的控制命令'
-}
-
-let commandRaw = colorRow.code
-if (commandRaw == null || (commandRaw + '').trim() == '') {
-    exit 500, '颜色命令code为空'
-}
-
-let commandText = (commandRaw + '').trim()
-let dataCommand = null
-if (commandText.startsWith('0x') || commandText.startsWith('0X')) {
-    dataCommand = Integer.parseInt(commandText.substring(2), 16)
-} else if (commandText.matches('^[0-9]+$')) {
-    dataCommand = Integer.parseInt(commandText)
-} else if (commandText.matches('^[0-9a-fA-F]+$')) {
-    dataCommand = Integer.parseInt(commandText, 16)
-} else {
-    exit 500, '颜色命令code格式不支持: ' + commandText
-}
-
-if (dataCommand <= 0 || dataCommand > 255) {
-    exit 500, 'dataCommand超出有效范围(1-255)'
-}
-
-let pluginControlOnUrl = Forest.config().getVariableValue("zintisLedControlOnUrl")
-if (pluginControlOnUrl == null || pluginControlOnUrl == '') {
-    pluginControlOnUrl = 'http://127.0.0.1:8090/plugin/zintis-led-plugin/api/control/on'
-}
-
-const requestBody = {
-    deviceIp: deviceIp,
-    devicePort: 9527,
-    hostAddress: hostAddress,
-    dataCommand: dataCommand,
-    timeoutMs: timeoutMs
-}
-
-const response = Forest.post(pluginControlOnUrl)
-    .contentType('application/json;charset=UTF-8')
-    .addHeader('Accept', 'application/json;charset=UTF-8')
-    .addBody(requestBody)
-    .executeAsResponse()
-
-const statusCode = response.statusCode()
-const responseText = response.readAsString()
-if (statusCode < 200 || statusCode >= 300) {
-    log.warn('turnOnAisleLedByLotNo failed, lotNo=' + lotNo + ', ledId=' + ledId + ', color=' + color + ', status=' + statusCode + ', response=' + responseText)
-    exit 502, '调用巷道灯插件失败: ' + responseText
-}
-
-db.update("""
-    update t_location_led
-       set status = 1
-     where location_code = #{lotNo}
-""", {lotNo: lotNo})
-
-log.info('turnOnAisleLedByLotNo success, lotNo=' + lotNo + ', ledId=' + ledId + ', color=' + color + ', ip=' + deviceIp + ', dataCommand=' + dataCommand)
 return {
+    code: 200,
+    message: 'success',
     lotNo: lotNo,
     ledId: ledId,
     color: color,
-    deviceIp: deviceIp,
-    devicePort: 9527,
-    hostAddress: hostAddress,
-    dataCommand: dataCommand,
+    deviceIp: controlResult.deviceIp,
+    devicePort: controlResult.devicePort,
+    hostAddress: controlResult.hostAddress,
+    dataCommand: firstExecuted == null ? null : firstExecuted.dataCommand,
     status: 1,
-    pluginResponseText: responseText
+    pluginResponseText: firstExecuted == null ? null : firstExecuted.responseText,
+    controlResult: controlResult
 }
-

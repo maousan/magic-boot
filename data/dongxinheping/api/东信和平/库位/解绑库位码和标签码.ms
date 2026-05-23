@@ -12,9 +12,9 @@
   "path" : "/label-mapping",
   "method" : "DELETE",
   "parameters" : [ {
-    "name" : "labelCode",
-    "value" : "03E2D88CE1DC",
-    "description" : "label code",
+    "name" : "id",
+    "value" : "",
+    "description" : "绑定记录ID",
     "required" : true,
     "dataType" : "String",
     "type" : null,
@@ -67,9 +67,19 @@ let buildAimsBaseUrl = (hostValue) => {
     return host
 }
 
-if(labelCode == null || labelCode == ''){
-    exit 400, 'labelCode不能为空'
+if(id == null || id == ''){
+    exit 400, 'id不能为空'
 }
+
+let record = db.selectOne("""
+    select label_code from t_location_label where id = #{id}
+""", { id: id })
+
+if(record == null){
+    exit 404, '绑定记录不存在'
+}
+
+let labelCode = record.label_code
 
 let aimsBaseUrl = buildAimsBaseUrl(aimsHost)
 let unlinkUrl = `${aimsBaseUrl}/labels/unlink?labelCode=${labelCode}`
@@ -87,4 +97,7 @@ if(unlinkStatus < 200 || unlinkStatus >= 300){
 }
 
 log.info('unlink location-label mapping success, labelCode=' + labelCode + ', status=' + unlinkStatus)
+
+db.table("t_location_label").where().eq("id", id).delete()
+
 return 1

@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "644d198b34704daeae5152e00e6da12b",
+  "name" : "wms",
+  "type" : "job",
+  "parentId" : "0",
+  "path" : "/wms",
+  "createTime" : 1778046038829,
+  "updateTime" : null,
+  "createBy" : "admin",
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

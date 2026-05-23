@@ -1,41 +1,17 @@
 {
   "properties" : { },
-  "id" : "f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1",
+  "id" : "pku202605220001list1234567890abcdef01",
   "script" : null,
-  "groupId" : "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+  "groupId" : "pk202605220001mgmt1234567890abcdef",
   "name" : "列表查询",
   "createTime" : null,
-  "updateTime" : 1779416616936,
+  "updateTime" : 1779426476623,
   "lock" : null,
   "createBy" : null,
   "updateBy" : "admin",
   "path" : "/list",
   "method" : "GET",
   "parameters" : [ {
-    "name" : "status",
-    "value" : "",
-    "description" : "状态过滤: 1=绑定中, 0=已解绑, 不传则全部",
-    "required" : false,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  }, {
-    "name" : "keyword",
-    "value" : "",
-    "description" : "关键词搜索(匹配batchId或epc)",
-    "required" : false,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  }, {
     "name" : "page",
     "value" : "1",
     "description" : "页码",
@@ -59,6 +35,42 @@
     "error" : null,
     "expression" : null,
     "children" : null
+  }, {
+    "name" : "waveNo",
+    "value" : "",
+    "description" : "波次号（模糊查询）",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  }, {
+    "name" : "userId",
+    "value" : "",
+    "description" : "用户ID（模糊查询）",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  }, {
+    "name" : "userName",
+    "value" : "",
+    "description" : "用户姓名（模糊查询）",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
   } ],
   "options" : [ {
     "name" : "require_login",
@@ -76,22 +88,26 @@
   "requestBody" : "",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n  \"success\": true,\n  \"data\": {\n    \"list\": [],\n    \"total\": 0\n  }\n}",
-  "description" : "分页查询批次EPC绑定记录。",
+  "responseBody" : null,
+  "description" : "分页查询拣货单列表",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
 }
 ================================
 let sql = """
-    select id, batch_id, epc, status, bind_time, unbind_time
-    from t_batch_epc
+    select id, wave_no, user_id, user_name,
+           detail_count, update_time, create_time
+    from t_picking_upload
     <where>
-    <if test="status != null and status != ''">
-    and status = #{status}
-    </if>
-    <if test="keyword != null and keyword != ''">
-    and (batch_id like concat('%', #{keyword}, '%') or epc like concat('%', #{keyword}, '%'))
-    </if>
+        <if test="waveNo != null and waveNo != ''">
+            and wave_no like concat('%', #{waveNo}, '%')
+        </if>
+        <if test="userId != null and userId != ''">
+            and user_id like concat('%', #{userId}, '%')
+        </if>
+        <if test="userName != null and userName != ''">
+            and user_name like concat('%', #{userName}, '%')
+        </if>
     </where>
     order by create_time desc
 """

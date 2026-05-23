@@ -4,8 +4,8 @@
   "script" : null,
   "groupId" : "89d74bcccfbc468a8dfcd06d6cc2fc56",
   "name" : "按库位查询库存返回",
-  "createTime" : null,
-  "updateTime" : 1777429724406,
+  "createTime" : 1777017543541,
+  "updateTime" : 1778048261138,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -40,8 +40,10 @@
   } ]
 }
 ================================
+import org.ssssssss.magicapi.utils.JsonUtils
 import log
 import java.util.ArrayList
+import java.util.List
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import com.dtflys.forest.Forest
@@ -62,13 +64,11 @@ let valueOrConfig = (configName, defaultValue) => {
     return value
 }
 
-let normalizeLocationIds = (rawLocationId) => {
-    let locations = new ArrayList()
-    let uniq = {}
-    if(rawLocationId == null || rawLocationId == ''){
-        return locations
+let addLocationId = (locations, uniq, rawCode) => {
+    if(rawCode == null || rawCode == ''){
+        return
     }
-    let text = (rawLocationId + '').replace('，', ',')
+    let text = (rawCode + '').replace('，', ',')
     for(part in text.split(',')){
         let code = (part + '').trim()
         if(code == ''){
@@ -76,9 +76,26 @@ let normalizeLocationIds = (rawLocationId) => {
         }
         if(uniq[code] == null){
             uniq[code] = 1
-            locations.add(code)
+            locations.add({
+                "locationId": code
+            })
         }
     }
+}
+
+let normalizeLocationIds = (rawLocationId) => {
+    let locations = new ArrayList()
+    let uniq = {}
+    if(rawLocationId == null || rawLocationId == ''){
+        return locations
+    }
+    if(rawLocationId instanceof List || rawLocationId.getClass().isArray()){
+        for(item in rawLocationId){
+            addLocationId(locations, uniq, item)
+        }
+        return locations
+    }
+    addLocationId(locations, uniq, rawLocationId)
     return locations
 }
 
@@ -129,34 +146,44 @@ for(code in locations){
 
 let queryUrl = targetUrl
 queryUrl = appendQuery(queryUrl, 'method', interfaceId)
-queryUrl = appendQuery(queryUrl, 'warehouseId', warehouseId)
-queryUrl = appendQuery(queryUrl, 'locationId', normalizedLocationId)
+// queryUrl = appendQuery(queryUrl, 'warehouseId', warehouseId)
+// queryUrl = appendQuery(queryUrl, 'locationId', normalizedLocationId)
+
+const postData = {
+    header: {
+        warehouseId,
+        locationdetail: locations
+    }
+}
+
 
 try {
-    let response = Forest.get(queryUrl)
-        .addHeader('Accept', 'application/json;charset=UTF-8')
+    let response = Forest.post(queryUrl)
+        .contentTypeJson()
+        .addBody("data", postData)
         .executeAsResponse()
 
     let statusCode = response.statusCode()
     let responseText = response.readAsString()
     let success = statusCode >= 200 && statusCode < 300
-    if(success){
-        log.info('DZJH004 inventory query success, status=' + statusCode + ', targetUrl=' + targetUrl + ', locationCount=' + locations.size())
-    } else {
-        log.warn('DZJH004 inventory query failed, status=' + statusCode + ', targetUrl=' + targetUrl + ', response=' + responseText)
+    if(!success){
+        // log.warn('DZJH004 inventory query failed, status=' + statusCode + ', targetUrl=' + targetUrl + ', response=' + responseText)
+        return {
+            success,
+            message: responseText
+        }
     }
+    const response = JsonUtils.readValue(responseText,Map.class)
+    success = success && response["Response"]["return"]["returnCode"] === "0000"
     return {
-        success: success,
-        status: statusCode,
-        requestUrl: queryUrl,
-        response: responseText
+        success,
+        totalCount: success ? response["Response"]["return"]["totalCount_Field"]::int : 0,
+        items: success ? response["Response"]["items"]["item"] : []
     }
 } catch (e) {
     log.error('DZJH004 inventory query error, targetUrl=' + targetUrl + ', message=' + e.message)
     return {
         success: false,
-        status: 500,
-        message: '调用DZJH004接口失败: ' + e.message,
-        requestUrl: queryUrl
+        message: '调用DZJH004接口失败: ' + e.message
     }
 }

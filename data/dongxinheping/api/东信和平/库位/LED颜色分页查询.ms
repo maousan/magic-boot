@@ -1,41 +1,17 @@
 {
   "properties" : { },
-  "id" : "f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1",
+  "id" : "lc20260522001bcdefghijklmnopqrst",
   "script" : null,
-  "groupId" : "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
-  "name" : "列表查询",
+  "groupId" : "6ce8544b21954e189dc7aeb484aeddfc",
+  "name" : "LED颜色分页查询",
   "createTime" : null,
-  "updateTime" : 1779416616936,
+  "updateTime" : null,
   "lock" : null,
   "createBy" : null,
-  "updateBy" : "admin",
-  "path" : "/list",
+  "updateBy" : null,
+  "path" : "/led-color/list",
   "method" : "GET",
   "parameters" : [ {
-    "name" : "status",
-    "value" : "",
-    "description" : "状态过滤: 1=绑定中, 0=已解绑, 不传则全部",
-    "required" : false,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  }, {
-    "name" : "keyword",
-    "value" : "",
-    "description" : "关键词搜索(匹配batchId或epc)",
-    "required" : false,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  }, {
     "name" : "page",
     "value" : "1",
     "description" : "页码",
@@ -59,6 +35,30 @@
     "error" : null,
     "expression" : null,
     "children" : null
+  }, {
+    "name" : "code",
+    "value" : "",
+    "description" : "颜色代码（模糊查询）",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  }, {
+    "name" : "color",
+    "value" : "",
+    "description" : "颜色（精确查询）",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
   } ],
   "options" : [ {
     "name" : "require_login",
@@ -76,24 +76,24 @@
   "requestBody" : "",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n  \"success\": true,\n  \"data\": {\n    \"list\": [],\n    \"total\": 0\n  }\n}",
-  "description" : "分页查询批次EPC绑定记录。",
+  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": {\n        \"total\": 0,\n        \"list\": null\n    }\n}",
+  "description" : "分页查询LED颜色与控制指令映射列表",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
 }
 ================================
 let sql = """
-    select id, batch_id, epc, status, bind_time, unbind_time
-    from t_batch_epc
+    select id, code, color, remark
+    from t_led_color
     <where>
-    <if test="status != null and status != ''">
-    and status = #{status}
-    </if>
-    <if test="keyword != null and keyword != ''">
-    and (batch_id like concat('%', #{keyword}, '%') or epc like concat('%', #{keyword}, '%'))
-    </if>
+        <if test="code != null and code != ''">
+            and code like concat('%', #{code}, '%')
+        </if>
+        <if test="color != null and color != ''">
+            and color = #{color}
+        </if>
     </where>
-    order by create_time desc
+    order by id
 """
 
 return db.page(sql, pageSize, (page-1)*pageSize)

@@ -5,7 +5,7 @@
   "groupId" : "qou8in0pu4dvva7g20trefax4lo26ye8",
   "name" : "亮灯灭灯控制",
   "createTime" : null,
-  "updateTime" : 1777000638185,
+  "updateTime" : 1779260526313,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -25,7 +25,7 @@
     "expression" : null,
     "children" : null
   } ],
-  "requestBody" : "{\n  \"waveNo\": \"WV260325001\",\n  \"userId\": \"USER001\",\n  \"mode\": 3,\n  \"color\": \"GREEN\",\n  \"duration\": \"0s\"\n}",
+  "requestBody" : "{\n  \"waveNo\": \"1W2604180001\", \n  \"userId\": \"WZK\", \n  \"mode\": \"1\", \n  \"color\": \"GREEN\", \n  \"duration\": \"inf\"\n}",
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"指令发送成功\",\n    \"data\": null,\n    \"timestamp\": 1777000634749,\n    \"executeTime\": 140\n}",
@@ -871,14 +871,22 @@ try {
     }
 
     for(locationCode in turnOffDispatchCodes){
-        turnOffAisleLedByLotNo({
-            lotNo: locationCode
-        })
+        try {
+            turnOffAisleLedByLotNo({
+                lotNo: locationCode
+            })
+        } catch {
+
+        }
     }
     for(locationCode in turnOnAisleDispatchCodes){
-        turnOnAisleLedByLotNo({
-            lotNo: locationCode
-        })
+        try {
+            turnOnAisleLedByLotNo({
+                lotNo: locationCode
+            })
+        } catch {
+
+        }
     }
 
     log.info(logPrefix + ', stage=dispatch_done, aisleTurnOff=' + turnOffDispatchCodes.size() + ', aisleTurnOn=' + turnOnAisleDispatchCodes.size())

@@ -14,7 +14,7 @@
   "parameters" : [ {
     "name" : "file",
     "value" : { },
-    "description" : "Excel文件，表头需包含仓库编码和库位ID",
+    "description" : "Excel(.xlsx/.xls)或CSV(.csv)文件，表头需包含仓库编码和库位ID",
     "required" : false,
     "dataType" : "MultipartFile",
     "type" : null,
@@ -51,6 +51,8 @@ import request
 import java.util.UUID
 import java.io.ByteArrayInputStream
 import cn.hutool.poi.excel.ExcelUtil
+import cn.hutool.core.text.csv.CsvUtil
+import cn.hutool.core.text.csv.CsvReadConfig
 
 let fail = (message) => {
     return {
@@ -82,8 +84,14 @@ let newId = () => {
 
 let uploadedFile = request.getFile('file')
 if(uploadedFile == null || uploadedFile.isEmpty()){
-    return fail('请上传Excel文件')
+    return fail('请上传文件')
 }
+
+let fileName = uploadedFile.getOriginalFilename()
+if(fileName == null){
+    return fail('无法获取文件名')
+}
+fileName = fileName.toLowerCase()
 
 db.update("""
     create table if not exists t_location_warehouse (
@@ -96,9 +104,18 @@ db.update("""
     ) comment='仓库库位导入数据'
 """)
 
-let rows = ExcelUtil.getReader(new ByteArrayInputStream(uploadedFile.getBytes())).readAll()
+let rows
+if(fileName.endsWith('.csv')){
+    let csvConfig = CsvReadConfig.defaultConfig()
+    csvConfig.setContainsHeader(true)
+    let csvData = CsvUtil.getReader(csvConfig).readFromStr(new String(uploadedFile.getBytes(), 'UTF-8'))
+    rows = csvData.getRows()
+}else{
+    rows = ExcelUtil.getReader(new ByteArrayInputStream(uploadedFile.getBytes())).readAll()
+}
+
 if(rows == null || rows.size() == 0){
-    return fail('Excel数据为空')
+    return fail('文件数据为空')
 }
 
 let warehouseKeys = ['warehouse_code', 'warehouseCode', '仓库编码']
