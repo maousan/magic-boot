@@ -10,6 +10,7 @@ import org.ssssssss.script.exception.MagicScriptException;
 import org.ssssssss.script.functions.ObjectConvertExtension;
 import org.ssssssss.script.runtime.ExitValue;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -106,6 +107,9 @@ public interface ResultProvider {
 	 * @param data          数据内容
 	 */
 	default Object buildPageResult(RequestEntity requestEntity, Page page, long total, List<Map<String, Object>> data) {
+		if (data == null) {
+			data = new ArrayList<>();
+		}
 		return new PageResult<>(total, data);
 	}
 

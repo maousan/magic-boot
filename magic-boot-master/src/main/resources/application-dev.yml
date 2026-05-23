@@ -15,6 +15,6 @@ upload:
 # 插件路径
 plugin:
   dir: plugins/
-  auto-load: true
+  auto-load: false
   auto-start: false
   signature-force-verify: false

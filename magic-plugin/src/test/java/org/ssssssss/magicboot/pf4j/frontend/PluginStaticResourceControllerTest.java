@@ -172,7 +172,7 @@ class PluginStaticResourceControllerTest {
     @ParameterizedTest
     @CsvSource({
         "console.js, application/javascript",
-        "styles.css, text/plain",
+        "styles.css, text/css",
         "index.html, text/html",
         "data.json, application/json",
         "image.png, image/png",

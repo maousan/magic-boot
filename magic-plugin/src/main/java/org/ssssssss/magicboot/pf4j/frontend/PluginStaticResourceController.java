@@ -88,7 +88,7 @@ public class PluginStaticResourceController {
             return MediaType.parseMediaType("application/javascript");
         }
         if (path.endsWith(".css")) {
-            return MediaType.TEXT_PLAIN;
+            return MediaType.parseMediaType("text/css");
         }
         if (path.endsWith(".html")) {
             return MediaType.TEXT_HTML;
