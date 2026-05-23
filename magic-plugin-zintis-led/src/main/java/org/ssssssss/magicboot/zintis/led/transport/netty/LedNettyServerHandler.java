@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.ssssssss.magicboot.zintis.led.protocol.LedProtocolCodec;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -23,6 +24,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -40,7 +45,20 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
 
     private final Set<SocketAddress> activeConnections = ConcurrentHashMap.newKeySet();
     private final Map<SocketAddress, Channel> activeChannels = new ConcurrentHashMap<>();
+    private final Map<SocketAddress, String> activeClientMacAddresses = new ConcurrentHashMap<>();
+    private final Map<SocketAddress, ConcurrentLinkedQueue<CompletableFuture<ClientResponse>>> pendingResponses = new ConcurrentHashMap<>();
     private final LedNettyMessageReportStore reportStore = new LedNettyMessageReportStore();
+    private final DeviceReporter deviceReporter;
+
+    public LedNettyServerHandler() {
+        this((macAddress, ipAddress) -> {
+        });
+    }
+
+    public LedNettyServerHandler(DeviceReporter deviceReporter) {
+        this.deviceReporter = deviceReporter == null ? (macAddress, ipAddress) -> {
+        } : deviceReporter;
+    }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
@@ -54,6 +72,8 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
     public void channelInactive(ChannelHandlerContext ctx) {
         activeConnections.remove(ctx.channel().remoteAddress());
         activeChannels.remove(ctx.channel().remoteAddress());
+        activeClientMacAddresses.remove(ctx.channel().remoteAddress());
+        pendingResponses.remove(ctx.channel().remoteAddress());
         log.info("LED netty server connection inactive: {}", ctx.channel().remoteAddress());
         ctx.fireChannelInactive();
     }
@@ -67,8 +87,28 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
             byte[] payload = extractPayload(data);
             String payloadAscii = toAsciiText(payload);
             String mac = extractMac(payload);
+            if (!mac.isBlank()) {
+                activeClientMacAddresses.put(ctx.channel().remoteAddress(), mac);
+            }
             String ip = extractIp(payload);
+            if (ip.isBlank()) {
+                ip = extractRemoteIp(ctx.channel().remoteAddress());
+            }
+            if (!mac.isBlank()) {
+                deviceReporter.report(mac, ip);
+            }
             String crc = extractCrcHex(data);
+            ClientResponse response = new ClientResponse(
+                    normalizeRemoteAddress(String.valueOf(ctx.channel().remoteAddress())),
+                    true,
+                    false,
+                    LedProtocolCodec.toHex(data),
+                    payloadAscii,
+                    mac,
+                    ip,
+                    crc
+            );
+            completePendingResponse(ctx.channel().remoteAddress(), response);
             log.info(
                     "LED netty server recv from {}: hex={}, payloadAscii={}, mac={}, ip={}, crc={}",
                     ctx.channel().remoteAddress(),
@@ -100,6 +140,8 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         activeConnections.remove(ctx.channel().remoteAddress());
         activeChannels.remove(ctx.channel().remoteAddress());
+        activeClientMacAddresses.remove(ctx.channel().remoteAddress());
+        pendingResponses.remove(ctx.channel().remoteAddress());
         log.warn("LED netty server channel exception: {}", cause.getMessage());
         ctx.close();
     }
@@ -108,8 +150,7 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof IdleStateEvent idleStateEvent
                 && idleStateEvent.state() == IdleState.READER_IDLE) {
-            log.warn("LED netty server client read idle timeout, close channel: {}", ctx.channel().remoteAddress());
-            ctx.close();
+            log.debug("LED netty server client read idle, keep channel open: {}", ctx.channel().remoteAddress());
             return;
         }
         ctx.fireUserEventTriggered(evt);
@@ -122,6 +163,8 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
     public void resetActiveConnections() {
         activeConnections.clear();
         activeChannels.clear();
+        activeClientMacAddresses.clear();
+        pendingResponses.clear();
     }
 
     public List<String> listActiveRemoteAddresses() {
@@ -133,11 +176,28 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
         return result;
     }
 
+    public List<ActiveClient> listActiveClients() {
+        List<ActiveClient> result = new ArrayList<>(activeChannels.size());
+        for (SocketAddress address : activeChannels.keySet()) {
+            result.add(new ActiveClient(
+                    normalizeRemoteAddress(String.valueOf(address)),
+                    activeClientMacAddresses.getOrDefault(address, "")
+            ));
+        }
+        result.sort((left, right) -> left.remoteAddress().compareTo(right.remoteAddress()));
+        return result;
+    }
+
     public SendResult sendTo(String remoteAddress, byte[] data) {
+        return sendTo(remoteAddress, data, false);
+    }
+
+    public SendResult sendTo(String remoteAddress, byte[] data, boolean waitResponse) {
         if (remoteAddress == null || remoteAddress.isBlank() || data == null || data.length == 0) {
-            return new SendResult(0, 0, new CopyOnWriteArrayList<>());
+            return new SendResult(0, 0, new CopyOnWriteArrayList<>(), new CopyOnWriteArrayList<>());
         }
         CopyOnWriteArrayList<String> failed = new CopyOnWriteArrayList<>();
+        CopyOnWriteArrayList<ClientResponse> responses = new CopyOnWriteArrayList<>();
         int total = 0;
         int success = 0;
         String normalizedTarget = normalizeRemoteAddress(remoteAddress);
@@ -149,18 +209,22 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
             total++;
             Channel channel = entry.getValue();
             if (channel != null && channel.isActive()) {
+                CompletableFuture<ClientResponse> responseFuture = waitResponse ? registerResponseWaiter(entry.getKey()) : null;
                 channel.writeAndFlush(Unpooled.wrappedBuffer(data)).syncUninterruptibly();
                 success++;
+                if (responseFuture != null) {
+                    responses.add(awaitResponse(entry.getKey(), normalizedTarget, responseFuture));
+                }
             } else {
                 failed.add(String.valueOf(entry.getKey()));
             }
         }
-        return new SendResult(total, success, failed);
+        return new SendResult(total, success, failed, responses);
     }
 
     public SendResult broadcast(byte[] data) {
         if (data == null || data.length == 0) {
-            return new SendResult(0, 0, new CopyOnWriteArrayList<>());
+            return new SendResult(0, 0, new CopyOnWriteArrayList<>(), new CopyOnWriteArrayList<>());
         }
         CopyOnWriteArrayList<String> failed = new CopyOnWriteArrayList<>();
         int total = 0;
@@ -175,7 +239,7 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
                 failed.add(String.valueOf(entry.getKey()));
             }
         }
-        return new SendResult(total, success, failed);
+        return new SendResult(total, success, failed, new CopyOnWriteArrayList<>());
     }
 
     private String normalizeRemoteAddress(String remoteAddress) {
@@ -186,7 +250,76 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
         return value;
     }
 
-    public record SendResult(int totalTargets, int successCount, CopyOnWriteArrayList<String> failedTargets) {
+    private CompletableFuture<ClientResponse> registerResponseWaiter(SocketAddress address) {
+        CompletableFuture<ClientResponse> future = new CompletableFuture<>();
+        pendingResponses.computeIfAbsent(address, ignored -> new ConcurrentLinkedQueue<>()).add(future);
+        return future;
+    }
+
+    private ClientResponse awaitResponse(SocketAddress address, String remoteAddress, CompletableFuture<ClientResponse> future) {
+        try {
+            return future.get(3000, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException exception) {
+            return ClientResponse.timeout(remoteAddress);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            return ClientResponse.timeout(remoteAddress);
+        } catch (Exception exception) {
+            return ClientResponse.timeout(remoteAddress);
+        } finally {
+            ConcurrentLinkedQueue<CompletableFuture<ClientResponse>> queue = pendingResponses.get(address);
+            if (queue != null) {
+                queue.remove(future);
+                if (queue.isEmpty()) {
+                    pendingResponses.remove(address, queue);
+                }
+            }
+        }
+    }
+
+    private void completePendingResponse(SocketAddress address, ClientResponse response) {
+        ConcurrentLinkedQueue<CompletableFuture<ClientResponse>> queue = pendingResponses.get(address);
+        if (queue == null) {
+            return;
+        }
+        CompletableFuture<ClientResponse> future = queue.poll();
+        if (future != null) {
+            future.complete(response);
+        }
+        if (queue.isEmpty()) {
+            pendingResponses.remove(address, queue);
+        }
+    }
+
+    public record SendResult(
+            int totalTargets,
+            int successCount,
+            CopyOnWriteArrayList<String> failedTargets,
+            CopyOnWriteArrayList<ClientResponse> responses
+    ) {
+    }
+
+    public record ActiveClient(String remoteAddress, String macAddress) {
+    }
+
+    public record ClientResponse(
+            String remoteAddress,
+            boolean received,
+            boolean timeout,
+            String rawResponseHex,
+            String payloadAscii,
+            String macAddress,
+            String ipAddress,
+            String crc
+    ) {
+        static ClientResponse timeout(String remoteAddress) {
+            return new ClientResponse(remoteAddress, false, true, "", "", "", "", "");
+        }
+    }
+
+    @FunctionalInterface
+    public interface DeviceReporter {
+        void report(String macAddress, String ipAddress);
     }
 
     static String toAsciiText(byte[] data) {
@@ -306,5 +439,21 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
         }
         return compact.substring(0, 2) + ":" + compact.substring(2, 4) + ":" + compact.substring(4, 6)
                 + ":" + compact.substring(6, 8) + ":" + compact.substring(8, 10) + ":" + compact.substring(10, 12);
+    }
+
+    private static String extractRemoteIp(SocketAddress remoteAddress) {
+        if (remoteAddress instanceof InetSocketAddress inetSocketAddress
+                && inetSocketAddress.getAddress() != null) {
+            return inetSocketAddress.getAddress().getHostAddress();
+        }
+        String normalized = remoteAddress == null ? "" : String.valueOf(remoteAddress);
+        if (normalized.startsWith("/")) {
+            normalized = normalized.substring(1);
+        }
+        int colonIndex = normalized.lastIndexOf(':');
+        if (colonIndex > 0) {
+            return normalized.substring(0, colonIndex);
+        }
+        return normalized;
     }
 }

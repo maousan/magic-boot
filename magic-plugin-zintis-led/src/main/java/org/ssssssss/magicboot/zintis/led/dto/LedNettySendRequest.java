@@ -29,4 +29,7 @@ public class LedNettySendRequest {
      */
     @Schema(description = "负载格式，可选 ascii 或 hex", example = "hex", defaultValue = "ascii")
     private String payloadFormat = "ascii";
+
+    @Schema(description = "是否等待客户端回包；默认false，不等待", example = "false", defaultValue = "false")
+    private Boolean waitResponse = false;
 }

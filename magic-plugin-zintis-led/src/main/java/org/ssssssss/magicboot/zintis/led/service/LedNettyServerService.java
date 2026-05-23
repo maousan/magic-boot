@@ -6,6 +6,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.socket.nio.NioChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -20,13 +21,18 @@ import org.ssssssss.magicboot.zintis.led.dto.LedNettySendResponse;
 import org.ssssssss.magicboot.zintis.led.dto.LedNettyServerStatusResponse;
 import org.ssssssss.magicboot.zintis.led.transport.netty.LedNettyFrameDecoder;
 import org.ssssssss.magicboot.zintis.led.transport.netty.LedNettyServerHandler;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.net.InetSocketAddress;
+import java.net.SocketOption;
+import java.net.StandardSocketOptions;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Slf4j
@@ -35,6 +41,9 @@ public class LedNettyServerService {
 
     public static final int DEFAULT_NETTY_SERVER_PORT = 9834;
     public static final int DEFAULT_CLIENT_READ_IDLE_SECONDS = 120;
+    public static final int DEFAULT_TCP_KEEP_IDLE_SECONDS = 60;
+    public static final int DEFAULT_TCP_KEEP_INTERVAL_SECONDS = 10;
+    public static final int DEFAULT_TCP_KEEP_COUNT = 3;
 
     private final ReentrantLock lock = new ReentrantLock();
     private final LedNettyServerHandler serverHandler;
@@ -46,6 +55,11 @@ public class LedNettyServerService {
 
     public LedNettyServerService() {
         this(new LedNettyServerHandler());
+    }
+
+    @Autowired
+    public LedNettyServerService(LedDeviceRegistryService deviceRegistryService) {
+        this(new LedNettyServerHandler(deviceRegistryService::saveClientDevice));
     }
 
     LedNettyServerService(LedNettyServerHandler serverHandler) {
@@ -100,6 +114,7 @@ public class LedNettyServerService {
                     .option(ChannelOption.SO_BACKLOG, 128)
                     .childOption(ChannelOption.SO_KEEPALIVE, true)
                     .childOption(ChannelOption.TCP_NODELAY, true);
+            configureTcpKeepAliveOptions(bootstrap);
 
             ChannelFuture future = bootstrap.bind(port).syncUninterruptibly();
             serverChannel = future.channel();
@@ -156,12 +171,56 @@ public class LedNettyServerService {
         return serverChannel != null && serverChannel.isOpen() && serverChannel.isActive();
     }
 
+    private void configureTcpKeepAliveOptions(ServerBootstrap bootstrap) {
+        childExtendedSocketOption(bootstrap, "TCP_KEEPIDLE", DEFAULT_TCP_KEEP_IDLE_SECONDS);
+        childExtendedSocketOption(bootstrap, "TCP_KEEPINTERVAL", DEFAULT_TCP_KEEP_INTERVAL_SECONDS);
+        childExtendedSocketOption(bootstrap, "TCP_KEEPCOUNT", DEFAULT_TCP_KEEP_COUNT);
+    }
+
+    private void childExtendedSocketOption(ServerBootstrap bootstrap, String optionName, int value) {
+        extendedSocketOption(optionName).ifPresent(option -> {
+            try {
+                bootstrap.childOption(NioChannelOption.of(option), value);
+                log.info("LED netty server tcp keepalive option configured: {}={}", optionName, value);
+            } catch (RuntimeException exception) {
+                log.info("LED netty server tcp keepalive option unsupported: {}, error={}",
+                        optionName, exception.getMessage());
+            }
+        });
+    }
+
+    @SuppressWarnings("unchecked")
+    private Optional<SocketOption<Integer>> extendedSocketOption(String optionName) {
+        return Arrays.stream(jdk.net.ExtendedSocketOptions.class.getFields())
+                .filter(field -> optionName.equals(field.getName()))
+                .findFirst()
+                .flatMap(field -> {
+                    try {
+                        Object option = field.get(null);
+                        if (option instanceof SocketOption<?> socketOption) {
+                            return Optional.of((SocketOption<Integer>) socketOption);
+                        }
+                    } catch (IllegalAccessException exception) {
+                        log.info("LED netty server tcp keepalive option inaccessible: {}, error={}",
+                                optionName, exception.getMessage());
+                    }
+                    return Optional.empty();
+                });
+    }
+
     public LedNettyClientListResponse listClients() {
         List<String> clients = serverHandler.listActiveRemoteAddresses();
+        List<LedNettyClientListResponse.ClientInfo> clientDetails = serverHandler.listActiveClients().stream()
+                .map(client -> LedNettyClientListResponse.ClientInfo.builder()
+                        .remoteAddress(client.remoteAddress())
+                        .macAddress(client.macAddress())
+                        .build())
+                .toList();
         return LedNettyClientListResponse.builder()
                 .running(isRunning())
                 .totalClients(clients.size())
                 .clients(clients)
+                .clientDetails(clientDetails)
                 .message(isRunning() ? "Active netty clients" : "Netty server is not running")
                 .build();
     }
@@ -178,15 +237,31 @@ public class LedNettyServerService {
                     .build();
         }
         byte[] data = parsePayload(request.getPayload(), request.getPayloadArray(), request.getPayloadFormat());
-        LedNettyServerHandler.SendResult result = serverHandler.sendTo(request.getRemoteAddress(), data);
+        boolean waitResponse = Boolean.TRUE.equals(request.getWaitResponse());
+        LedNettyServerHandler.SendResult result = serverHandler.sendTo(request.getRemoteAddress(), data, waitResponse);
         int failedCount = result.totalTargets() - result.successCount();
+        List<LedNettySendResponse.ClientResponse> responses = result.responses().stream()
+                .map(response -> LedNettySendResponse.ClientResponse.builder()
+                        .remoteAddress(response.remoteAddress())
+                        .received(response.received())
+                        .timeout(response.timeout())
+                        .rawResponseHex(response.rawResponseHex())
+                        .payloadAscii(response.payloadAscii())
+                        .macAddress(response.macAddress())
+                        .ipAddress(response.ipAddress())
+                        .crc(response.crc())
+                        .build())
+                .toList();
         return LedNettySendResponse.builder()
                 .success(result.totalTargets() > 0 && failedCount == 0)
-                .message(result.totalTargets() == 0 ? "Target client not found" : "Send completed")
+                .message(buildSendMessage(result, failedCount, waitResponse))
                 .totalTargets(result.totalTargets())
                 .successCount(result.successCount())
                 .failedCount(failedCount)
                 .failedTargets(new ArrayList<>(result.failedTargets()))
+                .waitResponse(waitResponse)
+                .responseCount(responses.size())
+                .responses(responses)
                 .build();
     }
 
@@ -211,7 +286,23 @@ public class LedNettyServerService {
                 .successCount(result.successCount())
                 .failedCount(failedCount)
                 .failedTargets(new ArrayList<>(result.failedTargets()))
+                .waitResponse(false)
+                .responseCount(0)
+                .responses(List.of())
                 .build();
+    }
+
+    private String buildSendMessage(LedNettyServerHandler.SendResult result, int failedCount, boolean waitResponse) {
+        if (result.totalTargets() == 0) {
+            return "Target client not found";
+        }
+        if (failedCount > 0) {
+            return "Send completed with failures";
+        }
+        if (waitResponse && result.responses().stream().noneMatch(LedNettyServerHandler.ClientResponse::received)) {
+            return "Send completed, response timeout";
+        }
+        return waitResponse ? "Send completed with response" : "Send completed";
     }
 
     private LedNettyServerStatusResponse status(String message) {

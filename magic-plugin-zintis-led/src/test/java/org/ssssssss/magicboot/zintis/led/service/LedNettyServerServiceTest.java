@@ -72,5 +72,7 @@ class LedNettyServerServiceTest {
         assertEquals(0, response.getTotalClients());
         assertNotNull(response.getClients());
         assertTrue(response.getClients().isEmpty());
+        assertNotNull(response.getClientDetails());
+        assertTrue(response.getClientDetails().isEmpty());
     }
 }

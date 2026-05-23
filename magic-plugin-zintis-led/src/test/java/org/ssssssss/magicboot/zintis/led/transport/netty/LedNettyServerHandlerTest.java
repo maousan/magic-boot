@@ -1,11 +1,14 @@
 package org.ssssssss.magicboot.zintis.led.transport.netty;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.timeout.IdleStateEvent;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LedNettyServerHandlerTest {
 
@@ -63,12 +66,36 @@ class LedNettyServerHandlerTest {
     }
 
     @Test
-    void userEventTriggered_shouldCloseChannel_whenReaderIdleTimeout() {
+    void userEventTriggered_shouldKeepChannelOpen_whenReaderIdleTimeout() {
         LedNettyServerHandler handler = new LedNettyServerHandler();
         EmbeddedChannel channel = new EmbeddedChannel(handler);
         channel.pipeline().fireUserEventTriggered(IdleStateEvent.READER_IDLE_STATE_EVENT);
 
-        assertFalse(channel.isActive());
+        assertTrue(channel.isActive());
+        channel.finishAndReleaseAll();
+    }
+
+    @Test
+    void channelRead_shouldReportDevice_whenPayloadContainsMac() {
+        AtomicReference<String> reportedMac = new AtomicReference<>();
+        AtomicReference<String> reportedIp = new AtomicReference<>();
+        LedNettyServerHandler handler = new LedNettyServerHandler((macAddress, ipAddress) -> {
+            reportedMac.set(macAddress);
+            reportedIp.set(ipAddress);
+        });
+        EmbeddedChannel channel = new EmbeddedChannel(handler);
+        byte[] frame = new byte[]{
+                0x66, (byte) 0xAB, (byte) 0x97,
+                0x11, 0x0D,
+                0x33, 0x41, 0x3A, 0x36, 0x39, 0x3A, 0x37, 0x41, 0x3A, 0x30, 0x38, 0x3A, 0x44, 0x30, 0x3A, 0x41, 0x35,
+                0x31, 0x39, 0x32, 0x2E, 0x31, 0x36, 0x38, 0x2E, 0x32, 0x2E, 0x31, 0x30, 0x32,
+                (byte) 0x90, 0x78
+        };
+
+        channel.writeInbound(Unpooled.wrappedBuffer(frame));
+
+        assertEquals("3A:69:7A:08:D0:A5", reportedMac.get());
+        assertEquals("192.168.2.102", reportedIp.get());
         channel.finishAndReleaseAll();
     }
 }
