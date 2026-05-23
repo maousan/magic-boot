@@ -1,0 +1,128 @@
+feature: 2026-05-21-dxhp-admin-panel
+created: 2026-05-21
+
+steps:
+  - action: "项目骨架：初始化 Vite + Vue3 + Naive UI 项目，配置路由、布局、认证"
+    exit_signal: "npm run dev 启动后能看到登录页，登录后跳转到带侧边栏的空 Dashboard"
+    status: done
+
+  - action: "API 层 + 类型定义：封装 axios 实例、拦截器、所有 API 模块和 TypeScript 类型"
+    exit_signal: "类型定义完整，API 函数可调用，dev proxy 联通后端且错误能弹出提示"
+    status: done
+
+  - action: "LED 设备管理页面：设备列表表格 + LED 控制面板"
+    exit_signal: "进入页面能看到设备列表，选择设备执行开/关灯并看到结果"
+    status: done
+
+  - action: "库位-LED 绑定管理页面：分页表格 + 创建/删除绑定"
+    exit_signal: "表格展示绑定数据，创建和删除操作成功后表格自动刷新"
+    status: done
+
+  - action: "库位-标签绑定管理页面：分页表格 + 创建/解绑"
+    exit_signal: "表格展示标签绑定数据，创建绑定和解绑操作成功后表格自动刷新"
+    status: done
+
+  - action: "库位导入页面：模板下载 + Excel 上传 + 结果展示"
+    exit_signal: "能下载模板，上传合规文件后显示总数/成功/失败/错误明细"
+    status: done
+
+  - action: "批次 EPC 管理页面：分页搜索表格 + 绑定/解绑"
+    exit_signal: "表格展示 EPC 绑定数据，搜索/绑定/解绑操作正常"
+    status: done
+
+  - action: "后端补齐：新增 LED 映射列表 API 和标签映射列表 API 的 .ms 文件"
+    exit_signal: "前端 LED 绑定和标签绑定表格能分页展示数据"
+    status: done
+
+  - action: "构建配置：配置 Vite 构建输出到 plugin static/admin/ 目录"
+    exit_signal: "npm run build 产物出现在 target 目录，Spring Boot 能正常服务"
+    status: done
+
+checks:
+  - item: "登录页：正确凭证登录成功跳转 Dashboard"
+    source: 验收场景
+    status: passed
+
+  - item: "登录页：错误凭证显示错误提示，停留在登录页"
+    source: 验收场景
+    status: passed
+
+  - item: "路由守卫：未登录访问管理页自动重定向到登录页"
+    source: 验收场景
+    status: passed
+
+  - item: "LED 设备列表：展示 MAC、IP、备注列"
+    source: 名词契约
+    status: passed
+
+  - item: "LED 控制面板：选设备+命令+端口+超时→执行并显示结果"
+    source: 验收场景
+    status: passed
+
+  - item: "LED 绑定表格：分页展示 locationCode、ledId、color、status"
+    source: 名词契约
+    status: passed
+
+  - item: "LED 绑定创建：填写库位码+选设备+选颜色→创建成功表格刷新"
+    source: 验收场景
+    status: passed
+
+  - item: "LED 绑定删除：输入库位码→删除成功表格刷新"
+    source: 验收场景
+    status: passed
+
+  - item: "标签绑定表格：分页展示 locationCode、labelCode、bindTime"
+    source: 名词契约
+    status: passed
+
+  - item: "标签绑定创建：填写库位码+标签码→创建成功表格刷新"
+    source: 验收场景
+    status: passed
+
+  - item: "标签解绑：输入标签码→解绑成功表格刷新"
+    source: 验收场景
+    status: passed
+
+  - item: "库位导入：下载模板得到 .xlsx 文件"
+    source: 验收场景
+    status: passed
+
+  - item: "库位导入：上传合规文件显示总数/成功/失败/错误明细"
+    source: 验收场景
+    status: passed
+
+  - item: "库位导入：上传非 Excel 文件显示格式错误提示"
+    source: 验收场景
+    status: passed
+
+  - item: "批次 EPC 表格：分页展示 batchId、epc、status、bindTime，支持搜索"
+    source: 名词契约
+    status: passed
+
+  - item: "批次 EPC 绑定：填写批次ID+EPC→绑定成功"
+    source: 验收场景
+    status: passed
+
+  - item: "批次 EPC 解绑：确认后解绑成功"
+    source: 验收场景
+    status: passed
+
+  - item: "代码中不出现 sa-token / StpUtil 相关导入"
+    source: 范围守护
+    status: passed
+
+  - item: "代码中不出现 /api/light/picking 或 /api/light/control 的调用"
+    source: 范围守护
+    status: passed
+
+  - item: "代码中不出现 RFID 控制 API 的调用"
+    source: 范围守护
+    status: passed
+
+  - item: "代码中不出现移动端 viewport meta 或响应式媒体查询"
+    source: 范围守护
+    status: passed
+
+  - item: "构建产物部署到 plugin static/admin/ 并可被 Spring Boot 正常服务"
+    source: 挂载点
+    status: passed

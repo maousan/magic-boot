@@ -44,7 +44,8 @@ $required = @(
     'name: normalizeText(sku)',
     'appendInventoryRowsToArticleData',
     'putIndexedField',
-    "fieldName + '_' + pageIndex + '_' + rowIndex",
+    'let globalRowIndex = ((pageIndex - 1) * batchSize) + rowIndex',
+    "fieldName + '_' + globalRowIndex",
     'while(pageIndex <= maxLocationPages)',
     'let pageOffset = (pageIndex - 1) * batchSize',
     'let rowIndex = 1',
@@ -67,6 +68,10 @@ if ($script.Contains("return 'Hello magic-api-job'")) {
 
 if ($script.Contains('where location_id in (')) {
     throw 'inventory rows must be read per locationId page, not as a location batch'
+}
+
+if ($script.Contains("fieldName + '_' + pageIndex + '_' + rowIndex")) {
+    throw 'indexed fields must use global row index, not pageIndex_rowIndex format'
 }
 
 'aims article inventory sync job static checks passed'

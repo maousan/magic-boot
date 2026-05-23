@@ -36,6 +36,52 @@ return db.page(sql)
 
 **详细语法说明**：`guides/mybatis-syntax.md`
 
+### 🚫 禁止事项
+
+**1. 禁止 `WHERE 1=1` 永真条件**
+
+Druid 连接池的 Wall Filter 会拦截 `WHERE 1=1` 这类永真条件，报错 `sql injection violation: select alway true condition not allow`。
+
+```javascript
+// ❌ 禁止：Druid 会拦截
+var sql = "select * from t where 1=1"
+if(name){ sql += " and name = #{name}" }
+
+// ✅ 正确：使用 <where> + <if> 标签
+let sql = """
+    select * from t
+    <where>
+        <if test="name != null and name != ''">
+            and name = #{name}
+        </if>
+    </where>
+"""
+```
+
+**2. 禁止手动拼接 params Map 传给 `db.page()`**
+
+`db.page(sql, params, page, pageSize)` 方法签名在 MagicScript 中无法匹配 `(String, LinkedHashMap, Integer, Integer)`，会报找不到方法错误。
+
+```javascript
+// ❌ 禁止：LinkedHashMap 参数导致方法解析失败
+var params = {}
+params.name = 'test'
+db.page(sql, params, page, pageSize)
+
+// ✅ 正确写法 1：自动分页（从请求参数读取 page/pageSize）
+return db.page(sql)
+
+// ✅ 正确写法 2：手动指定 limit/offset（三参数签名）
+return db.page(sql, pageSize, (page - 1) * pageSize)
+```
+
+**3. `db.page()` 可用签名**
+
+| 签名 | 说明 |
+|------|------|
+| `db.page(sql)` | 自动从请求参数读取 `page`/`pageSize` |
+| `db.page(sql, limit, offset)` | 手动指定每页条数和偏移量 |
+
 ## ⚡ 快速开始
 
 ### 判断是否使用此技能

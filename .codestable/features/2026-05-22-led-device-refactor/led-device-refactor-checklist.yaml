@@ -1,0 +1,48 @@
+feature: 2026-05-22-led-device-refactor
+
+steps:
+  - name: 后端 CRUD API
+    description: 新增 LED 设备分页查询、新增、更新、删除 4 个 .ms 文件
+    status: pending
+    exit_signal: magic-api 管理页面可手动调用每个 API 返回正确结果
+
+  - name: 前端 API 层 + 类型
+    description: 扩展 LedDevice 类型，改造 led-device.ts 为 CRUD + 分页
+    status: pending
+    exit_signal: TypeScript 编译通过
+
+  - name: 前端页面重构
+    description: 重写 LedDevice.vue（分页表格 + CRUD 弹窗 + 操作列快捷按钮 + 高级控制弹窗）
+    status: pending
+    exit_signal: 浏览器可完成完整 CRUD + 操作列控制 + 高级控制弹窗
+
+  - name: 菜单和路由清理
+    description: 删除 ZintisLedControl 路由和菜单项
+    status: pending
+    exit_signal: 侧边栏不再显示设备控制菜单
+
+checks:
+  - name: S1 分页查询
+    status: pending
+  - name: S2 模糊搜索
+    status: pending
+  - name: S3 新增设备
+    status: pending
+  - name: S4 编辑设备
+    status: pending
+  - name: S5 删除设备
+    status: pending
+  - name: S6 快捷开灯
+    status: pending
+  - name: S7 快捷关灯
+    status: pending
+  - name: S8 高级控制弹窗预填
+    status: pending
+  - name: S9 底层直控执行
+    status: pending
+  - name: S10 菜单清理
+    status: pending
+  - name: "反向核对: ZintisLanScan/ZintisNetty 路由正常"
+    status: pending
+  - name: "反向核对: zintis-led.ts 未被删除或修改"
+    status: pending

@@ -225,6 +225,9 @@ anyline.deletes("table_name", "field", value)
 // 分页查询（自动读取 pageNum、pageSize 参数）
 const page = db.page(sql)
 
+// 分页查询（手动指定 limit/offset）
+const page = db.page(sql, pageSize, (page - 1) * pageSize)
+
 // 单值查询
 const value = db.selectValue(sql)
 
@@ -235,7 +238,17 @@ const list = db.select(sql)
 const rows = db.update(sql)
 ```
 
-**⚠️ 注意**：所有 SQL 必须使用 MyBatis 动态 SQL 语法，不支持字符串拼接！
+**⚠️ 注意**：
+- 所有 SQL 必须使用 MyBatis 动态 SQL 语法，不支持字符串拼接！
+- 禁止 `WHERE 1=1` —— Druid Wall Filter 会拦截永真条件
+- 禁止 `db.page(sql, params, page, pageSize)` —— LinkedHashMap 参数导致方法解析失败
+
+**`db.page()` 可用签名**：
+
+| 签名 | 说明 |
+|------|------|
+| `db.page(sql)` | 自动从请求参数读取 `page`/`pageSize` |
+| `db.page(sql, limit, offset)` | 手动指定每页条数和偏移量 |
 
 ## 分组配置（group.json）
 

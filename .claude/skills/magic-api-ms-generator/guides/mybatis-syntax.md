@@ -373,6 +373,45 @@ db.update(sql)
 </where>
 ```
 
+### ❌ 错误：使用 WHERE 1=1 永真条件
+```javascript
+// ❌ Druid Wall Filter 会拦截，报 sql injection violation
+var sql = "select * from t_user where 1=1"
+if(name != null){ sql = sql + " and name = #{name}" }
+db.page(sql, {}, page, pageSize)
+
+// ✅ 正确：使用 <where> + <if> 标签
+let sql = """
+    select * from t_user
+    <where>
+        <if test="name != null and name != ''">
+            and name = #{name}
+        </if>
+    </where>
+"""
+return db.page(sql)
+```
+
+### ❌ 错误：手动拼 params Map 传给 db.page()
+```javascript
+// ❌ 方法解析失败：找不到 page(String, LinkedHashMap, Integer, Integer)
+var params = {}
+params.name = name
+db.page(sql, params, page, pageSize)
+
+// ✅ 正确：MyBatis 动态 SQL + #{} 自动绑定脚本变量
+let sql = """
+    select * from t_user
+    <where>
+        <if test="name != null and name != ''">
+            and name = #{name}
+        </if>
+    </where>
+"""
+return db.page(sql)
+// 或手动指定分页：db.page(sql, pageSize, (page - 1) * pageSize)
+```
+
 ### ❌ 错误：XML 转义字符
 ```javascript
 // ❌ 直接使用 < 符号
