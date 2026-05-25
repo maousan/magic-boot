@@ -1,0 +1,1 @@
+import{_ as e}from"./_plugin-vue_export-helper-DlAUqK2U.js";import{bn as c,a9 as o}from"./index-CbyYNhBJ.js";const t={},r={src:"/magic/web/index.html",style:{width:"100%",height:"calc(100vh - 120px)",border:"none"}};function n(s,a){return c(),o("iframe",r)}const m=e(t,[["render",n]]);export{m as default};
