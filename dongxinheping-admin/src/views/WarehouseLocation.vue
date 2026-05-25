@@ -77,16 +77,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, h, onMounted } from 'vue'
 import {
   NCard, NSpace, NFlex, NButton, NInput, NDataTable, NPagination, NText,
   NUpload, NModal, NForm, NFormItem, NDescriptions, NDescriptionsItem,
-  NDropdown,
+  NDropdown, NPopconfirm,
   useMessage,
 } from 'naive-ui'
 import type { DataTableColumns, FormRules, DropdownOption } from 'naive-ui'
 import type { UploadCustomRequestOptions } from 'naive-ui'
-import { getWarehouseLocations, addWarehouseLocation, importWarehouseLocations } from '@/api/warehouse'
+import { getWarehouseLocations, addWarehouseLocation, importWarehouseLocations, syncLocationInventory, updateLocationArticle } from '@/api/warehouse'
 import type { WarehouseLocation, ImportResult } from '@/types'
 
 const message = useMessage()
@@ -110,17 +110,82 @@ const addRules: FormRules = {
   locationId: { required: true, message: '请输入库位ID', trigger: 'blur' },
 }
 
+const syncingIds = ref<Set<string>>(new Set())
+const updatingIds = ref<Set<string>>(new Set())
+
 const columns: DataTableColumns<WarehouseLocation> = [
   { title: '仓库编码', key: 'warehouseCode', width: 180 },
   { title: '库位ID', key: 'locationId' },
   { title: '创建时间', key: 'createTime', width: 180 },
   { title: '更新时间', key: 'updateTime', width: 180 },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 200,
+    fixed: 'right',
+    render: (row) =>
+      h(NSpace, { size: 'small' }, () => [
+        h(NPopconfirm, { onPositiveClick: () => handleSync(row) }, {
+          trigger: () =>
+            h(NButton, {
+              size: 'small',
+              type: 'primary',
+              loading: syncingIds.value.has(row.id),
+            }, () => '同步库存'),
+          default: () => `确认同步库位「${row.locationId}」的库存数据？`,
+        }),
+        h(NPopconfirm, { onPositiveClick: () => handleUpdateArticle(row) }, {
+          trigger: () =>
+            h(NButton, {
+              size: 'small',
+              type: 'info',
+              loading: updatingIds.value.has(row.id),
+            }, () => '更新标签'),
+          default: () => `确认更新库位「${row.locationId}」的标签数据？`,
+        }),
+      ]),
+  },
 ]
 
 const errorColumns: DataTableColumns<{ rowNo: number; message: string }> = [
   { title: '行号', key: 'rowNo', width: 80 },
   { title: '错误信息', key: 'message' },
 ]
+
+async function handleUpdateArticle(row: WarehouseLocation) {
+  updatingIds.value.add(row.id)
+  try {
+    const res = await updateLocationArticle({ locationId: row.locationId })
+    if (res.rowCount > 0) {
+      message.success(`库位 ${row.locationId} 已推送 ${res.rowCount} 条标签数据`)
+    } else {
+      message.info(`库位 ${row.locationId} 无库存数据`)
+    }
+  } catch {
+    return false
+  } finally {
+    updatingIds.value.delete(row.id)
+  }
+}
+
+async function handleSync(row: WarehouseLocation) {
+  syncingIds.value.add(row.id)
+  try {
+    const res = await syncLocationInventory({
+      warehouseCode: row.warehouseCode,
+      locationId: row.locationId,
+    })
+    if (res.savedCount > 0) {
+      message.success(`库位 ${row.locationId} 已同步 ${res.savedCount} 条库存数据`)
+    } else {
+      message.info(`库位 ${row.locationId} 无新数据`)
+    }
+  } catch {
+    return false
+  } finally {
+    syncingIds.value.delete(row.id)
+  }
+}
 
 async function loadData() {
   loading.value = true

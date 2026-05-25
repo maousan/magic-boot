@@ -30,3 +30,26 @@ export function importWarehouseLocations(file: File): Promise<ImportResult> {
     })
     .then((r) => r.data.data)
 }
+
+export function syncLocationInventory(data: {
+  warehouseCode: string
+  locationId: string
+}): Promise<{ success: boolean; savedCount: number; skippedCount: number; message?: string }> {
+  return client
+    .post<ApiResponse<{ success: boolean; savedCount: number; skippedCount: number; message?: string }>>(
+      '/location/warehouse-location/sync-inventory',
+      data,
+    )
+    .then((r) => r.data.data)
+}
+
+export function updateLocationArticle(data: {
+  locationId: string
+}): Promise<{ success: boolean; rowCount: number; message?: string }> {
+  return client
+    .post<ApiResponse<{ success: boolean; rowCount: number; message?: string }>>(
+      '/location/warehouse-location/update-article',
+      data,
+    )
+    .then((r) => r.data.data)
+}
