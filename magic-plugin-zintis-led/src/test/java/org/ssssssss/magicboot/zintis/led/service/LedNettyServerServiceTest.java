@@ -5,6 +5,9 @@ import org.junit.jupiter.api.Test;
 import org.ssssssss.magicboot.zintis.led.dto.LedNettyClientListResponse;
 import org.ssssssss.magicboot.zintis.led.dto.LedNettyServerStatusResponse;
 
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -74,5 +77,34 @@ class LedNettyServerServiceTest {
         assertTrue(response.getClients().isEmpty());
         assertNotNull(response.getClientDetails());
         assertTrue(response.getClientDetails().isEmpty());
+    }
+
+    @Test
+    void stop_shouldCloseAcceptedClientConnection() throws Exception {
+        LedNettyServerStatusResponse start = service.start(0);
+        assertTrue(start.isRunning());
+
+        try (Socket socket = new Socket("127.0.0.1", start.getPort())) {
+            socket.setSoTimeout(1000);
+            waitUntilClientConnected();
+
+            service.stop();
+
+            int read = socket.getInputStream().read();
+            assertEquals(-1, read);
+        } catch (SocketTimeoutException exception) {
+            throw new AssertionError("client did not observe server-side close within timeout", exception);
+        }
+    }
+
+    private void waitUntilClientConnected() throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 2000;
+        while (System.currentTimeMillis() < deadline) {
+            if (service.listClients().getTotalClients() > 0) {
+                return;
+            }
+            Thread.sleep(20);
+        }
+        throw new AssertionError("client was not registered as active");
     }
 }

@@ -28,12 +28,10 @@ var MAGIC_EDITOR_CONFIG = {
     },
     request: {
         beforeSend: function (config) {
-            console.log('请求设置', config);
             config.headers.Authorization = `Bearer ${localStorage.getItem('ACCESS_TOKEN')}`
             return config;
         },
         onError: function (err) {
-            console.log('请求出错');
             return Promise.reject(err)
         }
     },

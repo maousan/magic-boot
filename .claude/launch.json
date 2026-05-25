@@ -8,5 +8,6 @@
       "port": 3200,
       "cwd": "dongxinheping-admin"
     }
-  ]
+  ],
+  "autoVerify": false
 }

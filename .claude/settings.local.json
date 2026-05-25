@@ -53,7 +53,8 @@
       "Bash(done)",
       "Bash(wc:*)",
       "Bash(./start.bat)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(npx vue-tsc *)"
     ]
   },
   "outputStyle": "Explanatory"
