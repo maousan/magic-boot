@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.ssssssss.magicapi.core.config.MagicConfiguration;
@@ -16,6 +17,7 @@ import org.ssssssss.magicapi.core.servlet.MagicHttpServletRequest;
 import org.ssssssss.magicapi.core.web.MagicController;
 import org.ssssssss.magicapi.core.web.MagicExceptionHandler;
 import org.ssssssss.magicapi.job.model.JobInfo;
+import org.ssssssss.magicapi.job.service.JobMagicDynamicRegistryForQuartz;
 import org.ssssssss.magicapi.utils.ScriptManager;
 import org.ssssssss.script.MagicScriptDebugContext;
 

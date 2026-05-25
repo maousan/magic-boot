@@ -24,7 +24,7 @@ import { inject, ref, onMounted, watch } from 'vue'
 // 从magic-api注入所需对象
 const $i = inject('i18n.format')
 const info = inject('info')
-const path = inject('path')
+const path = inject('path', ref(''))
 const onSave = inject('onSave')
 const request = inject('request')
 const editor = ref();
@@ -83,7 +83,7 @@ onMounted(async () => {
 })
 
 // 监听路径变化，用于新任务创建后的状态刷新
-watch(() => path.value, async (newPath) => {
+watch(() => path?.value, async (newPath) => {
     if (newPath && newPath !== '/new') {
         await loadJobState()
     }
