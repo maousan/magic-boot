@@ -28,6 +28,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'zintis-netty', name: 'ZintisNetty', component: () => import('@/views/ZintisNetty.vue') },
       { path: 'inventory-query', name: 'InventoryQuery', component: () => import('@/views/InventoryQuery.vue') },
       { path: 'database', name: 'DatabaseManagement', component: () => import('@/views/DatabaseManagement.vue') },
+      { path: 'jobs', name: 'JobManagement', component: () => import('@/views/JobManagement.vue') },
       { path: 'magic-api', name: 'MagicApiConsole', component: () => import('@/views/MagicApiConsole.vue') },
     ],
   },

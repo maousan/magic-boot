@@ -63,6 +63,7 @@ const menuOptions: MenuOption[] = [
   { label: '用户灯色映射', key: 'UserLightColor' },
   { label: '系统管理', key: 'system', children: [
     { label: '数据库管理', key: 'DatabaseManagement' },
+    { label: '定时任务', key: 'JobManagement' },
     { label: 'Magic-API', key: 'MagicApiConsole' },
   ]},
 ]
