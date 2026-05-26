@@ -19,3 +19,7 @@ export function bindBatchEpc(data: { batchId: string; epc: string }): Promise<Ba
 export function unbindBatchEpc(data: { batchId?: string; epc?: string }): Promise<void> {
   return client.post('/location/batch-epc/unbind', data).then(() => {})
 }
+
+export function deleteBatchEpc(data: { id: string }): Promise<void> {
+  return client.post('/location/batch-epc/delete', data).then(() => {})
+}

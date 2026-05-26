@@ -107,7 +107,11 @@ const page = ref(1)
 const pageSize = ref(20)
 const ledDevices = ref<LedDevice[]>([])
 
-const form = reactive({ lotNo: '', ledId: null, color: 'RED' as string })
+const form = reactive<{ lotNo: string; ledId: string | null; color: string }>({
+  lotNo: '',
+  ledId: null,
+  color: 'RED',
+})
 
 const query = reactive({ locationCode: '', ledId: '', color: '' as string })
 
@@ -192,7 +196,7 @@ async function handleCreate() {
     await createLedMapping({ lotNo: form.lotNo, ledId: form.ledId, color: form.color })
     showCreate.value = false
     form.lotNo = ''
-    form.ledId = ''
+    form.ledId = null
     form.color = 'RED'
     await fetchData()
   } finally {

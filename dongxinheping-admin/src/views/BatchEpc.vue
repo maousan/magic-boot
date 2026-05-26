@@ -6,7 +6,11 @@
     content-style="flex: 1; min-height: 0; display: flex; flex-direction: column"
   >
     <template #header-extra>
-      <n-space>
+      <n-button @click="showBind = true">绑定</n-button>
+    </template>
+
+    <div class="table-page-content">
+      <n-space :size="12" class="table-page-toolbar">
         <n-input v-model:value="searchKeyword" placeholder="搜索批次ID或EPC" clearable @keyup.enter="fetchData" />
         <n-select
           v-model:value="searchStatus"
@@ -16,23 +20,32 @@
           style="width: 120px"
         />
         <n-button type="primary" @click="fetchData">搜索</n-button>
-        <n-button @click="showBind = true">绑定</n-button>
       </n-space>
-    </template>
 
-    <div class="table-page-content">
-      <div ref="tableAreaRef" class="table-page-table batch-epc-table-area">
+      <div class="table-page-table">
         <n-data-table
           :columns="columns"
           :data="bindings.list"
           :loading="loading"
           :bordered="true"
-          :pagination="pagination"
           :row-key="(row: BatchEpcBinding) => row.id"
-          :max-height="tableBodyMaxHeight"
-          @update:page="handlePageChange"
+          :scroll-x="900"
+          flex-height
+          style="height: 100%"
         />
       </div>
+
+      <n-flex justify="end" class="table-page-pagination">
+        <n-pagination
+          v-model:page="pagination.page"
+          v-model:page-size="pagination.pageSize"
+          :item-count="pagination.itemCount"
+          :page-sizes="[10, 20, 50, 100]"
+          show-size-picker
+          @update:page="fetchData"
+          @update:page-size="fetchData"
+        />
+      </n-flex>
     </div>
 
     <n-modal v-model:show="showBind" title="绑定批次 EPC" preset="dialog">
@@ -63,22 +76,23 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, h } from 'vue'
 import {
-  NCard, NDataTable, NButton, NModal, NSpace, NFormItem, NInput, NSelect, NTag,
+  NCard, NDataTable, NButton, NModal, NSpace, NFormItem, NInput, NSelect, NTag, NFlex, NPagination,
+  NPopconfirm, useMessage,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
-import { getBatchEpcList, bindBatchEpc, unbindBatchEpc } from '@/api/batch-epc'
+import { getBatchEpcList, bindBatchEpc, unbindBatchEpc, deleteBatchEpc } from '@/api/batch-epc'
 import type { BatchEpcBinding } from '@/types'
-import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
+const message = useMessage()
 const loading = ref(false)
 const binding = ref(false)
 const unbinding = ref(false)
+const deletingIds = ref<Set<string>>(new Set())
 const showBind = ref(false)
 const showUnbind = ref(false)
 const searchKeyword = ref('')
 const searchStatus = ref<number | null>(null)
 const unbindTarget = ref<BatchEpcBinding | null>(null)
-const { tableAreaRef, tableBodyMaxHeight } = useTableBodyHeight(100)
 
 const bindings = reactive<{ list: BatchEpcBinding[]; total: number }>({
   list: [],
@@ -94,30 +108,58 @@ const statusOptions = [
 ]
 
 const columns: DataTableColumns<BatchEpcBinding> = [
-  { title: '批次ID', key: 'batchId' },
-  { title: 'EPC', key: 'epc' },
+  { title: '批次ID', key: 'batchId', width: 180 },
+  { title: 'EPC', key: 'epc', width: 280 },
   {
     title: '状态',
     key: 'status',
+    width: 100,
     render: (row) =>
       h(NTag, { type: row.status === 1 ? 'success' : 'default', size: 'small' }, () =>
         row.status === 1 ? '已绑定' : '已解绑',
       ),
   },
-  { title: '绑定时间', key: 'bindTime' },
+  { title: '绑定时间', key: 'bindTime', width: 180 },
   {
     title: '操作',
     key: 'actions',
+    width: 160,
+    fixed: 'right',
     render: (row) =>
-      row.status === 1
-        ? h(
-            NButton,
-            { size: 'small', type: 'error', onClick: () => openUnbind(row) },
-            () => '解绑',
-          )
-        : null,
+      h(NSpace, { size: 'small' }, () => [
+        row.status === 1
+          ? h(
+              NButton,
+              { size: 'small', type: 'error', onClick: () => openUnbind(row) },
+              () => '解绑',
+            )
+          : null,
+        h(NPopconfirm, { onPositiveClick: () => handleDelete(row) }, {
+          trigger: () =>
+            h(NButton, {
+              size: 'small',
+              type: 'error',
+              ghost: true,
+              loading: deletingIds.value.has(row.id),
+            }, () => '删除'),
+          default: () => `确认删除该 EPC 绑定记录？`,
+        }),
+      ]),
   },
 ]
+
+async function handleDelete(row: BatchEpcBinding) {
+  deletingIds.value.add(row.id)
+  try {
+    await deleteBatchEpc({ id: row.id })
+    message.success('删除成功')
+    await fetchData()
+  } catch {
+    // handled by interceptor
+  } finally {
+    deletingIds.value.delete(row.id)
+  }
+}
 
 async function fetchData() {
   loading.value = true
@@ -134,11 +176,6 @@ async function fetchData() {
   } finally {
     loading.value = false
   }
-}
-
-function handlePageChange(page: number) {
-  pagination.page = page
-  fetchData()
 }
 
 async function handleBind() {
@@ -196,12 +233,11 @@ onMounted(fetchData)
   min-height: 0;
   display: flex;
   flex-direction: column;
+  gap: 16px;
 }
 
-.batch-epc-table-area {
-  flex: 1 1 0;
-  height: 0;
-  min-height: 0;
-  overflow: hidden;
+.table-page-toolbar,
+.table-page-pagination {
+  flex-shrink: 0;
 }
 </style>
