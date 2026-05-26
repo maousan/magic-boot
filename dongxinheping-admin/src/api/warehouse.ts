@@ -21,6 +21,12 @@ export function addWarehouseLocation(data: {
     .then((r) => r.data.data)
 }
 
+export function deleteWarehouseLocation(id: string): Promise<string> {
+  return client
+    .delete<ApiResponse<string>>('/location/warehouse-location/delete', { params: { id } })
+    .then((r) => r.data.data)
+}
+
 export function importWarehouseLocations(file: File): Promise<ImportResult> {
   const form = new FormData()
   form.append('file', file)

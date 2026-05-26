@@ -109,7 +109,10 @@ if(fileName.endsWith('.csv')){
     let csvConfig = CsvReadConfig.defaultConfig()
     csvConfig.setContainsHeader(true)
     let csvData = CsvUtil.getReader(csvConfig).readFromStr(new String(uploadedFile.getBytes(), 'UTF-8'))
-    rows = csvData.getRows()
+    rows = []
+    for(csvRow in csvData.getRows()){
+        rows.add(csvRow.getFieldMap())
+    }
 }else{
     rows = ExcelUtil.getReader(new ByteArrayInputStream(uploadedFile.getBytes())).readAll()
 }

@@ -1,34 +1,44 @@
 <template>
-  <n-card title="标签绑定">
+  <n-card
+    title="标签绑定"
+    class="table-page-card"
+    style="height: 100%; min-height: 0; display: flex; flex-direction: column"
+    content-style="flex: 1; min-height: 0; display: flex; flex-direction: column"
+  >
     <template #header-extra>
       <n-button type="primary" @click="showCreate = true">新增绑定</n-button>
     </template>
 
-    <n-space :size="12" style="margin-bottom: 16px">
-      <n-input v-model:value="query.locationCode" placeholder="库位编码" clearable style="width: 160px" @keyup.enter="handleSearch" />
-      <n-input v-model:value="query.labelCode" placeholder="标签编码" clearable style="width: 160px" @keyup.enter="handleSearch" />
-      <n-button type="primary" @click="handleSearch">查询</n-button>
-    </n-space>
+    <div class="table-page-content">
+      <n-space :size="12" class="table-page-toolbar">
+        <n-input v-model:value="query.locationCode" placeholder="库位编码" clearable style="width: 160px" @keyup.enter="handleSearch" />
+        <n-input v-model:value="query.labelCode" placeholder="标签编码" clearable style="width: 160px" @keyup.enter="handleSearch" />
+        <n-button type="primary" @click="handleSearch">查询</n-button>
+      </n-space>
 
-    <n-data-table
-      :columns="columns"
-      :data="bindings.list"
-      :loading="loading"
-      :bordered="true"
-      :row-key="(row: LocationLabelBinding) => row.id"
-    />
+      <div ref="tableAreaRef" class="table-page-table label-mapping-table-area">
+        <n-data-table
+          :columns="columns"
+          :data="bindings.list"
+          :loading="loading"
+          :bordered="true"
+          :row-key="(row: LocationLabelBinding) => row.id"
+          :max-height="tableBodyMaxHeight"
+        />
+      </div>
 
-    <n-flex justify="end" style="margin-top: 12px">
-      <n-pagination
-        v-model:page="page"
-        v-model:page-size="pageSize"
-        :item-count="bindings.total"
-        :page-sizes="[10, 20, 50]"
-        show-size-picker
-        @update:page="fetchData"
-        @update:page-size="fetchData"
-      />
-    </n-flex>
+      <n-flex justify="end" class="table-page-pagination">
+        <n-pagination
+          v-model:page="page"
+          v-model:page-size="pageSize"
+          :item-count="bindings.total"
+          :page-sizes="[10, 20, 50]"
+          show-size-picker
+          @update:page="fetchData"
+          @update:page-size="fetchData"
+        />
+      </n-flex>
+    </div>
 
     <n-modal v-model:show="showCreate" title="新增库位-标签绑定" preset="dialog">
       <n-space vertical>
@@ -63,6 +73,7 @@ import {
 import type { DataTableColumns } from 'naive-ui'
 import { getLabelMappingList, createLabelMapping, deleteLabelMapping } from '@/api/label-mapping'
 import type { LocationLabelBinding } from '@/types'
+import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
 const loading = ref(false)
 const creating = ref(false)
@@ -72,6 +83,7 @@ const showDelete = ref(false)
 const deleteTarget = ref<{ id: string; labelCode: string } | null>(null)
 const page = ref(1)
 const pageSize = ref(20)
+const { tableAreaRef, tableBodyMaxHeight } = useTableBodyHeight()
 
 const bindings = reactive<{ list: LocationLabelBinding[]; total: number }>({
   list: [],
@@ -149,3 +161,40 @@ async function handleDelete() {
 
 onMounted(fetchData)
 </script>
+
+<style scoped>
+.table-page-card {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-page-card :deep(.n-card__content) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-page-content {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.table-page-toolbar,
+.table-page-pagination {
+  flex-shrink: 0;
+}
+
+.label-mapping-table-area {
+  flex: 1 1 0;
+  height: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+</style>

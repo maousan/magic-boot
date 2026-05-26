@@ -1,5 +1,10 @@
 <template>
-  <n-card title="颜色管理">
+  <n-card
+    title="颜色管理"
+    class="table-page-card"
+    style="height: 100%; min-height: 0; display: flex; flex-direction: column"
+    content-style="flex: 1; min-height: 0; display: flex; flex-direction: column"
+  >
     <template #header-extra>
       <n-space>
         <n-button type="primary" @click="openCreate">新增颜色</n-button>
@@ -7,30 +12,36 @@
       </n-space>
     </template>
 
-    <n-space :size="12" style="margin-bottom: 16px">
-      <n-input v-model:value="query.code" placeholder="颜色代码" clearable style="width: 160px" @keyup.enter="handleSearch" />
-      <n-select v-model:value="query.color" :options="[{ label: '全部', value: '' }, ...colorOptions]" placeholder="颜色" clearable style="width: 120px" />
-    </n-space>
+    <div class="table-page-content">
+      <n-space :size="12" class="table-page-toolbar">
+        <n-input v-model:value="query.code" placeholder="颜色代码" clearable style="width: 160px" @keyup.enter="handleSearch" />
+        <n-select v-model:value="query.color" :options="[{ label: '全部', value: '' }, ...colorOptions]" placeholder="颜色" clearable style="width: 120px" />
+      </n-space>
 
-    <n-data-table
-      :columns="columns"
-      :data="records.list"
-      :loading="loading"
-      :bordered="true"
-      :row-key="(row: LedColor) => row.id"
-    />
+      <div ref="tableAreaRef" class="table-page-table led-color-table-area">
+        <n-data-table
+          :columns="columns"
+          :data="records.list"
+          :loading="loading"
+          :bordered="true"
+          :row-key="(row: LedColor) => row.id"
+          :scroll-x="620"
+          :max-height="tableBodyMaxHeight"
+        />
+      </div>
 
-    <n-flex justify="end" style="margin-top: 12px">
-      <n-pagination
-        v-model:page="page"
-        v-model:page-size="pageSize"
-        :item-count="records.total"
-        :page-sizes="[10, 20, 50]"
-        show-size-picker
-        @update:page="fetchData"
-        @update:page-size="fetchData"
-      />
-    </n-flex>
+      <n-flex justify="end" class="table-page-pagination">
+        <n-pagination
+          v-model:page="page"
+          v-model:page-size="pageSize"
+          :item-count="records.total"
+          :page-sizes="[10, 20, 50]"
+          show-size-picker
+          @update:page="fetchData"
+          @update:page-size="fetchData"
+        />
+      </n-flex>
+    </div>
 
     <!-- 新增弹窗 -->
     <n-modal v-model:show="showCreate" title="新增颜色映射" preset="dialog">
@@ -90,6 +101,7 @@ import {
 import type { DataTableColumns } from 'naive-ui'
 import { getLedColorList, createLedColor, updateLedColor, deleteLedColor } from '@/api/led-color'
 import type { LedColor } from '@/types'
+import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -100,6 +112,7 @@ const deleteTarget = ref<LedColor | null>(null)
 
 const page = ref(1)
 const pageSize = ref(20)
+const { tableAreaRef, tableBodyMaxHeight } = useTableBodyHeight()
 
 const query = reactive({ code: '', color: '' as string })
 const form = reactive({ code: '', color: 'RED' as string, remark: '' })
@@ -226,3 +239,40 @@ async function handleDelete() {
 
 onMounted(fetchData)
 </script>
+
+<style scoped>
+.table-page-card {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-page-card :deep(.n-card__content) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-page-content {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.table-page-toolbar,
+.table-page-pagination {
+  flex-shrink: 0;
+}
+
+.led-color-table-area {
+  flex: 1 1 0;
+  height: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+</style>

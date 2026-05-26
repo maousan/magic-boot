@@ -16,7 +16,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 120px);
+  min-height: 100%;
 }
 
 .welcome-content {

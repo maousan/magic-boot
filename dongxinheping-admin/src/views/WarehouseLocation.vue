@@ -1,7 +1,12 @@
 <template>
-  <n-card title="库位列表">
-    <n-space vertical :size="16">
-      <n-space justify="space-between">
+  <n-card
+    title="库位列表"
+    class="table-page-card"
+    style="height: 100%; min-height: 0; display: flex; flex-direction: column"
+    content-style="flex: 1; min-height: 0; display: flex; flex-direction: column"
+  >
+    <div class="table-page-content">
+      <n-space justify="space-between" class="table-page-toolbar">
         <n-space>
           <n-input v-model:value="query.warehouseCode" placeholder="仓库编码" clearable style="width: 160px" @keyup.enter="loadData" />
           <n-input v-model:value="query.locationId" placeholder="库位ID" clearable style="width: 160px" @keyup.enter="loadData" />
@@ -23,14 +28,18 @@
         </n-space>
       </n-space>
 
-      <n-data-table
-        :columns="columns"
-        :data="list"
-        :loading="loading"
-        :bordered="true"
-      />
+      <div ref="tableAreaRef" class="table-page-table warehouse-table-area">
+        <n-data-table
+          :columns="columns"
+          :data="list"
+          :loading="loading"
+          :bordered="true"
+          :scroll-x="980"
+          :max-height="tableBodyMaxHeight"
+        />
+      </div>
 
-      <n-flex justify="end">
+      <n-flex justify="end" class="table-page-pagination">
         <n-pagination
           v-model:page="page"
           v-model:page-size="pageSize"
@@ -42,26 +51,7 @@
         />
       </n-flex>
 
-      <n-card v-if="importResult" title="导入结果" size="small">
-        <n-descriptions :column="3" bordered>
-          <n-descriptions-item label="总行数">{{ importResult.totalRows }}</n-descriptions-item>
-          <n-descriptions-item label="成功">
-            <n-text type="success">{{ importResult.successCount }}</n-text>
-          </n-descriptions-item>
-          <n-descriptions-item label="失败">
-            <n-text type="error">{{ importResult.failCount }}</n-text>
-          </n-descriptions-item>
-        </n-descriptions>
-        <n-data-table
-          v-if="importResult.errors.length > 0"
-          :columns="errorColumns"
-          :data="importResult.errors"
-          :bordered="true"
-          size="small"
-          style="margin-top: 12px"
-        />
-      </n-card>
-    </n-space>
+    </div>
 
     <n-modal v-model:show="showAddModal" title="手动添加库位" preset="dialog" positive-text="确认" negative-text="取消" @positive-click="handleAdd">
       <n-form ref="addFormRef" :model="addForm" :rules="addRules" style="margin-top: 16px">
@@ -73,37 +63,46 @@
         </n-form-item>
       </n-form>
     </n-modal>
+
+    <n-modal v-model:show="showDeleteModal" title="确认删除" preset="dialog" type="warning" positive-text="确认删除" negative-text="取消" @positive-click="handleDelete">
+      确定要删除库位 <b>{{ deleteTarget?.locationId }}</b> 吗？
+    </n-modal>
   </n-card>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, h, onMounted } from 'vue'
+import { ref, reactive, h, nextTick, onBeforeUnmount, onMounted } from 'vue'
 import {
   NCard, NSpace, NFlex, NButton, NInput, NDataTable, NPagination, NText,
   NUpload, NModal, NForm, NFormItem, NDescriptions, NDescriptionsItem,
   NDropdown, NPopconfirm,
-  useMessage,
+  useMessage, useDialog,
 } from 'naive-ui'
 import type { DataTableColumns, FormRules, DropdownOption } from 'naive-ui'
 import type { UploadCustomRequestOptions } from 'naive-ui'
-import { getWarehouseLocations, addWarehouseLocation, importWarehouseLocations, syncLocationInventory, updateLocationArticle } from '@/api/warehouse'
+import { getWarehouseLocations, addWarehouseLocation, deleteWarehouseLocation, importWarehouseLocations, syncLocationInventory, updateLocationArticle } from '@/api/warehouse'
 import type { WarehouseLocation, ImportResult } from '@/types'
 
 const message = useMessage()
+const dialog = useDialog()
 
 const loading = ref(false)
 const list = ref<WarehouseLocation[]>([])
 const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
+const tableAreaRef = ref<HTMLElement | null>(null)
+const tableBodyMaxHeight = ref(360)
+let tableResizeObserver: ResizeObserver | null = null
 
 const query = reactive({ warehouseCode: '', locationId: '' })
 
 const uploading = ref(false)
-const importResult = ref<ImportResult | null>(null)
 
 const showAddModal = ref(false)
 const addForm = reactive({ warehouseCode: '', locationId: '' })
+const showDeleteModal = ref(false)
+const deleteTarget = ref<WarehouseLocation | null>(null)
 
 const addRules: FormRules = {
   warehouseCode: { required: true, message: '请输入仓库编码', trigger: 'blur' },
@@ -121,7 +120,7 @@ const columns: DataTableColumns<WarehouseLocation> = [
   {
     title: '操作',
     key: 'actions',
-    width: 200,
+    width: 260,
     fixed: 'right',
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
@@ -143,6 +142,11 @@ const columns: DataTableColumns<WarehouseLocation> = [
             }, () => '更新标签'),
           default: () => `确认更新库位「${row.locationId}」的标签数据？`,
         }),
+        h(NButton, {
+          size: 'small',
+          type: 'error',
+          onClick: () => openDelete(row),
+        }, () => '删除'),
       ]),
   },
 ]
@@ -203,6 +207,13 @@ async function loadData() {
   }
 }
 
+function updateTableHeight() {
+  const areaHeight = tableAreaRef.value?.clientHeight || 0
+  if (areaHeight > 0) {
+    tableBodyMaxHeight.value = Math.max(areaHeight - 52, 160)
+  }
+}
+
 async function handleAdd() {
   if (!addForm.warehouseCode || !addForm.locationId) {
     message.warning('请填写完整信息')
@@ -220,15 +231,64 @@ async function handleAdd() {
   }
 }
 
+function openDelete(row: WarehouseLocation) {
+  deleteTarget.value = row
+  showDeleteModal.value = true
+}
+
+async function handleDelete() {
+  if (!deleteTarget.value) {
+    return false
+  }
+  try {
+    await deleteWarehouseLocation(deleteTarget.value.id)
+    message.success('删除成功')
+    showDeleteModal.value = false
+    deleteTarget.value = null
+    loadData()
+  } catch {
+    return false
+  }
+}
+
 async function handleUpload({ file }: UploadCustomRequestOptions) {
   uploading.value = true
-  importResult.value = null
   try {
-    importResult.value = await importWarehouseLocations(file.file as File)
+    const result = await importWarehouseLocations(file.file as File)
+    showImportResultDialog(result)
     loadData()
   } finally {
     uploading.value = false
   }
+}
+
+function showImportResultDialog(result: ImportResult) {
+  dialog[result.failCount > 0 ? 'warning' : 'success']({
+    title: '导入结果',
+    positiveText: '知道了',
+    style: { width: '640px' },
+    content: () =>
+      h(NSpace, { vertical: true, size: 12 }, () => [
+        h(NDescriptions, { column: 3, bordered: true, size: 'small' }, () => [
+          h(NDescriptionsItem, { label: '总行数' }, () => result.totalRows),
+          h(NDescriptionsItem, { label: '成功' }, () =>
+            h(NText, { type: 'success' }, () => result.successCount),
+          ),
+          h(NDescriptionsItem, { label: '失败' }, () =>
+            h(NText, { type: result.failCount > 0 ? 'error' : 'success' }, () => result.failCount),
+          ),
+        ]),
+        result.errors.length > 0
+          ? h(NDataTable, {
+              columns: errorColumns,
+              data: result.errors,
+              bordered: true,
+              size: 'small',
+              maxHeight: 260,
+            })
+          : null,
+      ]),
+  })
 }
 
 const templateOptions: DropdownOption[] = [
@@ -256,5 +316,55 @@ function downloadBlob(content: string, filename: string, mimeType: string) {
   URL.revokeObjectURL(url)
 }
 
-onMounted(loadData)
+onMounted(() => {
+  loadData()
+  nextTick(() => {
+    updateTableHeight()
+    if (tableAreaRef.value) {
+      tableResizeObserver = new ResizeObserver(updateTableHeight)
+      tableResizeObserver.observe(tableAreaRef.value)
+    }
+  })
+})
+
+onBeforeUnmount(() => {
+  tableResizeObserver?.disconnect()
+})
 </script>
+
+<style scoped>
+.table-page-card {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-page-card :deep(.n-card__content) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-page-content {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.table-page-toolbar,
+.table-page-pagination {
+  flex-shrink: 0;
+}
+
+.warehouse-table-area {
+  flex: 1 1 0;
+  height: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+</style>

@@ -1,5 +1,10 @@
 <template>
-  <n-card title="库存查询">
+  <n-card
+    title="库存查询"
+    class="table-page-card"
+    style="height: 100%; min-height: 0; display: flex; flex-direction: column"
+    content-style="flex: 1; min-height: 0; display: flex; flex-direction: column"
+  >
     <template #header-extra>
       <n-space>
         <n-button type="primary" @click="showCreate = true">手动录入</n-button>
@@ -8,8 +13,8 @@
       </n-space>
     </template>
 
-    <n-space vertical :size="16">
-      <n-grid :cols="4" :x-gap="12" :y-gap="8">
+    <div class="table-page-content">
+      <n-grid :cols="4" :x-gap="12" :y-gap="8" class="table-page-toolbar">
         <n-gi>
           <n-input v-model:value="filters.warehouseId" placeholder="仓库ID" clearable />
         </n-gi>
@@ -24,15 +29,20 @@
         </n-gi>
       </n-grid>
 
-      <n-data-table
-        :columns="columns"
-        :data="tableData.list"
-        :loading="loading"
-        :bordered="true"
-        :row-key="(row: InventoryItem) => row.warehouseId + '-' + row.locationId + '-' + row.lotAtt09"
-      />
+      <div class="table-page-table">
+        <n-data-table
+          :columns="columns"
+          :data="tableData.list"
+          :loading="loading"
+          :bordered="true"
+          :row-key="(row: InventoryItem) => row.warehouseId + '-' + row.locationId + '-' + row.lotAtt09"
+          :scroll-x="1240"
+          flex-height
+          style="height: 100%"
+        />
+      </div>
 
-      <n-flex justify="end" style="margin-top: 12px">
+      <n-flex justify="end" class="table-page-pagination">
         <n-pagination
           v-model:page="page"
           v-model:page-size="pageSize"
@@ -43,7 +53,7 @@
           @update:page-size="fetchData"
         />
       </n-flex>
-    </n-space>
+    </div>
 
     <n-modal v-model:show="showCreate" title="手动录入库存" preset="dialog">
       <n-space vertical>
@@ -230,3 +240,12 @@ async function handleClear() {
 
 onMounted(fetchData)
 </script>
+
+<style scoped>
+.table-page-card :deep(.n-card__content) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+</style>

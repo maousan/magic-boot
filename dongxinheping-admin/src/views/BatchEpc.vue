@@ -1,5 +1,10 @@
 <template>
-  <n-card title="批次 EPC 管理">
+  <n-card
+    title="批次 EPC 管理"
+    class="table-page-card"
+    style="height: 100%; min-height: 0; display: flex; flex-direction: column"
+    content-style="flex: 1; min-height: 0; display: flex; flex-direction: column"
+  >
     <template #header-extra>
       <n-space>
         <n-input v-model:value="searchKeyword" placeholder="搜索批次ID或EPC" clearable @keyup.enter="fetchData" />
@@ -15,15 +20,20 @@
       </n-space>
     </template>
 
-    <n-data-table
-      :columns="columns"
-      :data="bindings.list"
-      :loading="loading"
-      :bordered="true"
-      :pagination="pagination"
-      :row-key="(row: BatchEpcBinding) => row.id"
-      @update:page="handlePageChange"
-    />
+    <div class="table-page-content">
+      <div ref="tableAreaRef" class="table-page-table batch-epc-table-area">
+        <n-data-table
+          :columns="columns"
+          :data="bindings.list"
+          :loading="loading"
+          :bordered="true"
+          :pagination="pagination"
+          :row-key="(row: BatchEpcBinding) => row.id"
+          :max-height="tableBodyMaxHeight"
+          @update:page="handlePageChange"
+        />
+      </div>
+    </div>
 
     <n-modal v-model:show="showBind" title="绑定批次 EPC" preset="dialog">
       <n-space vertical>
@@ -58,6 +68,7 @@ import {
 import type { DataTableColumns } from 'naive-ui'
 import { getBatchEpcList, bindBatchEpc, unbindBatchEpc } from '@/api/batch-epc'
 import type { BatchEpcBinding } from '@/types'
+import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
 const loading = ref(false)
 const binding = ref(false)
@@ -67,6 +78,7 @@ const showUnbind = ref(false)
 const searchKeyword = ref('')
 const searchStatus = ref<number | null>(null)
 const unbindTarget = ref<BatchEpcBinding | null>(null)
+const { tableAreaRef, tableBodyMaxHeight } = useTableBodyHeight(100)
 
 const bindings = reactive<{ list: BatchEpcBinding[]; total: number }>({
   list: [],
@@ -162,3 +174,34 @@ async function handleUnbind() {
 
 onMounted(fetchData)
 </script>
+
+<style scoped>
+.table-page-card {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-page-card :deep(.n-card__content) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-page-content {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.batch-epc-table-area {
+  flex: 1 1 0;
+  height: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+</style>

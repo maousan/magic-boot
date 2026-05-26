@@ -1,5 +1,10 @@
 <template>
-  <n-card title="设备管理">
+  <n-card
+    title="设备管理"
+    class="table-page-card"
+    style="height: 100%; min-height: 0; display: flex; flex-direction: column"
+    content-style="flex: 1; min-height: 0; display: flex; flex-direction: column"
+  >
     <template #header-extra>
       <n-space>
         <n-button type="primary" @click="openCreate">新增设备</n-button>
@@ -7,31 +12,37 @@
       </n-space>
     </template>
 
-    <n-space :size="12" style="margin-bottom: 16px">
-      <n-input v-model:value="query.macAddress" placeholder="MAC 地址" clearable style="width: 200px" @keyup.enter="handleSearch" />
-      <n-input v-model:value="query.ip" placeholder="IP 地址" clearable style="width: 160px" @keyup.enter="handleSearch" />
-      <n-input v-model:value="query.remark" placeholder="备注" clearable style="width: 160px" @keyup.enter="handleSearch" />
-    </n-space>
+    <div class="table-page-content">
+      <n-space :size="12" class="table-page-toolbar">
+        <n-input v-model:value="query.macAddress" placeholder="MAC 地址" clearable style="width: 200px" @keyup.enter="handleSearch" />
+        <n-input v-model:value="query.ip" placeholder="IP 地址" clearable style="width: 160px" @keyup.enter="handleSearch" />
+        <n-input v-model:value="query.remark" placeholder="备注" clearable style="width: 160px" @keyup.enter="handleSearch" />
+      </n-space>
 
-    <n-data-table
-      :columns="columns"
-      :data="devices.list"
-      :loading="loading"
-      :bordered="true"
-      :row-key="(row: LedDevice) => row.macAddress"
-    />
+      <div ref="tableAreaRef" class="table-page-table led-device-table-area">
+        <n-data-table
+          :columns="columns"
+          :data="devices.list"
+          :loading="loading"
+          :bordered="true"
+          :row-key="(row: LedDevice) => row.macAddress"
+          :scroll-x="620"
+          :max-height="tableBodyMaxHeight"
+        />
+      </div>
 
-    <n-flex justify="end" style="margin-top: 12px">
-      <n-pagination
-        v-model:page="page"
-        v-model:page-size="pageSize"
-        :item-count="devices.total"
-        :page-sizes="[10, 20, 50]"
-        show-size-picker
-        @update:page="fetchData"
-        @update:page-size="fetchData"
-      />
-    </n-flex>
+      <n-flex justify="end" class="table-page-pagination">
+        <n-pagination
+          v-model:page="page"
+          v-model:page-size="pageSize"
+          :item-count="devices.total"
+          :page-sizes="[10, 20, 50]"
+          show-size-picker
+          @update:page="fetchData"
+          @update:page-size="fetchData"
+        />
+      </n-flex>
+    </div>
 
     <!-- 新增弹窗 -->
     <n-modal v-model:show="showCreate" title="新增 LED 设备" preset="dialog">
@@ -176,6 +187,7 @@ import {
   zintisControlQuery, zintisSystemInfo, zintisSignalStrength, zintisNetwork,
 } from '@/api/zintis-led'
 import type { LedDevice, ZintisLedControlRequest } from '@/types'
+import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -191,6 +203,7 @@ const deleteTarget = ref<LedDevice | null>(null)
 const controlDevice = ref<LedDevice | null>(null)
 const lightDevice = ref<LedDevice | null>(null)
 const ctrlResult = ref<Record<string, any> | null>(null)
+const { tableAreaRef, tableBodyMaxHeight } = useTableBodyHeight()
 
 const query = reactive({ macAddress: '', ip: '', remark: '' })
 const form = reactive({ macAddress: '', ip: '', remark: '' })
@@ -346,3 +359,40 @@ async function execControl(fn: (d: ZintisLedControlRequest) => Promise<any>, _la
 
 onMounted(fetchData)
 </script>
+
+<style scoped>
+.table-page-card {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-page-card :deep(.n-card__content) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-page-content {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.table-page-toolbar,
+.table-page-pagination {
+  flex-shrink: 0;
+}
+
+.led-device-table-area {
+  flex: 1 1 0;
+  height: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+</style>

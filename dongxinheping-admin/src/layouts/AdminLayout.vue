@@ -1,7 +1,7 @@
 <template>
-  <n-layout style="height: 100vh">
-    <n-layout has-sider>
+  <n-layout class="admin-shell" has-sider content-style="height: 100%">
       <n-layout-sider
+        class="admin-sider"
         bordered
         :width="220"
         :native-scrollbar="false"
@@ -9,26 +9,30 @@
         :collapsed-width="64"
         :show-trigger="false"
       >
-        <div style="padding: 16px; font-size: 16px; font-weight: 600; text-align: center">
+        <div class="admin-brand">
           东信和平管理后台
         </div>
-        <n-menu :options="menuOptions" :value="activeKey" @update:value="onMenuSelect" />
+        <n-menu class="admin-menu" :options="menuOptions" :value="activeKey" @update:value="onMenuSelect" />
       </n-layout-sider>
-      <n-layout>
-        <n-layout-header bordered style="padding: 12px 24px; display: flex; justify-content: flex-end; align-items: center">
+      <n-layout class="admin-main" content-style="height: 100%; min-height: 0; display: flex; flex-direction: column">
+        <n-layout-header bordered class="admin-header">
           <n-button text @click="handleLogout">退出登录</n-button>
         </n-layout-header>
-        <n-layout-content content-style="padding: 24px">
-          <router-view v-slot="{ Component }">
-            <transition name="fade-slide" mode="out-in">
-              <keep-alive>
-                <component :is="Component" />
-              </keep-alive>
-            </transition>
-          </router-view>
+        <n-layout-content
+          class="admin-content"
+          content-style="height: 100%; min-height: 0; padding: 24px; box-sizing: border-box; overflow: hidden"
+        >
+          <div class="admin-page">
+            <router-view v-slot="{ Component }">
+              <transition name="fade-slide" mode="out-in">
+                <keep-alive>
+                  <component :is="Component" />
+                </keep-alive>
+              </transition>
+            </router-view>
+          </div>
         </n-layout-content>
       </n-layout>
-    </n-layout>
   </n-layout>
 </template>
 
@@ -89,6 +93,64 @@ function handleLogout() {
 </script>
 
 <style scoped>
+.admin-shell {
+  position: fixed;
+  inset: 0;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.admin-sider {
+  height: 100%;
+}
+
+.admin-sider :deep(.n-layout-sider-scroll-container) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-brand {
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.admin-menu {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.admin-main {
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.admin-header {
+  height: 52px;
+  padding: 12px 24px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.admin-content {
+  flex: 1;
+  height: 0;
+  min-height: 0;
+}
+
+.admin-page {
+  height: 100%;
+  min-height: 100%;
+}
+
 .fade-slide-enter-active,
 .fade-slide-leave-active {
   transition: opacity 0.2s ease, transform 0.2s ease;

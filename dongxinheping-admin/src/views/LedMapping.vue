@@ -1,35 +1,45 @@
 <template>
-  <n-card title="巷道灯绑定">
+  <n-card
+    title="巷道灯绑定"
+    class="table-page-card"
+    style="height: 100%; min-height: 0; display: flex; flex-direction: column"
+    content-style="flex: 1; min-height: 0; display: flex; flex-direction: column"
+  >
     <template #header-extra>
       <n-button type="primary" @click="showCreate = true">新增绑定</n-button>
     </template>
 
-    <n-space :size="12" style="margin-bottom: 16px">
-      <n-input v-model:value="query.locationCode" placeholder="库位编码" clearable style="width: 160px" @keyup.enter="handleSearch" />
-      <n-input v-model:value="query.ledId" placeholder="设备ID" clearable style="width: 160px" @keyup.enter="handleSearch" />
-      <n-select v-model:value="query.color" :options="[{ label: '全部', value: '' }, ...colorOptions]" placeholder="灯色" clearable style="width: 120px" />
-      <n-button type="primary" @click="handleSearch">查询</n-button>
-    </n-space>
+    <div class="table-page-content">
+      <n-space :size="12" class="table-page-toolbar">
+        <n-input v-model:value="query.locationCode" placeholder="库位编码" clearable style="width: 160px" @keyup.enter="handleSearch" />
+        <n-input v-model:value="query.ledId" placeholder="设备ID" clearable style="width: 160px" @keyup.enter="handleSearch" />
+        <n-select v-model:value="query.color" :options="[{ label: '全部', value: '' }, ...colorOptions]" placeholder="灯色" clearable style="width: 120px" />
+        <n-button type="primary" @click="handleSearch">查询</n-button>
+      </n-space>
 
-    <n-data-table
-      :columns="columns"
-      :data="bindings.list"
-      :loading="loading"
-      :bordered="true"
-      :row-key="(row: LocationLedBinding) => row.id"
-    />
+      <div ref="tableAreaRef" class="table-page-table led-mapping-table-area">
+        <n-data-table
+          :columns="columns"
+          :data="bindings.list"
+          :loading="loading"
+          :bordered="true"
+          :row-key="(row: LocationLedBinding) => row.id"
+          :max-height="tableBodyMaxHeight"
+        />
+      </div>
 
-    <n-flex justify="end" style="margin-top: 12px">
-      <n-pagination
-        v-model:page="page"
-        v-model:page-size="pageSize"
-        :item-count="bindings.total"
-        :page-sizes="[10, 20, 50]"
-        show-size-picker
-        @update:page="fetchData"
-        @update:page-size="fetchData"
-      />
-    </n-flex>
+      <n-flex justify="end" class="table-page-pagination">
+        <n-pagination
+          v-model:page="page"
+          v-model:page-size="pageSize"
+          :item-count="bindings.total"
+          :page-sizes="[10, 20, 50]"
+          show-size-picker
+          @update:page="fetchData"
+          @update:page-size="fetchData"
+        />
+      </n-flex>
+    </div>
 
     <n-modal v-model:show="showCreate" title="新增绑定" preset="dialog">
       <n-space vertical>
@@ -37,7 +47,14 @@
           <n-input v-model:value="form.lotNo" placeholder="请输入库位码" />
         </n-form-item>
         <n-form-item label="设备ID">
-          <n-input v-model:value="form.ledId" placeholder="请输入设备ID" />
+          <n-select
+            v-model:value="form.ledId"
+            :options="deviceOptions"
+            :loading="deviceLoading"
+            placeholder="请选择设备"
+            filterable
+            clearable
+          />
         </n-form-item>
         <n-form-item label="颜色">
           <n-select v-model:value="form.color" :options="colorOptions" />
@@ -60,21 +77,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, h } from 'vue'
+import { ref, reactive, nextTick, onBeforeUnmount, onMounted, h, computed } from 'vue'
 import {
   NCard, NDataTable, NButton, NModal, NSpace, NFormItem, NFlex, NPagination,
   NInput, NSelect, NTag,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { getLedMappingList, createLedMapping, deleteLedMapping } from '@/api/led-mapping'
-import type { LocationLedBinding } from '@/types'
+import { getLedDeviceList } from '@/api/led-device'
+import type { LedDevice, LocationLedBinding } from '@/types'
 
 const loading = ref(false)
 const creating = ref(false)
 const deleting = ref(false)
+const deviceLoading = ref(false)
 const showCreate = ref(false)
 const showDelete = ref(false)
 const deleteTarget = ref<{ id: string; locationCode: string } | null>(null)
+const tableAreaRef = ref<HTMLElement | null>(null)
+const tableBodyMaxHeight = ref(360)
+let tableResizeObserver: ResizeObserver | null = null
 
 const bindings = reactive<{ list: LocationLedBinding[]; total: number }>({
   list: [],
@@ -83,8 +105,9 @@ const bindings = reactive<{ list: LocationLedBinding[]; total: number }>({
 
 const page = ref(1)
 const pageSize = ref(20)
+const ledDevices = ref<LedDevice[]>([])
 
-const form = reactive({ lotNo: '', ledId: '', color: 'RED' as string })
+const form = reactive({ lotNo: '', ledId: null, color: 'RED' as string })
 
 const query = reactive({ locationCode: '', ledId: '', color: '' as string })
 
@@ -93,6 +116,13 @@ const colorOptions = [
   { label: '黄色', value: 'YELLOW' },
   { label: '绿色', value: 'GREEN' },
 ]
+
+const deviceOptions = computed(() =>
+  ledDevices.value.map((device) => ({
+    label: device.macAddress,
+    value: device.macAddress,
+  })),
+)
 
 const colorTagMap: Record<string, 'error' | 'warning' | 'success'> = {
   RED: 'error',
@@ -133,6 +163,23 @@ async function fetchData() {
   }
 }
 
+async function fetchLedDevices() {
+  deviceLoading.value = true
+  try {
+    const res = await getLedDeviceList({ page: 1, pageSize: 500 })
+    ledDevices.value = res.list || []
+  } finally {
+    deviceLoading.value = false
+  }
+}
+
+function updateTableHeight() {
+  const areaHeight = tableAreaRef.value?.clientHeight || 0
+  if (areaHeight > 0) {
+    tableBodyMaxHeight.value = Math.max(areaHeight - 52, 160)
+  }
+}
+
 function handleSearch() {
   page.value = 1
   fetchData()
@@ -170,5 +217,56 @@ async function handleDelete() {
   }
 }
 
-onMounted(fetchData)
+onMounted(() => {
+  fetchData()
+  fetchLedDevices()
+  nextTick(() => {
+    updateTableHeight()
+    if (tableAreaRef.value) {
+      tableResizeObserver = new ResizeObserver(updateTableHeight)
+      tableResizeObserver.observe(tableAreaRef.value)
+    }
+  })
+})
+
+onBeforeUnmount(() => {
+  tableResizeObserver?.disconnect()
+})
 </script>
+
+<style scoped>
+.table-page-card {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-page-card :deep(.n-card__content) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-page-content {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.table-page-toolbar,
+.table-page-pagination {
+  flex-shrink: 0;
+}
+
+.led-mapping-table-area {
+  flex: 1 1 0;
+  height: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+</style>

@@ -1,6 +1,11 @@
 <template>
-  <n-space vertical :size="16">
-    <n-card title="拣货单管理">
+  <div class="picking-page">
+    <n-card
+      title="拣货单管理"
+      class="picking-card"
+      style="min-height: 0; display: flex; flex-direction: column"
+      content-style="flex: 1; min-height: 0; display: flex; flex-direction: column"
+    >
       <template #header-extra>
         <n-space>
           <n-input v-model:value="query.waveNo" placeholder="波次号" clearable style="width: 160px" @keyup.enter="handleSearch" />
@@ -11,41 +16,55 @@
         </n-space>
       </template>
 
-      <n-data-table
-        :columns="masterColumns"
-        :data="masterList"
-        :loading="masterLoading"
-        :bordered="true"
-        :row-props="masterRowProps"
-        style="min-height: 120px"
-      />
+      <div class="picking-card-content">
+        <div ref="masterTableAreaRef" class="table-page-table picking-table-area">
+          <n-data-table
+            :columns="masterColumns"
+            :data="masterList"
+            :loading="masterLoading"
+            :bordered="true"
+            :row-props="masterRowProps"
+            :max-height="masterTableBodyMaxHeight"
+          />
+        </div>
 
-      <n-flex justify="end" style="margin-top: 12px">
-        <n-pagination
-          v-model:page="page"
-          v-model:page-size="pageSize"
-          :item-count="total"
-          :page-sizes="[20, 50, 100]"
-          show-size-picker
-          @update:page="loadMasters"
-          @update:page-size="loadMasters"
-        />
-      </n-flex>
+        <n-flex justify="end" class="table-page-pagination">
+          <n-pagination
+            v-model:page="page"
+            v-model:page-size="pageSize"
+            :item-count="total"
+            :page-sizes="[20, 50, 100]"
+            show-size-picker
+            @update:page="loadMasters"
+            @update:page-size="loadMasters"
+          />
+        </n-flex>
+      </div>
     </n-card>
 
-    <n-card v-if="selectedMaster" :title="'明细 - ' + selectedMaster.waveNo">
+    <n-card
+      v-if="selectedMaster"
+      :title="'明细 - ' + selectedMaster.waveNo"
+      class="picking-card"
+      style="min-height: 0; display: flex; flex-direction: column"
+      content-style="flex: 1; min-height: 0; display: flex; flex-direction: column"
+    >
       <template #header-extra>
         <n-button type="primary" @click="openAddDetail">新增明细</n-button>
       </template>
 
-      <n-data-table
-        :columns="detailColumns"
-        :data="detailList"
-        :loading="detailLoading"
-        :bordered="true"
-        size="small"
-        style="min-height: 80px"
-      />
+      <div class="picking-card-content">
+        <div ref="detailTableAreaRef" class="table-page-table picking-table-area">
+          <n-data-table
+            :columns="detailColumns"
+            :data="detailList"
+            :loading="detailLoading"
+            :bordered="true"
+            size="small"
+            :max-height="detailTableBodyMaxHeight"
+          />
+        </div>
+      </div>
     </n-card>
 
     <!-- 新增/编辑 主表 -->
@@ -96,11 +115,11 @@
     <n-modal v-model:show="showDetailDelete" title="确认删除" preset="dialog" type="warning" positive-text="确认删除" negative-text="取消" @positive-click="handleDetailDelete">
       确定要删除该明细记录吗？
     </n-modal>
-  </n-space>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, h } from 'vue'
+import { ref, reactive, nextTick, onMounted, h } from 'vue'
 import {
   NCard, NDataTable, NButton, NSpace, NFlex, NInput, NInputNumber, NSelect, NModal,
   NFormItem, NTag, NPagination, useMessage,
@@ -112,6 +131,7 @@ import {
   addPickingUploadDetail, updatePickingUploadDetail, deletePickingUploadDetail,
 } from '@/api/picking-upload'
 import type { PickingUpload, PickingUploadDetail } from '@/types'
+import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
 const message = useMessage()
 
@@ -123,6 +143,16 @@ const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
 const selectedMaster = ref<PickingUpload | null>(null)
+const {
+  tableAreaRef: masterTableAreaRef,
+  tableBodyMaxHeight: masterTableBodyMaxHeight,
+  updateTableHeight: updateMasterTableHeight,
+} = useTableBodyHeight()
+const {
+  tableAreaRef: detailTableAreaRef,
+  tableBodyMaxHeight: detailTableBodyMaxHeight,
+  updateTableHeight: updateDetailTableHeight,
+} = useTableBodyHeight()
 
 const query = reactive({ waveNo: '', userId: '', userName: '' })
 
@@ -232,6 +262,9 @@ async function loadMasters() {
 
 async function selectMaster(row: PickingUpload) {
   selectedMaster.value = row
+  await nextTick()
+  updateMasterTableHeight()
+  updateDetailTableHeight()
   detailLoading.value = true
   try {
     const res = await getPickingUploadDetail(row.id)
@@ -240,6 +273,9 @@ async function selectMaster(row: PickingUpload) {
     detailList.value = []
   } finally {
     detailLoading.value = false
+    await nextTick()
+    updateMasterTableHeight()
+    updateDetailTableHeight()
   }
 }
 
@@ -248,6 +284,7 @@ function handleSearch() {
   selectedMaster.value = null
   detailList.value = []
   loadMasters()
+  nextTick(updateMasterTableHeight)
 }
 
 // ---- Master CRUD ----
@@ -385,3 +422,43 @@ async function handleDetailDelete() {
 
 onMounted(loadMasters)
 </script>
+
+<style scoped>
+.picking-page {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.picking-card {
+  flex: 1 1 0;
+  height: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.picking-card :deep(.n-card__content) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.picking-card-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.picking-table-area {
+  flex: 1 1 0;
+  height: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+</style>

@@ -1,5 +1,5 @@
 <template>
-  <div style="display: flex; flex-direction: column; height: calc(100vh - 120px)">
+  <div style="display: flex; flex-direction: column; height: 100%; min-height: 0">
     <!-- Header -->
     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px">
       <h3 style="margin: 0">数据库管理</h3>

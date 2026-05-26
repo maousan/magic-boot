@@ -1,5 +1,10 @@
 <template>
-  <n-card title="用户灯色映射">
+  <n-card
+    title="用户灯色映射"
+    class="table-page-card"
+    style="height: 100%; min-height: 0; display: flex; flex-direction: column"
+    content-style="flex: 1; min-height: 0; display: flex; flex-direction: column"
+  >
     <template #header-extra>
       <n-space>
         <n-input v-model:value="searchUserId" placeholder="用户ID" clearable style="width: 160px" @keyup.enter="handleSearch" />
@@ -8,25 +13,31 @@
       </n-space>
     </template>
 
-    <n-data-table
-      :columns="columns"
-      :data="list"
-      :loading="loading"
-      :bordered="true"
-      :row-key="(row: UserLightColor) => row.id"
-    />
+    <div class="table-page-content">
+      <div ref="tableAreaRef" class="table-page-table user-light-color-table-area">
+        <n-data-table
+          :columns="columns"
+          :data="list"
+          :loading="loading"
+          :bordered="true"
+          :row-key="(row: UserLightColor) => row.id"
+          :scroll-x="980"
+          :max-height="tableBodyMaxHeight"
+        />
+      </div>
 
-    <n-flex justify="end" style="margin-top: 12px">
-      <n-pagination
-        v-model:page="page"
-        v-model:page-size="pageSize"
-        :item-count="total"
-        :page-sizes="[20, 50, 100]"
-        show-size-picker
-        @update:page="loadData"
-        @update:page-size="loadData"
-      />
-    </n-flex>
+      <n-flex justify="end" class="table-page-pagination">
+        <n-pagination
+          v-model:page="page"
+          v-model:page-size="pageSize"
+          :item-count="total"
+          :page-sizes="[20, 50, 100]"
+          show-size-picker
+          @update:page="loadData"
+          @update:page-size="loadData"
+        />
+      </n-flex>
+    </div>
 
     <n-modal v-model:show="showForm" :title="editId ? '编辑映射' : '新增映射'" preset="dialog" positive-text="确认" negative-text="取消" @positive-click="handleSubmit">
       <n-space vertical>
@@ -60,6 +71,7 @@ import {
 import type { DataTableColumns } from 'naive-ui'
 import { getUserLightColorList, addUserLightColor, updateUserLightColor, deleteUserLightColor } from '@/api/user-light-color'
 import type {UserLightColor} from '@/types'
+import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
 const message = useMessage()
 
@@ -69,6 +81,7 @@ const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
 const searchUserId = ref('')
+const { tableAreaRef, tableBodyMaxHeight } = useTableBodyHeight()
 
 const showForm = ref(false)
 const editId = ref<number | null>(null)
@@ -200,3 +213,39 @@ async function handleDelete() {
 
 onMounted(loadData)
 </script>
+
+<style scoped>
+.table-page-card {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-page-card :deep(.n-card__content) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-page-content {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.table-page-pagination {
+  flex-shrink: 0;
+}
+
+.user-light-color-table-area {
+  flex: 1 1 0;
+  height: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+</style>
