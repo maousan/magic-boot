@@ -4,7 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.pf4j.PluginWrapper;
 import org.pf4j.spring.SpringPlugin;
 import org.pf4j.spring.SpringPluginManager;
-import org.ssssssss.magicboot.zintis.rfid.config.RfidWebSocketProperties;
+import org.ssssssss.magicboot.zintis.rfid.config.RfidSocketProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -65,7 +65,7 @@ public class ZintisRfidPlugin extends SpringPlugin {
     }
 
     @Configuration
-    @EnableConfigurationProperties(RfidWebSocketProperties.class)
+    @EnableConfigurationProperties(RfidSocketProperties.class)
     @ComponentScan(basePackages = "org.ssssssss.magicboot.zintis.rfid")
     public static class PluginConfig {
     }

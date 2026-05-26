@@ -25,6 +25,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'user-light-color', name: 'UserLightColor', component: () => import('@/views/UserLightColor.vue') },
       { path: 'picking-upload', name: 'PickingUpload', component: () => import('@/views/PickingUpload.vue') },
       { path: 'batch-epc', name: 'BatchEpc', component: () => import('@/views/BatchEpc.vue') },
+      { path: 'rfid-server', name: 'RfidServer', component: () => import('@/views/RfidServer.vue') },
       { path: 'zintis-netty', name: 'ZintisNetty', component: () => import('@/views/ZintisNetty.vue') },
       { path: 'inventory-query', name: 'InventoryQuery', component: () => import('@/views/InventoryQuery.vue') },
       { path: 'database', name: 'DatabaseManagement', component: () => import('@/views/DatabaseManagement.vue') },

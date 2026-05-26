@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.ssssssss.magicboot.zintis.rfid.config.RfidWebSocketProperties;
 import org.ssssssss.magicboot.zintis.rfid.model.WsMessage;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +19,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public class MessageService {
 
     private final ObjectMapper objectMapper;
-    private final RfidWebSocketProperties properties;
     private final DataPersistenceService persistenceService;
 
     private final Map<String, Boolean> receivedMsgIds = new LruSet<>(100);

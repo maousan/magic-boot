@@ -61,10 +61,13 @@ const menuOptions: MenuOption[] = [
     { label: 'Netty 管理', key: 'ZintisNetty' },
   ]},
   { label: 'EPC 管理', key: 'epc', children: [
-    { label: '批次 EPC 管理', key: 'BatchEpc' },
+    { label: '批次 EPC 绑定', key: 'BatchEpc' },
+    { label: 'RFID Server', key: 'RfidServer' },
   ]},
-  { label: '拣货管理', key: 'PickingUpload' },
-  { label: '用户灯色映射', key: 'UserLightColor' },
+  { label: '拣货管理', key: 'picking', children: [
+    { label: '拣货单', key: 'PickingUpload' },
+    { label: '用户灯色映射', key: 'UserLightColor' },
+  ]},
   { label: '系统管理', key: 'system', children: [
     { label: '数据库管理', key: 'DatabaseManagement' },
     { label: '定时任务', key: 'JobManagement' },

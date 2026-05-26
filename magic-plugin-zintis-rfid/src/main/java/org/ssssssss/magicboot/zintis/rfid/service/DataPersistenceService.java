@@ -3,7 +3,7 @@ package org.ssssssss.magicboot.zintis.rfid.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.ssssssss.magicboot.zintis.rfid.config.RfidWebSocketProperties;
+import org.ssssssss.magicboot.zintis.rfid.config.RfidSocketProperties;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -20,7 +20,7 @@ public class DataPersistenceService {
     private final StringRedisTemplate redisTemplate;
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
-    private final RfidWebSocketProperties properties;
+    private final RfidSocketProperties properties;
 
     public void cacheRfidData(String deviceId, Object payload, long timestamp) {
         try {
@@ -31,7 +31,7 @@ public class DataPersistenceService {
         }
     }
 
-    @Scheduled(fixedDelayString = "${rfid.websocket.batchIntervalMs:5000}")
+    @Scheduled(fixedDelayString = "${rfid.socket.batchIntervalMs:${rfid.websocket.batchIntervalMs:5000}}")
     public void flushToMySQL() {
         Set<String> keys = redisTemplate.keys("rfid:pending:*");
         if (keys == null || keys.isEmpty()) return;

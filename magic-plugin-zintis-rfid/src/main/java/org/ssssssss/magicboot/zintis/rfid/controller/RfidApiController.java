@@ -1,8 +1,9 @@
 package org.ssssssss.magicboot.zintis.rfid.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.ssssssss.magicboot.zintis.rfid.config.RfidSocketProperties;
 import org.ssssssss.magicboot.zintis.rfid.model.DeviceInfo;
-import org.ssssssss.magicboot.zintis.rfid.server.NettyWebSocketServer;
+import org.ssssssss.magicboot.zintis.rfid.server.NettyTcpServer;
 import org.ssssssss.magicboot.zintis.rfid.service.DeviceManager;
 import org.ssssssss.magicboot.zintis.rfid.service.MessageService;
 import org.springframework.web.bind.annotation.*;
@@ -17,9 +18,26 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class RfidApiController {
 
-    private final NettyWebSocketServer server;
+    private final NettyTcpServer server;
+    private final RfidSocketProperties properties;
     private final DeviceManager deviceManager;
     private final MessageService messageService;
+
+    @PostMapping("/start")
+    public Map<String, Object> start(@RequestBody(required = false) Map<String, Object> request) {
+        int port = server.getBoundPort() > 0 ? server.getBoundPort() : properties.getPort();
+        if (request != null && request.get("port") instanceof Number number) {
+            port = number.intValue();
+        }
+        server.start(port);
+        return status();
+    }
+
+    @PostMapping("/stop")
+    public Map<String, Object> stop() {
+        server.stop();
+        return status();
+    }
 
     @PostMapping("/command")
     public Map<String, Object> sendCommand(@RequestBody Map<String, Object> request) {

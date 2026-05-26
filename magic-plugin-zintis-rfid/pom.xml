@@ -11,7 +11,7 @@
 
     <artifactId>magic-plugin-zintis-rfid</artifactId>
     <name>magic-plugin-zintis-rfid</name>
-    <description>Zintis RFID WebSocket Plugin</description>
+    <description>Zintis RFID TCP Socket Plugin</description>
 
     <properties>
         <java.version>17</java.version>

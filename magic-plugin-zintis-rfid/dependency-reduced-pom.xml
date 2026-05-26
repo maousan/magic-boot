@@ -9,7 +9,7 @@
   <artifactId>magic-plugin-zintis-rfid</artifactId>
   <name>magic-plugin-zintis-rfid</name>
   <version>0.0.2</version>
-  <description>Zintis RFID WebSocket Plugin</description>
+  <description>Zintis RFID TCP Socket Plugin</description>
   <licenses>
     <license>
       <name>Apache License, Version 2.0</name>
