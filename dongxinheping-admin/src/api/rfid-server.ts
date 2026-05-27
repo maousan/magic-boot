@@ -1,4 +1,4 @@
-import { pluginClient } from './request'
+import client, { pluginClient } from './request'
 
 export interface RfidServerStatus {
   running: boolean
@@ -47,4 +47,19 @@ export function sendRfidCommand(data: {
   params?: Record<string, unknown>
 }): Promise<RfidCommandResult> {
   return pluginClient.post('/plugin/zintis-rfid-plugin/api/rfid/command', data).then((r) => r.data)
+}
+
+export interface RfidRecord {
+  id: number
+  device_id: string
+  epc: string
+  rssi: number
+  read_time: string
+}
+
+export function getRfidRecords(params: {
+  page: number
+  pageSize: number
+}): Promise<{ list: RfidRecord[]; total: number }> {
+  return client.get('/rfid/records', { params }).then((r) => r.data.data)
 }

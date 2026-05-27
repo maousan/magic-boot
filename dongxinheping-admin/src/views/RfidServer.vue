@@ -48,29 +48,27 @@
       </n-gi>
     </n-grid>
 
-    <n-grid :cols="24" :x-gap="16" :y-gap="16" responsive="screen">
-      <n-gi :span="14" :m="24" :s="24" :xs="24">
-        <n-card title="连接终端" size="small">
-          <template #header-extra>
-            <n-text depth="3" style="font-size: 13px">
-              {{ devices.length }} 台在线
-            </n-text>
-          </template>
-          <div v-if="!devices.length" class="empty-devices">
-            <n-text depth="3">暂无已连接终端</n-text>
-          </div>
-          <n-data-table
-            v-else
-            :columns="columns"
-            :data="devices"
-            :loading="loading"
-            :bordered="false"
-            size="small"
-            :row-key="(row: RfidDeviceInfo) => row.deviceId"
-          />
-        </n-card>
-      </n-gi>
+    <!-- 连接终端 - 整行 -->
+    <n-card title="连接终端" size="small" style="margin-bottom: 16px">
+      <template #header-extra>
+        <n-text depth="3" style="font-size: 13px">{{ devices.length }} 台在线</n-text>
+      </template>
+      <div v-if="!devices.length" class="empty-devices">
+        <n-text depth="3">暂无已连接终端</n-text>
+      </div>
+      <n-data-table
+        v-else
+        :columns="columns"
+        :data="devices"
+        :loading="loading"
+        :bordered="false"
+        size="small"
+        :row-key="(row: RfidDeviceInfo) => row.deviceId"
+      />
+    </n-card>
 
+    <!-- 下方两栏 -->
+    <n-grid :cols="24" :x-gap="16" :y-gap="16" responsive="screen">
       <n-gi :span="10" :m="24" :s="24" :xs="24">
         <n-card title="指令控制台" size="small">
           <n-space vertical :size="12">
@@ -91,7 +89,7 @@
                 v-model:value="commandForm.params"
                 type="textarea"
                 placeholder='例如: {"key": "value"}'
-                :rows="5"
+                :rows="3"
                 size="small"
               />
             </n-form-item>
@@ -106,6 +104,7 @@
                 发送
               </n-button>
               <n-button size="small" secondary @click="resetCommand">清空</n-button>
+              <n-button size="small" secondary @click="generateRandomParams">随机参数</n-button>
             </n-space>
           </n-space>
 
@@ -125,6 +124,38 @@
           </template>
         </n-card>
       </n-gi>
+
+      <n-gi :span="14" :m="24" :s="24" :xs="24">
+        <n-card title="接收消息日志" size="small">
+          <template #header-extra>
+            <n-space :size="8" align="center">
+              <n-text depth="3" style="font-size: 13px">{{ records.length }} 条</n-text>
+              <n-button size="tiny" secondary :loading="recordsLoading" @click="fetchRecords">刷新</n-button>
+            </n-space>
+          </template>
+          <n-data-table
+            :columns="recordColumns"
+            :data="records"
+            :loading="recordsLoading"
+            :bordered="false"
+            size="small"
+            :row-key="(row: RfidRecord) => row.id"
+            :max-height="320"
+          />
+          <n-flex justify="end" style="margin-top: 8px">
+            <n-pagination
+              v-model:page="recordsPage"
+              v-model:page-size="recordsPageSize"
+              :item-count="recordsTotal"
+              :page-sizes="[20, 50, 100]"
+              size="small"
+              show-size-picker
+              @update:page="fetchRecords"
+              @update:page-size="fetchRecords"
+            />
+          </n-flex>
+        </n-card>
+      </n-gi>
     </n-grid>
   </div>
 </template>
@@ -132,12 +163,15 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted, onUnmounted, h } from 'vue'
 import {
-  NCard, NDataTable, NButton, NSpace, NFormItem, NInput, NTag, NGrid, NGi,
-  NText, NSpin, NSwitch, NSelect, NDivider, useMessage,
+  NCard, NDataTable, NButton, NSpace, NFlex, NFormItem, NInput, NTag, NGrid, NGi,
+  NText, NSpin, NSwitch, NSelect, NDivider, NPagination, useMessage,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
-import { getRfidStatus, getRfidDevices, sendRfidCommand, startRfidServer, stopRfidServer } from '@/api/rfid-server'
-import type { RfidServerStatus, RfidDeviceInfo, RfidCommandResult } from '@/api/rfid-server'
+import {
+  getRfidStatus, getRfidDevices, sendRfidCommand,
+  startRfidServer, stopRfidServer, getRfidRecords,
+} from '@/api/rfid-server'
+import type { RfidServerStatus, RfidDeviceInfo, RfidCommandResult, RfidRecord } from '@/api/rfid-server'
 
 const message = useMessage()
 const loading = ref(false)
@@ -149,7 +183,17 @@ const commandResult = ref<RfidCommandResult | null>(null)
 const autoRefresh = ref(false)
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 
-const commandForm = reactive({
+const records = ref<RfidRecord[]>([])
+const recordsLoading = ref(false)
+const recordsPage = ref(1)
+const recordsPageSize = ref(20)
+const recordsTotal = ref(0)
+
+const commandForm = reactive<{
+  deviceId: string | undefined
+  command: string
+  params: string
+}>({
   deviceId: undefined,
   command: '',
   params: '',
@@ -186,6 +230,13 @@ const columns: DataTableColumns<RfidDeviceInfo> = [
   },
 ]
 
+const recordColumns: DataTableColumns<RfidRecord> = [
+  { title: '设备 ID', key: 'device_id', width: 160, ellipsis: { tooltip: true } },
+  { title: 'EPC', key: 'epc', ellipsis: { tooltip: true } },
+  { title: 'RSSI', key: 'rssi', width: 80 },
+  { title: '读取时间', key: 'read_time', width: 180 },
+]
+
 async function fetchStatus() {
   status.value = await getRfidStatus()
 }
@@ -195,10 +246,21 @@ async function fetchDevices() {
   devices.value = res.devices || []
 }
 
+async function fetchRecords() {
+  recordsLoading.value = true
+  try {
+    const res = await getRfidRecords({ page: recordsPage.value, pageSize: recordsPageSize.value })
+    records.value = res.list || []
+    recordsTotal.value = res.total || 0
+  } finally {
+    recordsLoading.value = false
+  }
+}
+
 async function refreshAll() {
   loading.value = true
   try {
-    await Promise.all([fetchStatus(), fetchDevices()])
+    await Promise.all([fetchStatus(), fetchDevices(), fetchRecords()])
   } finally {
     loading.value = false
   }
@@ -232,6 +294,23 @@ function resetCommand() {
   commandForm.command = ''
   commandForm.params = ''
   commandResult.value = null
+}
+
+function generateRandomParams() {
+  const keys = ['action', 'mode', 'type', 'channel', 'interval', 'threshold', 'power', 'freq']
+  const count = 2 + Math.floor(Math.random() * 3)
+  const obj: Record<string, unknown> = {}
+  const used = new Set<string>()
+  for (let i = 0; i < count; i++) {
+    let key = keys[Math.floor(Math.random() * keys.length)]
+    while (used.has(key)) key = keys[Math.floor(Math.random() * keys.length)]
+    used.add(key)
+    const val = Math.random() > 0.5
+      ? Math.floor(Math.random() * 100)
+      : `val_${Math.random().toString(36).slice(2, 6)}`
+    obj[key] = val
+  }
+  commandForm.params = JSON.stringify(obj, null, 2)
 }
 
 async function handleSendCommand() {

@@ -50,31 +50,27 @@
       </n-gi>
     </n-grid>
 
-    <!-- Two Column Layout -->
-    <n-grid :cols="24" :x-gap="16">
-      <!-- Clients -->
-      <n-gi :span="14">
-        <n-card title="连接设备" size="small">
-          <template #header-extra>
-            <n-text depth="3" style="font-size: 13px">
-              {{ clients?.clientDetails?.length ?? 0 }} 台在线
-            </n-text>
-          </template>
-          <div v-if="!clients?.clientDetails?.length" class="empty-clients">
-            <n-text depth="3">暂无已连接设备</n-text>
-          </div>
-          <n-data-table
-            v-else
-            :columns="clientColumns"
-            :data="clients?.clientDetails ?? []"
-            :bordered="false"
-            size="small"
-          />
-        </n-card>
-      </n-gi>
+    <!-- 连接设备 - 整行 -->
+    <n-card title="连接设备" size="small" style="margin-bottom: 16px">
+      <template #header-extra>
+        <n-text depth="3" style="font-size: 13px">{{ clients?.clientDetails?.length ?? 0 }} 台在线</n-text>
+      </template>
+      <div v-if="!clients?.clientDetails?.length" class="empty-clients">
+        <n-text depth="3">暂无已连接设备</n-text>
+      </div>
+      <n-data-table
+        v-else
+        :columns="clientColumns"
+        :data="clients?.clientDetails ?? []"
+        :bordered="false"
+        size="small"
+        :row-key="(row: any) => row.remoteAddress"
+      />
+    </n-card>
 
-      <!-- Message Console -->
-      <n-gi :span="10">
+    <!-- 下方两栏 -->
+    <n-grid :cols="24" :x-gap="16" :y-gap="16" responsive="screen">
+      <n-gi :span="10" :m="24" :s="24" :xs="24">
         <n-card title="消息控制台" size="small">
           <n-space vertical :size="12">
             <n-form-item label="目标客户端" :show-feedback="false">
@@ -100,7 +96,7 @@
             <n-input
               v-model:value="sendForm.payload"
               type="textarea"
-              :rows="4"
+              :rows="3"
               placeholder="输入发送内容"
               size="small"
             />
@@ -109,20 +105,26 @@
               <n-button type="warning" size="small" :loading="sendLoading" @click="broadcast">广播</n-button>
             </n-space>
           </n-space>
+        </n-card>
+      </n-gi>
 
-          <template v-if="sendResult">
-            <n-divider style="margin: 12px 0" />
-            <div class="result-summary">
-              <span>成功 <strong class="text-success">{{ sendResult.successCount }}</strong> / {{ sendResult.totalTargets }}</span>
-              <span style="margin-left: 12px">失败 <strong class="text-error">{{ sendResult.failedCount }}</strong></span>
-            </div>
+      <n-gi :span="14" :m="24" :s="24" :xs="24">
+        <n-card title="发送结果" size="small">
+          <template #header-extra>
+            <n-text v-if="sendResult" depth="3" style="font-size: 13px">
+              成功 <span class="text-success">{{ sendResult.successCount }}</span> / {{ sendResult.totalTargets }}
+            </n-text>
+          </template>
+          <div v-if="!sendResult" class="empty-clients">
+            <n-text depth="3">暂无发送记录</n-text>
+          </div>
+          <template v-else>
             <n-data-table
-              v-if="sendResult.responses.length > 0"
               :columns="responseColumns"
               :data="sendResult.responses"
               :bordered="false"
               size="small"
-              :max-height="200"
+              :max-height="320"
             />
           </template>
         </n-card>
@@ -322,10 +324,6 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
   text-align: center;
 }
 
-.result-summary {
-  margin-bottom: 8px;
-  font-size: 13px;
-}
 .text-success { color: #18a058; }
 .text-error   { color: #d03050; }
 </style>
