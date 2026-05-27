@@ -5,7 +5,7 @@
   "groupId" : "03a2d754c617417cb68306951d6f8cf6",
   "name" : "更新article信息",
   "createTime" : null,
-  "updateTime" : 1778051189315,
+  "updateTime" : 1779873004366,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -32,6 +32,7 @@ import log
 import java.util.List
 import com.google.common.collect.Lists
 import com.dtflys.forest.Forest
+import 'deleteArticleInfo' as deleteArticleInfo
 
 const aimsHost = Forest.config().getVariableValue("aimsHost")
 const batchSize = 100
@@ -53,6 +54,7 @@ if(!(dataList instanceof List) || dataList.size() == 0){
 }
 
 let idx = 0
+let articleIds = []
 for(item in dataList){
     idx = idx + 1
     if(item == null){
@@ -76,8 +78,21 @@ for(item in dataList){
             message: 'dataList[' + idx + '].data不能为空'
         }
     }
+    articleIds.add(item.id)
 }
 
+// 第一阶段：逐条删除 article
+let deleteResults = []
+let deleteFailCount = 0
+for(articleId in articleIds){
+    let delResult = deleteArticleInfo(articleId)
+    deleteResults.add(delResult)
+    if(!delResult.success){
+        deleteFailCount = deleteFailCount + 1
+    }
+}
+
+// 第二阶段：批量更新 article
 let callUpdateArticleBatch = (batchDataList, batchIndex) => {
     let response = Forest.post(`http://${aimsHost}/articles`)
         .contentTypeJson()
@@ -128,11 +143,18 @@ for(batch in batches){
 }
 
 return {
-    success: failedBatches.size() == 0,
-    status: failedBatches.size() == 0 ? 200 : 500,
-    totalCount: dataList.size(),
-    batchCount: batches.size(),
-    successCount: successCount,
-    failCount: dataList.size() - successCount,
-    failedBatches: failedBatches
+    success: failedBatches.size() == 0 && deleteFailCount == 0,
+    status: failedBatches.size() == 0 && deleteFailCount == 0 ? 200 : 500,
+    deletePhase: {
+        totalCount: articleIds.size(),
+        failCount: deleteFailCount,
+        results: deleteResults
+    },
+    updatePhase: {
+        totalCount: dataList.size(),
+        batchCount: batches.size(),
+        successCount: successCount,
+        failCount: dataList.size() - successCount,
+        failedBatches: failedBatches
+    }
 }

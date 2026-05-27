@@ -37,6 +37,7 @@
 import log
 import com.dtflys.forest.Forest
 import '@/aims/articles/updateArticleInfo' as updateArticleInfo
+import '@/aims/articles/deleteArticleInfo' as deleteArticleInfo
 
 const stationCode = Forest.config().getVariableValue("stationCode")
 const maxPages = 3
@@ -167,10 +168,12 @@ while(pageIndex <= maxPages){
 }
 
 if(totalRows == 0){
+    let delResult = deleteArticleInfo(locationId)
     return {
         success: true,
         rowCount: 0,
-        message: '该库位无库存数据'
+        deleted: delResult.success,
+        message: delResult.success ? '该库位无库存数据，已从AIMS删除article' : '该库位无库存数据，从AIMS删除article失败: status=' + delResult.status
     }
 }
 

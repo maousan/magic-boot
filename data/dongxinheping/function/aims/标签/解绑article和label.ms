@@ -5,7 +5,7 @@
   "groupId" : "a18fa4b15beb4aedbac4201627d9175f",
   "name" : "解绑article和label",
   "createTime" : null,
-  "updateTime" : 1776138238606,
+  "updateTime" : 1779876007095,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -14,12 +14,12 @@
   "returnType" : null,
   "mappingPath" : null,
   "parameters" : [ {
-    "name" : "data",
+    "name" : "labelCode",
     "value" : null,
-    "description" : "请求对象，包含labelCode",
+    "description" : "标签条码",
     "required" : false,
     "dataType" : "String",
-    "type" : null,
+    "type" : "java.lang.String",
     "defaultValue" : null,
     "validateType" : null,
     "error" : null,
@@ -33,15 +33,6 @@ import com.dtflys.forest.Forest
 
 const aimsHost = Forest.config().getVariableValue("aimsHost")
 
-if(data == null){
-    return {
-        success: false,
-        status: 400,
-        message: 'data不能为空'
-    }
-}
-
-let labelCode = data.labelCode
 if(labelCode == null || labelCode == ''){
     return {
         success: false,
@@ -50,10 +41,9 @@ if(labelCode == null || labelCode == ''){
     }
 }
 
-let url = `http://${aimsHost}/labels/unlink?labelCode=${labelCode}`
+let url = `http://${aimsHost}/labels/unlink`
 let response = Forest.post(url)
-    .contentType('application/json;charset=UTF-8')
-    .addHeader('Accept', 'application/json;charset=UTF-8')
+    .addQuery('labelCode', labelCode)
     .executeAsResponse()
 
 let statusCode = response.statusCode()
@@ -69,5 +59,5 @@ if(success){
 return {
     success: success,
     status: statusCode,
-    response: responseText
+    message: responseText
 }

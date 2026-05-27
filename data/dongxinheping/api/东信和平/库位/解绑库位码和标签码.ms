@@ -5,7 +5,7 @@
   "groupId" : "6ce8544b21954e189dc7aeb484aeddfc",
   "name" : "解绑库位码和标签码",
   "createTime" : 1775542800000,
-  "updateTime" : 1776665196457,
+  "updateTime" : 1779875970650,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -48,24 +48,8 @@
 ================================
 import log
 import com.dtflys.forest.Forest
+import '@/aims/labels/unlinkArticleAndLabel' as unlinkArticleAndLabel
 
-const aimsHost = Forest.config().getVariableValue("aimsHost")
-const stationCode = Forest.config().getVariableValue("stationCode")
-
-if(aimsHost == null || aimsHost == ''){
-    exit 500, 'aimsHost未配置'
-}
-
-let buildAimsBaseUrl = (hostValue) => {
-    let host = (hostValue + '').trim()
-    if(!host.startsWith('http://') && !host.startsWith('https://')){
-        host = 'http://' + host
-    }
-    if(!host.matches('^https?://[^/]+:[0-9]+$')){
-        host = host + ':9002'
-    }
-    return host
-}
 
 if(id == null || id == ''){
     exit 400, 'id不能为空'
@@ -79,25 +63,16 @@ if(record == null){
     exit 404, '绑定记录不存在'
 }
 
-let labelCode = record.label_code
+const { success, message } = unlinkArticleAndLabel(record.labelCode)
 
-let aimsBaseUrl = buildAimsBaseUrl(aimsHost)
-let unlinkUrl = `${aimsBaseUrl}/labels/unlink?labelCode=${labelCode}`
-let unlinkResponse = Forest.post(unlinkUrl)
-    .contentType('application/json;charset=UTF-8')
-    .addHeader('Accept', 'application/json;charset=UTF-8')
-    .executeAsResponse()
-
-let unlinkStatus = unlinkResponse.statusCode()
-let unlinkBody = unlinkResponse.readAsString()
-
-if(unlinkStatus < 200 || unlinkStatus >= 300){
-    log.warn('AIMS unlink failed, labelCode=' + labelCode + ', status=' + unlinkStatus + ', response=' + unlinkBody)
-    exit 502, 'AIMS解绑失败: ' + unlinkBody
+if (!success) {
+    exit 500, message
 }
 
-log.info('unlink location-label mapping success, labelCode=' + labelCode + ', status=' + unlinkStatus)
+if (success) {
+    db.table("t_location_label").where().eq("id", id).delete()
+    log.info('unlink location-label mapping success, labelCode=' + labelCode + ', status=' + unlinkStatus)
+}
 
-db.table("t_location_label").where().eq("id", id).delete()
 
-return 1
+return success

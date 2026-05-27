@@ -135,11 +135,12 @@ const colorTagMap: Record<string, 'error' | 'warning' | 'success'> = {
 }
 
 const columns: DataTableColumns<LocationLedBinding> = [
-  { title: '库位码', key: 'locationCode' },
-  { title: '设备ID', key: 'ledId' },
+  { title: '库位码', key: 'locationCode', width: 220 },
+  { title: '设备ID', key: 'ledId', width: 220 },
   {
     title: '颜色',
     key: 'color',
+    width: 200,
     render: (row) => h(NTag, { type: colorTagMap[row.color] || 'default', size: 'small' }, () => row.color),
   },
   {

@@ -26,7 +26,9 @@
             <router-view v-slot="{ Component }">
               <transition name="fade-slide" mode="out-in">
                 <keep-alive>
-                  <component :is="Component" />
+                  <div class="admin-page-content">
+                    <component :is="Component" />
+                  </div>
                 </keep-alive>
               </transition>
             </router-view>
@@ -71,6 +73,7 @@ const menuOptions: MenuOption[] = [
   { label: '系统管理', key: 'system', children: [
     { label: '数据库管理', key: 'DatabaseManagement' },
     { label: '定时任务', key: 'JobManagement' },
+    { label: 'AIMS 配置', key: 'AimsConfig' },
     { label: 'Magic-API', key: 'MagicApiConsole' },
   ]},
 ]
@@ -150,6 +153,11 @@ function handleLogout() {
 }
 
 .admin-page {
+  height: 100%;
+  min-height: 100%;
+}
+
+.admin-page-content {
   height: 100%;
   min-height: 100%;
 }

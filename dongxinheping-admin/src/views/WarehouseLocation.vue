@@ -120,7 +120,7 @@ const columns: DataTableColumns<WarehouseLocation> = [
   {
     title: '操作',
     key: 'actions',
-    width: 260,
+    width: 300,
     fixed: 'right',
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [

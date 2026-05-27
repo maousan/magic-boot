@@ -5,7 +5,7 @@
   "groupId" : "a18fa4b15beb4aedbac4201627d9175f",
   "name" : "绑定article和label",
   "createTime" : null,
-  "updateTime" : 1776138262988,
+  "updateTime" : 1779876517392,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -14,12 +14,36 @@
   "returnType" : null,
   "mappingPath" : null,
   "parameters" : [ {
-    "name" : "data",
+    "name" : "labelCode",
     "value" : null,
-    "description" : "请求对象，包含stationCode、labelCode、articleIdList等",
+    "description" : "",
     "required" : false,
     "dataType" : "String",
-    "type" : null,
+    "type" : "java.lang.String",
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  }, {
+    "name" : "articleIdList",
+    "value" : null,
+    "description" : null,
+    "required" : false,
+    "dataType" : "String",
+    "type" : "java.util.Collection",
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  }, {
+    "name" : "templateName",
+    "value" : null,
+    "description" : null,
+    "required" : false,
+    "dataType" : "String",
+    "type" : "java.lang.String",
     "defaultValue" : null,
     "validateType" : null,
     "error" : null,
@@ -32,27 +56,11 @@ import log
 import java.util.List
 import java.util.ArrayList
 import com.dtflys.forest.Forest
+import cn.hutool.core.lang.UUID
 
 const aimsHost = Forest.config().getVariableValue("aimsHost")
+const stationCode = Forest.config().getVariableValue("stationCode")
 
-if(data == null){
-    return {
-        success: false,
-        status: 400,
-        message: 'data不能为空'
-    }
-}
-
-let stationCode = data.stationCode
-if(stationCode == null || stationCode == ''){
-    return {
-        success: false,
-        status: 400,
-        message: 'stationCode不能为空'
-    }
-}
-
-let labelCode = data.labelCode
 if(labelCode == null || labelCode == ''){
     return {
         success: false,
@@ -61,7 +69,6 @@ if(labelCode == null || labelCode == ''){
     }
 }
 
-let articleIdList = data.articleIdList
 if(articleIdList == null || !(articleIdList instanceof List) || articleIdList.size() == 0){
     return {
         success: false,
@@ -70,32 +77,11 @@ if(articleIdList == null || !(articleIdList instanceof List) || articleIdList.si
     }
 }
 
-let articleIdChecked = new ArrayList()
-let idx = 0
-for(articleId in articleIdList){
-    idx = idx + 1
-    if(articleId == null || articleId == ''){
-        return {
-            success: false,
-            status: 400,
-            message: 'articleIdList[' + idx + ']不能为空'
-        }
-    }
-    articleIdChecked.add(articleId)
-}
-
 let requestBody = {
-    customBatchId: data.customBatchId,
+    customBatchId: UUID.fastUUID().toString(),
     labelCode: labelCode,
-    articleIdList: articleIdChecked,
-    templateName: data.templateName,
-    arrow: data.arrow,
-    addInfo2: data.addInfo2,
-    addInfo3: data.addInfo3,
-    addInfo4: data.addInfo4,
-    addInfo5: data.addInfo5,
-    skipChecksumValidation: data.skipChecksumValidation,
-    arrowDirection: data.arrowDirection
+    articleIdList,
+    templateName
 }
 
 let url = `http://${aimsHost}/labels/link/${stationCode}`
@@ -118,5 +104,5 @@ if(success){
 return {
     success: success,
     status: statusCode,
-    response: responseText
+    message: responseText
 }

@@ -56,6 +56,7 @@
     </div>
 
     <n-modal v-model:show="showCreate" title="手动录入库存" preset="dialog">
+      <div style="max-height: 60vh; overflow-y: auto; padding-right: 4px">
       <n-space vertical>
         <n-form-item label="仓库ID" required>
           <n-input v-model:value="form.warehouseId" placeholder="请输入仓库ID" />
@@ -66,13 +67,35 @@
         <n-form-item label="产品代码" required>
           <n-input v-model:value="form.sku" placeholder="请输入产品代码" />
         </n-form-item>
-        <n-form-item label="批次号">
-          <n-input v-model:value="form.lotAtt09" placeholder="请输入批次号（可选）" />
+        <n-form-item label="批次号" required>
+          <n-input v-model:value="form.lotAtt09" placeholder="请输入批次号" />
         </n-form-item>
         <n-form-item label="库存数量">
           <n-input-number v-model:value="form.qty" placeholder="0" :min="0" style="width: 100%" />
         </n-form-item>
+        <n-form-item label="待拣货数量">
+          <n-input-number v-model:value="form.qtyAllocated" placeholder="0" :min="0" style="width: 100%" />
+        </n-form-item>
+        <n-form-item label="待上架数量">
+          <n-input-number v-model:value="form.qtyPa" placeholder="0" :min="0" style="width: 100%" />
+        </n-form-item>
+        <n-form-item label="自定义字段1">
+          <n-input v-model:value="form.userDefine1" placeholder="可选" />
+        </n-form-item>
+        <n-form-item label="自定义字段2">
+          <n-input v-model:value="form.userDefine2" placeholder="可选" />
+        </n-form-item>
+        <n-form-item label="自定义字段3">
+          <n-input v-model:value="form.userDefine3" placeholder="可选" />
+        </n-form-item>
+        <n-form-item label="自定义字段4">
+          <n-input v-model:value="form.userDefine4" placeholder="可选" />
+        </n-form-item>
+        <n-form-item label="自定义字段5">
+          <n-input v-model:value="form.userDefine5" placeholder="可选" />
+        </n-form-item>
       </n-space>
+      </div>
       <template #action>
         <n-button @click="showCreate = false">取消</n-button>
         <n-button type="primary" :loading="creating" @click="handleCreate">确认录入</n-button>
@@ -133,6 +156,13 @@ const form = reactive({
   sku: '',
   lotAtt09: '',
   qty: 0,
+  qtyAllocated: 0,
+  qtyPa: 0,
+  userDefine1: '',
+  userDefine2: '',
+  userDefine3: '',
+  userDefine4: '',
+  userDefine5: '',
 })
 
 const tableData = reactive<{ list: InventoryItem[]; total: number }>({
@@ -186,15 +216,22 @@ function handleSearch() {
 }
 
 async function handleCreate() {
-  if (!form.warehouseId || !form.locationId || !form.sku) return
+  if (!form.warehouseId || !form.locationId || !form.sku || !form.lotAtt09) return
   creating.value = true
   try {
     await createInventory({
       warehouseId: form.warehouseId,
       locationId: form.locationId,
       sku: form.sku,
-      lotAtt09: form.lotAtt09 || undefined,
+      lotAtt09: form.lotAtt09,
       qty: form.qty || 0,
+      qtyAllocated: form.qtyAllocated || 0,
+      qtyPa: form.qtyPa || 0,
+      userDefine1: form.userDefine1 || undefined,
+      userDefine2: form.userDefine2 || undefined,
+      userDefine3: form.userDefine3 || undefined,
+      userDefine4: form.userDefine4 || undefined,
+      userDefine5: form.userDefine5 || undefined,
     })
     showCreate.value = false
     form.warehouseId = ''
@@ -202,6 +239,13 @@ async function handleCreate() {
     form.sku = ''
     form.lotAtt09 = ''
     form.qty = 0
+    form.qtyAllocated = 0
+    form.qtyPa = 0
+    form.userDefine1 = ''
+    form.userDefine2 = ''
+    form.userDefine3 = ''
+    form.userDefine4 = ''
+    form.userDefine5 = ''
     await fetchData()
   } finally {
     creating.value = false

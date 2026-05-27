@@ -31,6 +31,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'database', name: 'DatabaseManagement', component: () => import('@/views/DatabaseManagement.vue') },
       { path: 'jobs', name: 'JobManagement', component: () => import('@/views/JobManagement.vue') },
       { path: 'magic-api', name: 'MagicApiConsole', component: () => import('@/views/MagicApiConsole.vue') },
+      { path: 'aims-config', name: 'AimsConfig', component: () => import('@/views/AimsConfig.vue') },
     ],
   },
 ]

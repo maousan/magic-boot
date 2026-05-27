@@ -18,8 +18,15 @@ export function createInventory(data: {
   warehouseId: string
   locationId: string
   sku: string
-  lotAtt09?: string
+  lotAtt09: string
   qty?: number
+  qtyAllocated?: number
+  qtyPa?: number
+  userDefine1?: string
+  userDefine2?: string
+  userDefine3?: string
+  userDefine4?: string
+  userDefine5?: string
 }): Promise<string> {
   return client.post<ApiResponse<string>>('/location/inventory/add', data).then((r) => r.data.data)
 }

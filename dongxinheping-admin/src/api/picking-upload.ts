@@ -77,6 +77,44 @@ export function updatePickingUploadDetail(data: {
     .then((r) => r.data.data)
 }
 
+export function pickingDataUpload(data: {
+  waveNo: string
+  userId: string
+  userName?: string
+  updateTime: number
+  details: {
+    id: string
+    materialCode: string
+    batchNo: string
+    locationCode: string
+    planQuantity: number
+    actualQuantity: number
+    status: number
+  }[]
+}): Promise<string> {
+  return client
+    .post<ApiResponse<string>>('/light/picking/upload', data)
+    .then((r) => r.data.message)
+}
+
+export function pickingComplete(data: {
+  waveNo: string
+  userId: string
+  details: {
+    id: string
+    materialCode: string
+    batchNo: string
+    locationCode: string
+    planQuantity: number
+    actualQuantity: number
+    updateTime: number
+  }[]
+}): Promise<string> {
+  return client
+    .post<ApiResponse<string>>('/light/picking/complete', data)
+    .then((r) => r.data.message)
+}
+
 export function deletePickingUploadDetail(id: string): Promise<string> {
   return client
     .post<ApiResponse<string>>('/picking-upload/detail/delete', { id })

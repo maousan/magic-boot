@@ -222,7 +222,7 @@ const devices = reactive<{ list: LedDevice[]; total: number }>({ list: [], total
 const columns: DataTableColumns<LedDevice> = [
   { title: 'MAC 地址', key: 'macAddress', width: 180 },
   { title: 'IP 地址', key: 'ip', width: 160 },
-  { title: '备注', key: 'remark' },
+  { title: '备注', key: 'remark', width: 240 },
   {
     title: '操作',
     key: 'actions',

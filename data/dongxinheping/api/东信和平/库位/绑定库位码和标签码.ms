@@ -5,7 +5,7 @@
   "groupId" : "6ce8544b21954e189dc7aeb484aeddfc",
   "name" : "绑定库位码和标签码",
   "createTime" : 1775549000000,
-  "updateTime" : 1776665024175,
+  "updateTime" : 1779876757032,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -25,12 +25,48 @@
     "expression" : null,
     "children" : null
   } ],
-  "requestBody" : "{\n  \"locationCode\": \"\\\"OrdNo\\\":\\\"2025122365-1+01\\\";\\\"Sup\\\":\\\"Ep刷\\\";\\\"SupCode\\\":\\\"印刷\\\";\\\"Mtl\\\":\\\"2.01.26.01.20306\\\";\\\"MtlCode\\\":\\\"2.01.26.01.20306\\\";\\\"MtIDesc\\\":\\\"辽宁工行沈阳市市本级公务卡贷记IC金卡(C4362)251229确认版黑色高磁0.82mmPVC两面光面YL贷记卡签名条/金标天线:RG401R- C49\\\";\\\"Lot\\\":\\\"20260113_2025122365-1+01(1)_YS12_YS-JK-001_002\\\";\\\"Qty\\\":\\\"170\\\";\\\"PD\\\":\\\"2026-01-13 07:09:13\\\";\\\"Exp\\\":\\\"2036-01-11 07:09:13\\\"\",\n  \"labelCode\": \"03E2D88CE1DC\",\n  \"stationCode\": \"10001\"\n}",
+  "requestBody" : "{\n  \"locationCode\": \"\\\"OrdNo\\\":\\\"2025122365-1+01\\\";\\\"Sup\\\":\\\"Ep刷\\\";\\\"SupCode\\\":\\\"印刷\\\";\\\"Mtl\\\":\\\"2.01.26.01.20306\\\";\\\"MtlCode\\\":\\\"2.01.26.01.20306\\\";\\\"MtIDesc\\\":\\\"辽宁工行沈阳市市本级公务卡贷记IC金卡(C4362)251229确认版黑色高磁0.82mmPVC两面光面YL贷记卡签名条/金标天线:RG401R- C49\\\";\\\"Lot\\\":\\\"20260113_2025122365-1+01(1)_YS12_YS-JK-001_002\\\";\\\"Qty\\\":\\\"170\\\";\\\"PD\\\":\\\"2026-01-13 07:09:13\\\";\\\"Exp\\\":\\\"2036-01-11 07:09:13\\\"\",\n  \"labelCode\": \"03E2D88CE1DC\"\n}",
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": 1,\n    \"timestamp\": 1775555774312,\n    \"executeTime\": 119\n}",
   "description" : "call AIMS link api only, no local db operation",
-  "requestBodyDefinition" : null,
+  "requestBodyDefinition" : {
+    "name" : "root",
+    "value" : "",
+    "description" : "",
+    "required" : false,
+    "dataType" : "Object",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : "",
+    "error" : "",
+    "expression" : "",
+    "children" : [ {
+      "name" : "locationCode",
+      "value" : "\"OrdNo\":\"2025122365-1+01\";\"Sup\":\"Ep刷\";\"SupCode\":\"印刷\";\"Mtl\":\"2.01.26.01.20306\";\"MtlCode\":\"2.01.26.01.20306\";\"MtIDesc\":\"辽宁工行沈阳市市本级公务卡贷记IC金卡(C4362)251229确认版黑色高磁0.82mmPVC两面光面YL贷记卡签名条/金标天线:RG401R- C49\";\"Lot\":\"20260113_2025122365-1+01(1)_YS12_YS-JK-001_002\";\"Qty\":\"170\";\"PD\":\"2026-01-13 07:09:13\";\"Exp\":\"2036-01-11 07:09:13\"",
+      "description" : "",
+      "required" : false,
+      "dataType" : "String",
+      "type" : null,
+      "defaultValue" : null,
+      "validateType" : "",
+      "error" : "",
+      "expression" : "",
+      "children" : [ ]
+    }, {
+      "name" : "labelCode",
+      "value" : "03E2D88CE1DC",
+      "description" : "",
+      "required" : false,
+      "dataType" : "String",
+      "type" : null,
+      "defaultValue" : null,
+      "validateType" : "",
+      "error" : "",
+      "expression" : "",
+      "children" : [ ]
+    } ]
+  },
   "responseBodyDefinition" : null
 }
 ================================
@@ -39,59 +75,11 @@ import java.util.UUID
 import java.util.ArrayList
 import com.dtflys.forest.Forest
 import '@/utils/parseLot' as parseLot
-
-const aimsHost = Forest.config().getVariableValue("aimsHost")
-const stationCode = Forest.config().getVariableValue("stationCode")
-
-if(aimsHost == null || aimsHost == ''){
-    exit 500, 'aimsHost未配置'
-}
-
-let buildAimsBaseUrl = (hostValue) => {
-    let host = (hostValue + '').trim()
-    if(!host.startsWith('http://') && !host.startsWith('https://')){
-        host = 'http://' + host
-    }
-    if(!host.matches('^https?://[^/]+:[0-9]+$')){
-        host = host + ':9002'
-    }
-    return host
-}
-
-let extractAimsReturnMsg = (text) => {
-    if(text == null){
-        return null
-    }
-    let raw = text + ''
-    let key = '"returnMsg":"'
-    let start = raw.indexOf(key)
-    if(start < 0){
-        return null
-    }
-    start = start + key.length()
-    let end = raw.indexOf('"', start)
-    if(end < 0){
-        return null
-    }
-    return raw.substring(start, end)
-}
-
-let toFriendlyAimsMessage = (rawMessage, fallbackText) => {
-    let msg = extractAimsReturnMsg(rawMessage)
-    if(msg == null || msg == ''){
-        msg = fallbackText
-    }
-    if(msg == null || msg == ''){
-        msg = '请求AIMS失败'
-    }
-    if(msg == 'Checksum of label code is not matched'){
-        return '标签码校验位不匹配，请确认标签码是否正确'
-    }
-    return msg
-}
+import '@/aims/labels/linkArticleToLabel' as linkArticleToLabel
 
 let parsedLocationCode = parseLot(body.locationCode)
 let locationCode = parsedLocationCode != null && parsedLocationCode.Lot != null ? parsedLocationCode.Lot : parsedLocationCode
+
 let labelCode = body.labelCode
 
 if(locationCode == null || locationCode == ''){
@@ -102,43 +90,14 @@ if(labelCode == null || labelCode == ''){
 }
 
 let articleIdList = new ArrayList()
+
 articleIdList.add(locationCode)
 
-let requestBody = {
-    labelCode: labelCode,
-    articleIdList: articleIdList,
-    templateName: body.templateName,
-    arrow: body.arrow,
-    addInfo2: body.addInfo2,
-    addInfo3: body.addInfo3,
-    addInfo4: body.addInfo4,
-    addInfo5: body.addInfo5,
-    skipChecksumValidation: body.skipChecksumValidation,
-    arrowDirection: body.arrowDirection
-}
 
-let aimsBaseUrl = buildAimsBaseUrl(aimsHost)
-let url = `${aimsBaseUrl}/labels/link/${stationCode}`
-let response = null
-let statusCode = null
-let responseText = ''
-try {
-    response = Forest.post(url)
-        .contentType('application/json;charset=UTF-8')
-        .addHeader('Accept', 'application/json;charset=UTF-8')
-        .addBody(requestBody)
-        .executeAsResponse()
-    statusCode = response.statusCode()
-    responseText = response.readAsString()
-} catch (e) {
-    let friendlyMsg = toFriendlyAimsMessage(e.message, '调用AIMS接口失败')
-    log.warn('AIMS link request error, stationCode=' + stationCode + ', locationCode=' + locationCode + ', labelCode=' + labelCode + ', error=' + e.message)
-    exit 502, 'AIMS绑定失败: ' + friendlyMsg
-}
+const { success, message } = linkArticleToLabel(labelCode, articleIdList, null)
 
-if(statusCode < 200 || statusCode >= 300){
-    log.warn('AIMS link failed, stationCode=' + stationCode + ', locationCode=' + locationCode + ', labelCode=' + labelCode + ', status=' + statusCode + ', response=' + responseText)
-    exit 502, 'AIMS绑定失败: ' + toFriendlyAimsMessage(responseText, 'AIMS返回状态异常(' + statusCode + ')')
+if (!success) {
+    exit 500, message
 }
 
 log.info('AIMS link success, stationCode=' + stationCode + ', locationCode=' + locationCode + ', labelCode=' + labelCode + ', status=' + statusCode)
@@ -148,7 +107,7 @@ db.table("t_location_label").insert({
     id: UUID.randomUUID().toString().replace('-', ''),
     location_code: locationCode,
     label_code: labelCode,
-    bind_time: new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date())
+    bind_time: now().format("yyyy-MM-dd HH:mm:ss")
 })
 
 return 1
