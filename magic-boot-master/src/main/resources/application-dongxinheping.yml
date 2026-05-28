@@ -18,6 +18,7 @@ forest:
     stationCode: 10001
     mixColor: CYAN
     controlDispatchAsync: false
+    lightOnDuration: 60m
   log-response-content: false
 
 # 插件路径

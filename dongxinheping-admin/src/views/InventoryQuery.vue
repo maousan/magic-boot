@@ -8,6 +8,7 @@
     <template #header-extra>
       <n-space>
         <n-button type="primary" @click="showCreate = true">手动录入</n-button>
+        <n-button @click="showMock = true">生成模拟数据</n-button>
         <n-button type="error" @click="showClear = true">清空库存</n-button>
         <n-button type="primary" @click="handleSearch">查询</n-button>
       </n-space>
@@ -121,25 +122,42 @@
         <n-button type="error" :loading="clearing" :disabled="clearConfirm !== '确认清空'" @click="handleClear">确认清空</n-button>
       </template>
     </n-modal>
+
+    <n-modal v-model:show="showMock" title="生成模拟库存数据" preset="dialog">
+      <n-space vertical>
+        <span>基于库位列表（t_location_warehouse）批量生成随机库存记录到 t_inventory。</span>
+        <n-form-item label="每个库位生成条数">
+          <n-input-number v-model:value="mockRecordsPerLocation" :min="1" :max="10" style="width: 100%" />
+        </n-form-item>
+      </n-space>
+      <template #action>
+        <n-button @click="showMock = false">取消</n-button>
+        <n-button type="primary" :loading="mocking" @click="handleMock">确认生成</n-button>
+      </template>
+    </n-modal>
   </n-card>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, h } from 'vue'
-import { NCard, NDataTable, NButton, NSpace, NGrid, NGi, NInput, NInputNumber, NModal, NFormItem, NFlex, NPagination } from 'naive-ui'
+import { NCard, NDataTable, NButton, NSpace, NGrid, NGi, NInput, NInputNumber, NModal, NFormItem, NFlex, NPagination, useMessage } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
-import { getInventoryList, createInventory, deleteInventory, clearInventory } from '@/api/inventory'
+import { getInventoryList, createInventory, deleteInventory, clearInventory, generateMockInventory } from '@/api/inventory'
 import type { InventoryItem } from '@/types'
 
 const loading = ref(false)
 const creating = ref(false)
 const deleting = ref(false)
+const message = useMessage()
 const showCreate = ref(false)
 const showDelete = ref(false)
 const deleteTarget = ref<{ warehouseId: string; locationId: string; lotAtt09: string } | null>(null)
 const showClear = ref(false)
 const clearing = ref(false)
 const clearConfirm = ref('')
+const showMock = ref(false)
+const mocking = ref(false)
+const mockRecordsPerLocation = ref(1)
 const page = ref(1)
 const pageSize = ref(20)
 
@@ -279,6 +297,18 @@ async function handleClear() {
     await fetchData()
   } finally {
     clearing.value = false
+  }
+}
+
+async function handleMock() {
+  mocking.value = true
+  try {
+    const res = await generateMockInventory(mockRecordsPerLocation.value)
+    showMock.value = false
+    message.success(`已生成 ${res.successCount} 条库存记录（${res.totalLocations} 个库位 × ${mockRecordsPerLocation.value} 条）`)
+    await fetchData()
+  } finally {
+    mocking.value = false
   }
 }
 

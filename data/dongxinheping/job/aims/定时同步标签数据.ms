@@ -92,38 +92,46 @@ try {
 
     totalLabels = allLabels.size()
 
-    db.update("delete from t_location_label")
+    var tx = db.transaction()
+    try {
+        db.update("delete from t_location_label")
 
-    let bindTime = DateUtil.now()
-    for(label in allLabels){
-        let labelCode = normalizeText(label.labelCode)
-        if(labelCode == ''){
-            skippedBindings = skippedBindings + 1
-            continue
+        let bindTime = DateUtil.now()
+        for(label in allLabels){
+            let labelCode = normalizeText(label.labelCode)
+            if(labelCode == ''){
+                skippedBindings = skippedBindings + 1
+                continue
+            }
+
+            let articles = label.articles
+            if(articles == null || articles.size() == 0){
+                continue
+            }
+
+            let locationCode = normalizeText(articles.get(0))
+            if(locationCode == ''){
+                skippedBindings = skippedBindings + 1
+                continue
+            }
+
+            db.update("""
+                insert into t_location_label (id, location_code, label_code, bind_time)
+                values (#{id}, #{locationCode}, #{labelCode}, #{bindTime})
+            """, {
+                id: IdUtil.fastSimpleUUID(),
+                locationCode: locationCode,
+                labelCode: labelCode,
+                bindTime: bindTime
+            })
+
+            savedBindings = savedBindings + 1
         }
 
-        let articles = label.articles
-        if(articles == null || articles.size() == 0){
-            continue
-        }
-
-        let locationCode = normalizeText(articles.get(0))
-        if(locationCode == ''){
-            skippedBindings = skippedBindings + 1
-            continue
-        }
-
-        db.update("""
-            insert into t_location_label (id, location_code, label_code, bind_time)
-            values (#{id}, #{locationCode}, #{labelCode}, #{bindTime})
-        """, {
-            id: IdUtil.fastSimpleUUID(),
-            locationCode: locationCode,
-            labelCode: labelCode,
-            bindTime: bindTime
-        })
-
-        savedBindings = savedBindings + 1
+        tx.commit()
+    } catch(txErr) {
+        tx.rollback()
+        throw txErr
     }
 
     let success = failedPages.size() == 0

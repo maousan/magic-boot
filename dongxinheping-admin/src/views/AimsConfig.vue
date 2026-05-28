@@ -15,6 +15,9 @@
           <n-form-item label="异步派发灯控">
             <n-switch v-model:value="form.controlDispatchAsync" />
           </n-form-item>
+          <n-form-item label="标签默认亮灯时长">
+            <n-input v-model:value="form.lightOnDuration" placeholder="60m"/>
+          </n-form-item>
         </n-form>
       </n-spin>
 
@@ -54,6 +57,7 @@ const form = reactive({
   stationCode: '',
   mixColor: 'CYAN',
   controlDispatchAsync: false,
+  lightOnDuration: '60m'
 })
 
 const colorOptions = [
@@ -75,6 +79,7 @@ async function loadConfig() {
     form.stationCode = cfg.stationCode ?? ''
     form.mixColor = cfg.mixColor || 'CYAN'
     form.controlDispatchAsync = cfg.controlDispatchAsync === 'true'
+    form.lightOnDuration = cfg.lightOnDuration || '60m'
     message.success('配置已加载')
   } finally {
     loading.value = false
@@ -93,6 +98,7 @@ async function handleSave() {
       stationCode: form.stationCode,
       mixColor: form.mixColor,
       controlDispatchAsync: String(form.controlDispatchAsync),
+      lightOnDuration: form.lightOnDuration
     })
     message.success('配置已保存（运行时生效，重启后恢复）')
   } finally {

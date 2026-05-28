@@ -54,7 +54,8 @@
       "Bash(wc:*)",
       "Bash(./start.bat)",
       "Bash(taskkill:*)",
-      "Bash(npx vue-tsc *)"
+      "Bash(npx vue-tsc *)",
+      "Bash(xxd \"D:\\\\IdeaProjects\\\\magic-boot\\\\data\\\\dongxinheping\\\\api\\\\东信和平\\\\库位\\\\批量导入巷道灯绑定.ms\")"
     ]
   },
   "outputStyle": "Explanatory"

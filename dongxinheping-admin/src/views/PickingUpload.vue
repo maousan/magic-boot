@@ -11,6 +11,7 @@
           <n-input v-model:value="query.waveNo" placeholder="波次号" clearable style="width: 160px" @keyup.enter="handleSearch" />
           <n-input v-model:value="query.userId" placeholder="用户ID" clearable style="width: 140px" @keyup.enter="handleSearch" />
           <n-input v-model:value="query.userName" placeholder="用户姓名" clearable style="width: 120px" @keyup.enter="handleSearch" />
+          <n-input v-model:value="query.locationCode" placeholder="库位号" clearable style="width: 160px" @keyup.enter="handleSearch" />
           <n-button type="primary" @click="handleSearch">查询</n-button>
           <n-button type="primary" @click="openAddMaster">新增单据</n-button>
           <n-button secondary @click="showMockDialog = true">生成模拟单据</n-button>
@@ -45,6 +46,7 @@
     <!-- 明细 Drawer -->
     <n-drawer v-model:show="drawerVisible" placement="bottom" :height="450">
       <n-drawer-content :title="'明细 - ' + (selectedMaster?.waveNo ?? '')" closable>
+        <!-- @vue-expect-error header-extra slot exists at runtime -->
         <template #header-extra>
           <n-button type="primary" size="small" @click="openAddDetail">新增明细</n-button>
         </template>
@@ -135,6 +137,7 @@ import {
   addPickingUploadDetail, updatePickingUploadDetail, deletePickingUploadDetail,
   pickingDataUpload, pickingComplete,
 } from '@/api/picking-upload'
+import { getWarehouseLocations } from '@/api/warehouse'
 import type { PickingUpload, PickingUploadDetail } from '@/types'
 import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
@@ -155,7 +158,7 @@ const {
   updateTableHeight: updateMasterTableHeight,
 } = useTableBodyHeight()
 
-const query = reactive({ waveNo: '', userId: '', userName: '' })
+const query = reactive({ waveNo: '', userId: '', userName: '', locationCode: '' })
 
 const statusOptions = [
   { label: '未拣', value: 0 },
@@ -268,6 +271,7 @@ async function loadMasters() {
       waveNo: query.waveNo || undefined,
       userId: query.userId || undefined,
       userName: query.userName || undefined,
+      locationCode: query.locationCode || undefined,
     })
     masterList.value = res.list
     total.value = res.total
@@ -501,13 +505,18 @@ async function handleGenerateMock() {
     const userId = `U${(Math.random() * 1000 | 0).toString().padStart(4, '0')}`
     const userName = `测试用户${Math.random() * 100 | 0}`
     const billId = await addPickingUpload({ waveNo, userId, userName })
-    const locations = ['B2-21-01-01-01', 'B2-21-01-02-01', 'B2-22-01-01-01', 'B2-22-01-02-01', 'B2-23-01-01-01']
+    const locRes = await getWarehouseLocations({ page: 1, pageSize: 500 })
+    const locations = locRes.list.map((l) => l.locationId)
+    if (locations.length === 0) {
+      message.warning('库位数据为空，请先导入库位')
+      return
+    }
     for (let i = 0; i < mockForm.detailCount; i++) {
       await addPickingUploadDetail({
         billId,
         materialCode: `MAT-${(Math.random() * 9000 + 1000 | 0)}`,
         batchNo: `B${(Date.now() - i * 86400000).toString(36).toUpperCase()}`,
-        locationCode: locations[i % locations.length],
+        locationCode: locations[i % locations.length]!,
         planQuantity: 5 + (Math.random() * 20 | 0),
         actualQuantity: 0,
         status: mockForm.status,

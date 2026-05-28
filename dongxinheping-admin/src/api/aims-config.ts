@@ -6,6 +6,7 @@ export interface AimsConfig {
   stationCode: string
   mixColor: string
   controlDispatchAsync: string
+  lightOnDuration: string
 }
 
 export function getAimsConfig(): Promise<AimsConfig> {

@@ -1,5 +1,5 @@
 import client from './request'
-import type { LocationLedBinding, PageResult, ApiResponse } from '@/types'
+import type { LocationLedBinding, PageResult, ApiResponse, ImportResult } from '@/types'
 
 export function getLedMappingList(params: {
   page: number
@@ -17,4 +17,14 @@ export function createLedMapping(data: { lotNo: string; ledId: string; color: st
 
 export function deleteLedMapping(id: string): Promise<void> {
   return client.delete('/location/led-mapping', { params: { id } }).then(() => {})
+}
+
+export function importLedMappings(file: File): Promise<ImportResult> {
+  const form = new FormData()
+  form.append('file', file)
+  return client
+    .post<ApiResponse<ImportResult>>('/location/led-mapping/import', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    .then((r) => r.data.data)
 }

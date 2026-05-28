@@ -7,6 +7,7 @@ export function getPickingUploadList(params: {
   waveNo?: string
   userId?: string
   userName?: string
+  locationCode?: string
 }): Promise<PageResult<PickingUpload>> {
   return client
     .get<ApiResponse<PageResult<PickingUpload>>>('/picking-upload/list', { params })

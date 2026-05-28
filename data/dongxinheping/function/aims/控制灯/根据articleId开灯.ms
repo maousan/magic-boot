@@ -5,7 +5,7 @@
   "groupId" : "d7de530ea18542f2827146962f10bdb4",
   "name" : "根据articleId开灯",
   "createTime" : 1775235163576,
-  "updateTime" : 1775533563803,
+  "updateTime" : 1779933312552,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -28,12 +28,17 @@
   } ]
 }
 ================================
+import com.dtflys.forest.Forest
 import '@/aims/led/controlByArticleId' as controlByArticleId
 
+const lightOnDuration = Forest.config().getVariableValue("lightOnDuration")
+
 const { stationCode, color, articleIds, duration } = data
+
+
 let ledDuration = duration
 if(ledDuration == null || ledDuration == ''){
-    ledDuration = "60m"
+    ledDuration = lightOnDuration || '60m'
 }
 
 const items = []

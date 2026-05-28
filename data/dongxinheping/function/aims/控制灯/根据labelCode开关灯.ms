@@ -5,7 +5,7 @@
   "groupId" : "d7de530ea18542f2827146962f10bdb4",
   "name" : "根据labelCode开关灯",
   "createTime" : 1775209721631,
-  "updateTime" : 1776138190375,
+  "updateTime" : 1779930933582,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -121,9 +121,10 @@ if(ledItems.size() == 0){
 }
 
 let response = Forest.put(`http://${aimsHost}/labels/contents/led`)
-    .contentType('application/json;charset=UTF-8')
-    .addHeader('Accept', 'application/json;charset=UTF-8')
-    .addBody(JSONUtil.toJsonStr(ledItems).getBytes(StandardCharsets.UTF_8))
+    .contentTypeJson()
+    // .contentType('application/json;charset=UTF-8')
+    // .addHeader('Accept', 'application/json;charset=UTF-8')
+    .addBody(ledItems)
     .executeAsResponse()
 
 let statusCode = response.statusCode()

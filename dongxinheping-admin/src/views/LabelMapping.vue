@@ -62,25 +62,46 @@
         <n-button type="error" :loading="deleting" @click="handleDelete">解绑</n-button>
       </template>
     </n-modal>
+
+    <n-modal v-model:show="showLightOn" title="标签亮灯" preset="dialog">
+      <n-space vertical>
+        <span>标签码：<b>{{ lightOnTarget?.labelCode }}</b></span>
+        <n-form-item label="灯光颜色">
+          <n-select v-model:value="lightOnForm.color" :options="lightColorOptions" />
+        </n-form-item>
+        <n-form-item label="亮灯时长">
+          <n-select v-model:value="lightOnForm.duration" :options="lightDurationOptions" />
+        </n-form-item>
+      </n-space>
+      <template #action>
+        <n-button @click="showLightOn = false">取消</n-button>
+        <n-button type="warning" :loading="lighting" @click="handleLightOn">确认亮灯</n-button>
+      </template>
+    </n-modal>
   </n-card>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, h } from 'vue'
 import {
-  NCard, NDataTable, NButton, NModal, NSpace, NFormItem, NInput, NFlex, NPagination,
+  NCard, NDataTable, NButton, NModal, NSpace, NFormItem, NInput, NFlex, NPagination, NSelect, useMessage,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
-import { getLabelMappingList, createLabelMapping, deleteLabelMapping } from '@/api/label-mapping'
+import { getLabelMappingList, createLabelMapping, deleteLabelMapping, lightOnLabel, lightOffLabel } from '@/api/label-mapping'
 import type { LocationLabelBinding } from '@/types'
 import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
 const loading = ref(false)
 const creating = ref(false)
 const deleting = ref(false)
+const lighting = ref(false)
 const showCreate = ref(false)
 const showDelete = ref(false)
+const showLightOn = ref(false)
 const deleteTarget = ref<{ id: string; labelCode: string } | null>(null)
+const lightOnTarget = ref<{ labelCode: string } | null>(null)
+const lightOnForm = reactive({ color: 'GREEN', duration: 'inf' })
+const message = useMessage()
 const page = ref(1)
 const pageSize = ref(20)
 const { tableAreaRef, tableBodyMaxHeight } = useTableBodyHeight()
@@ -94,6 +115,26 @@ const form = reactive({ locationCode: '', labelCode: '' })
 
 const query = reactive({ locationCode: '', labelCode: '' })
 
+const lightColorOptions = [
+  { label: '红色', value: 'RED' },
+  { label: '黄色', value: 'YELLOW' },
+  { label: '绿色', value: 'GREEN' },
+]
+
+const lightDurationOptions = [
+  { label: '10秒', value: '10s' },
+  { label: '30秒', value: '30s' },
+  { label: '1分钟', value: '1m' },
+  { label: '2分钟', value: '2m' },
+  { label: '5分钟', value: '5m' },
+  { label: '10分钟', value: '10m' },
+  { label: '15分钟', value: '15m' },
+  { label: '20分钟', value: '20m' },
+  { label: '30分钟', value: '30m' },
+  { label: '60分钟', value: '60m' },
+  { label: '持续亮灯', value: 'inf' },
+]
+
 const columns: DataTableColumns<LocationLabelBinding> = [
   { title: '库位码', key: 'locationCode', width: 220 },
   { title: '标签码', key: 'labelCode', width: 220 },
@@ -101,8 +142,13 @@ const columns: DataTableColumns<LocationLabelBinding> = [
   {
     title: '操作',
     key: 'actions',
+    width: 220,
     render: (row) =>
-      h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '解绑'),
+      h(NSpace, { size: 'small' }, () => [
+        h(NButton, { size: 'small', type: 'warning', onClick: () => openLightOn(row) }, () => '亮灯'),
+        h(NButton, { size: 'small', onClick: () => handleLightOff(row) }, () => '灭灯'),
+        h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '解绑'),
+      ]),
   },
 ]
 
@@ -138,6 +184,46 @@ async function handleCreate() {
     await fetchData()
   } finally {
     creating.value = false
+  }
+}
+
+function openLightOn(row: LocationLabelBinding) {
+  lightOnTarget.value = { labelCode: row.labelCode }
+  lightOnForm.color = 'GREEN'
+  lightOnForm.duration = 'inf'
+  showLightOn.value = true
+}
+
+async function handleLightOn() {
+  if (!lightOnTarget.value) return
+  lighting.value = true
+  try {
+    const res = await lightOnLabel({
+      labelCode: lightOnTarget.value.labelCode,
+      color: lightOnForm.color,
+      duration: lightOnForm.duration,
+    })
+    showLightOn.value = false
+    if (res.success) {
+      message.success(`标签 ${lightOnTarget.value.labelCode} 亮灯成功`)
+    } else {
+      message.error(`标签 ${lightOnTarget.value.labelCode} 亮灯失败`)
+    }
+  } finally {
+    lighting.value = false
+  }
+}
+
+async function handleLightOff(row: LocationLabelBinding) {
+  try {
+    const res = await lightOffLabel({ labelCode: row.labelCode })
+    if (res.success) {
+      message.success(`标签 ${row.labelCode} 灭灯成功`)
+    } else {
+      message.error(`标签 ${row.labelCode} 灭灯失败`)
+    }
+  } catch {
+    message.error(`标签 ${row.labelCode} 灭灯失败`)
   }
 }
 

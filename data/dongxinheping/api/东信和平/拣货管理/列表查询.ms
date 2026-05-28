@@ -71,6 +71,18 @@
     "error" : null,
     "expression" : null,
     "children" : null
+  }, {
+    "name" : "locationCode",
+    "value" : "",
+    "description" : "库位号（模糊查询，匹配明细表）",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
   } ],
   "options" : [ {
     "name" : "require_login",
@@ -107,6 +119,13 @@ let sql = """
         </if>
         <if test="userName != null and userName != ''">
             and user_name like concat('%', #{userName}, '%')
+        </if>
+        <if test="locationCode != null and locationCode != ''">
+            and exists (
+                select 1 from t_picking_upload_detail d
+                where d.bill_id = t_picking_upload.id
+                  and d.location_code like concat('%', #{locationCode}, '%')
+            )
         </if>
     </where>
     order by create_time desc

@@ -119,114 +119,127 @@ let queryLocationPage = (warehouseCode, offset) => {
     return locationIds
 }
 
-let upsertInventoryItems = (items, defaultWarehouseCode) => {
+let deleteAndInsertInventoryItems = (items, defaultWarehouseCode, locationIds) => {
     let normalizedItems = asList(items)
-    if(normalizedItems.size() == 0){
-        return {
-            savedCount: 0,
-            skippedCount: 0
+
+    let inClause = ""
+    let deleteParams = {
+        warehouseId: defaultWarehouseCode
+    }
+    let locIdx = 0
+    for(locId in locationIds){
+        if(locIdx > 0){
+            inClause = inClause + ","
         }
+        let key = "loc_" + locIdx
+        inClause = inClause + "#{" + key + "}"
+        deleteParams[key] = normalizeText(locId)
+        locIdx = locIdx + 1
     }
 
-    let upsertSql = """
-        insert into t_inventory (
-            warehouse_id,
-            location_id,
-            sku,
-            lot_att09,
-            qty,
-            qty_allocated,
-            qty_pa,
-            edit_time,
-            user_define1,
-            user_define2,
-            user_define3,
-            user_define4,
-            user_define5,
-            create_time,
-            update_time
-        ) values
-    """
-    let valuesSql = ""
-    let params = {}
-    let rowIndex = 0
-    let skippedCount = 0
-
-    for(item in normalizedItems){
-        let warehouseId = normalizeText(item.warehouseId)
-        if(warehouseId == ''){
-            warehouseId = defaultWarehouseCode
+    let tx = db.transaction()
+    try {
+        if(inClause != ''){
+            db.update("""
+                delete from t_inventory
+                 where warehouse_id = #{warehouseId}
+                   and location_id in (""" + inClause + ")"
+            , deleteParams)
         }
-        let locationId = normalizeText(item.locationId)
-        let sku = normalizeText(item.sku)
-        if(warehouseId == '' || locationId == '' || sku == ''){
-            skippedCount = skippedCount + 1
-            continue
+
+        if(normalizedItems.size() == 0){
+            tx.commit()
+            return {
+                savedCount: 0,
+                skippedCount: 0
+            }
+        }
+
+        let insertSql = """
+            insert into t_inventory (
+                warehouse_id,
+                location_id,
+                sku,
+                lot_att09,
+                qty,
+                qty_allocated,
+                qty_pa,
+                edit_time,
+                user_define1,
+                user_define2,
+                user_define3,
+                user_define4,
+                user_define5,
+                create_time,
+                update_time
+            ) values
+        """
+        let valuesSql = ""
+        let params = {}
+        let rowIndex = 0
+        let skippedCount = 0
+
+        for(item in normalizedItems){
+            let warehouseId = normalizeText(item.warehouseId)
+            if(warehouseId == ''){
+                warehouseId = defaultWarehouseCode
+            }
+            let locationId = normalizeText(item.locationId)
+            let sku = normalizeText(item.sku)
+            if(warehouseId == '' || locationId == '' || sku == ''){
+                skippedCount = skippedCount + 1
+                continue
+            }
+
+            if(rowIndex > 0){
+                valuesSql = valuesSql + ","
+            }
+            let suffix = "_" + rowIndex
+            valuesSql = valuesSql + "("
+                + "#{warehouseId" + suffix + "},"
+                + "#{locationId" + suffix + "},"
+                + "#{sku" + suffix + "},"
+                + "#{lotAtt09" + suffix + "},"
+                + "#{qty" + suffix + "},"
+                + "#{qtyAllocated" + suffix + "},"
+                + "#{qtyPa" + suffix + "},"
+                + "str_to_date(nullif(#{editTime" + suffix + "}, ''), '%Y-%m-%d %H:%i:%s'),"
+                + "#{userDefine1" + suffix + "},"
+                + "#{userDefine2" + suffix + "},"
+                + "#{userDefine3" + suffix + "},"
+                + "#{userDefine4" + suffix + "},"
+                + "#{userDefine5" + suffix + "},"
+                + "now(),"
+                + "now())"
+
+            params["warehouseId" + suffix] = warehouseId
+            params["locationId" + suffix] = locationId
+            params["sku" + suffix] = sku
+            params["lotAtt09" + suffix] = normalizeText(item.lotAtt09)
+            params["qty" + suffix] = decimalOrZero(item.qty)
+            params["qtyAllocated" + suffix] = decimalOrZero(item.qtyAllocated)
+            params["qtyPa" + suffix] = decimalOrZero(item.qtyPa)
+            params["editTime" + suffix] = normalizeText(item.editTime)
+            params["userDefine1" + suffix] = normalizeText(item.userDefine1)
+            params["userDefine2" + suffix] = normalizeText(item.userDefine2)
+            params["userDefine3" + suffix] = normalizeText(item.userDefine3)
+            params["userDefine4" + suffix] = normalizeText(item.userDefine4)
+            params["userDefine5" + suffix] = normalizeText(item.userDefine5)
+            rowIndex = rowIndex + 1
         }
 
         if(rowIndex > 0){
-            valuesSql = valuesSql + ","
+            db.update(insertSql + valuesSql, params)
         }
-        let suffix = "_" + rowIndex
-        valuesSql = valuesSql + "("
-            + "#{warehouseId" + suffix + "},"
-            + "#{locationId" + suffix + "},"
-            + "#{sku" + suffix + "},"
-            + "#{lotAtt09" + suffix + "},"
-            + "#{qty" + suffix + "},"
-            + "#{qtyAllocated" + suffix + "},"
-            + "#{qtyPa" + suffix + "},"
-            + "str_to_date(nullif(#{editTime" + suffix + "}, ''), '%Y-%m-%d %H:%i:%s'),"
-            + "#{userDefine1" + suffix + "},"
-            + "#{userDefine2" + suffix + "},"
-            + "#{userDefine3" + suffix + "},"
-            + "#{userDefine4" + suffix + "},"
-            + "#{userDefine5" + suffix + "},"
-            + "now(),"
-            + "now())"
 
-        params["warehouseId" + suffix] = warehouseId
-        params["locationId" + suffix] = locationId
-        params["sku" + suffix] = sku
-        params["lotAtt09" + suffix] = normalizeText(item.lotAtt09)
-        params["qty" + suffix] = decimalOrZero(item.qty)
-        params["qtyAllocated" + suffix] = decimalOrZero(item.qtyAllocated)
-        params["qtyPa" + suffix] = decimalOrZero(item.qtyPa)
-        params["editTime" + suffix] = normalizeText(item.editTime)
-        params["userDefine1" + suffix] = normalizeText(item.userDefine1)
-        params["userDefine2" + suffix] = normalizeText(item.userDefine2)
-        params["userDefine3" + suffix] = normalizeText(item.userDefine3)
-        params["userDefine4" + suffix] = normalizeText(item.userDefine4)
-        params["userDefine5" + suffix] = normalizeText(item.userDefine5)
-        rowIndex = rowIndex + 1
-    }
-
-    if(rowIndex == 0){
+        tx.commit()
         return {
-            savedCount: 0,
+            savedCount: rowIndex,
             skippedCount: skippedCount
         }
-    }
-
-    db.update(upsertSql + valuesSql + """
-        on duplicate key update
-            sku = values(sku),
-            lot_att09 = values(lot_att09),
-            qty = values(qty),
-            qty_allocated = values(qty_allocated),
-            qty_pa = values(qty_pa),
-            edit_time = values(edit_time),
-            user_define1 = values(user_define1),
-            user_define2 = values(user_define2),
-            user_define3 = values(user_define3),
-            user_define4 = values(user_define4),
-            user_define5 = values(user_define5),
-            update_time = now()
-    """, params)
-
-    return {
-        savedCount: rowIndex,
-        skippedCount: skippedCount
+    } catch(txErr) {
+        tx.rollback()
+        throw txErr
     }
 }
 
@@ -267,7 +280,7 @@ try {
                         message: message
                     })
                 } else {
-                    let saveResult = upsertInventoryItems(result.items, warehouseCode)
+                    let saveResult = deleteAndInsertInventoryItems(result.items, warehouseCode, locationIds)
                     savedItems = savedItems + saveResult.savedCount
                     skippedItems = skippedItems + saveResult.skippedCount
                 }

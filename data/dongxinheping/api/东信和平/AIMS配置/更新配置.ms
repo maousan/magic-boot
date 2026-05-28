@@ -5,10 +5,10 @@
   "groupId" : "aimscfg001a2b3c4d5e6f7a8b9c0d1e2f",
   "name" : "更新配置",
   "createTime" : null,
-  "updateTime" : null,
+  "updateTime" : 1779933435813,
   "lock" : null,
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/update",
   "method" : "POST",
   "parameters" : [ ],
@@ -49,6 +49,9 @@ if(body.mixColor != null){
 }
 if(body.controlDispatchAsync != null){
     cfg.setVariable("controlDispatchAsync", body.controlDispatchAsync)
+}
+if(body.lightOnDuration !== null) {
+    cfg.setVariable("lightOnDuration", body.lightOnDuration)
 }
 
 return '配置已更新（运行时生效，重启后恢复）'

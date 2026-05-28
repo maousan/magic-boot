@@ -5,7 +5,7 @@
   "groupId" : "l5kl0q2xiqa4ryz349c3fkzj3hzm07vw",
   "name" : "拣货数据上传",
   "createTime" : null,
-  "updateTime" : 1779427161285,
+  "updateTime" : 1779931050920,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -284,6 +284,7 @@ import '@/led/turnOnAisleLedByLotNo' as turnOnAisleLedByLotNo
 import '@/led/turnOffAisleLedByLotNo' as turnOffAisleLedByLotNo
 
 const stationCode = Forest.config().getVariableValue("stationCode")
+
 const globalLockKey = 'light:picking:upload:global'
 const lockTimeoutSeconds = 10
 const locationChunkSize = 200

@@ -42,3 +42,14 @@ export function deleteInventory(params: {
 export function clearInventory(): Promise<string> {
   return client.delete<ApiResponse<string>>('/location/inventory/clear', { params: { confirm: 'CONFIRM' } }).then((r) => r.data.data)
 }
+
+export interface MockInventoryResult {
+  totalLocations: number
+  totalRecords: number
+  successCount: number
+  failCount: number
+}
+
+export function generateMockInventory(recordsPerLocation: number): Promise<MockInventoryResult> {
+  return client.post<ApiResponse<MockInventoryResult>>('/location/inventory/mock', { recordsPerLocation }).then((r) => r.data.data)
+}

@@ -5,10 +5,10 @@
   "groupId" : "aimscfg001a2b3c4d5e6f7a8b9c0d1e2f",
   "name" : "获取配置",
   "createTime" : null,
-  "updateTime" : null,
+  "updateTime" : 1779933447781,
   "lock" : null,
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/get",
   "method" : "GET",
   "parameters" : [ ],
@@ -42,5 +42,6 @@ return {
     aimsHost: cfg.getVariableValue("aimsHost"),
     stationCode: cfg.getVariableValue("stationCode"),
     mixColor: cfg.getVariableValue("mixColor"),
-    controlDispatchAsync: cfg.getVariableValue("controlDispatchAsync")
+    controlDispatchAsync: cfg.getVariableValue("controlDispatchAsync"),
+    lightOnDuration: cfg.getVariableValue('lightOnDuration')
 }

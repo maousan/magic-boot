@@ -302,8 +302,8 @@ function generateRandomParams() {
   const obj: Record<string, unknown> = {}
   const used = new Set<string>()
   for (let i = 0; i < count; i++) {
-    let key = keys[Math.floor(Math.random() * keys.length)]
-    while (used.has(key)) key = keys[Math.floor(Math.random() * keys.length)]
+    let key = keys[Math.floor(Math.random() * keys.length)]!
+    while (used.has(key)) key = keys[Math.floor(Math.random() * keys.length)]!
     used.add(key)
     const val = Math.random() > 0.5
       ? Math.floor(Math.random() * 100)
