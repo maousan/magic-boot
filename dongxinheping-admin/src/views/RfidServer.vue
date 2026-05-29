@@ -1,76 +1,54 @@
 <template>
-  <div class="rfid-monitor">
-    <div class="status-hero" :class="statusClass">
-      <div>
-        <div class="status-row">
-          <span class="pulse-dot" :class="{ active: status?.running }" />
-          <span class="status-title">RFID TCP 服务</span>
-          <n-tag v-if="status" :type="status.running ? 'success' : 'error'" size="small" :bordered="false" round>
-            {{ status.running ? '运行中' : '已停止' }}
-          </n-tag>
-          <n-spin v-else size="small" />
+  <div class="rfid-layout">
+    <!-- Left column -->
+    <div class="rfid-left">
+      <!-- Status hero -->
+      <div class="status-hero" :class="statusClass">
+        <div>
+          <div class="status-row">
+            <span class="pulse-dot" :class="{ active: status?.running }" />
+            <span class="status-title">RFID TCP 服务</span>
+            <n-tag v-if="status" :type="status.running ? 'success' : 'error'" size="small" :bordered="false" round>
+              {{ status.running ? '运行中' : '已停止' }}
+            </n-tag>
+            <n-spin v-else size="small" />
+          </div>
+          <div class="status-meta">
+            <template v-if="status?.running">
+              端口 {{ status.port }}
+              <template v-if="status.activeConnections !== undefined"> · {{ status.activeConnections }} 个活跃连接</template>
+            </template>
+            <template v-else-if="status">服务未启动</template>
+          </div>
         </div>
-        <div class="status-meta">
-          <template v-if="status?.running">
-            端口 {{ status.port }}
-            <template v-if="status.activeConnections !== undefined"> · {{ status.activeConnections }} 个活跃连接</template>
-          </template>
-          <template v-else-if="status">服务未启动</template>
-        </div>
+        <n-space :size="8" align="center">
+          <n-text depth="3" style="font-size: 12px">自动刷新</n-text>
+          <n-switch v-model:value="autoRefresh" size="small" />
+          <n-button size="small" secondary :loading="loading" @click="refreshAll">刷新</n-button>
+          <n-button size="small" type="success" :disabled="status?.running ?? false" :loading="opLoading" @click="startServer">启动</n-button>
+          <n-button size="small" type="error" :disabled="!status?.running" :loading="opLoading" @click="stopServer">停止</n-button>
+        </n-space>
       </div>
-      <n-space :size="8" align="center">
-        <n-text depth="3" style="font-size: 12px">自动刷新</n-text>
-        <n-switch v-model:value="autoRefresh" size="small" />
-        <n-button size="small" secondary :loading="loading" @click="refreshAll">刷新</n-button>
-        <n-button size="small" type="success" :disabled="status?.running ?? false" :loading="opLoading" @click="startServer">启动</n-button>
-        <n-button size="small" type="error" :disabled="!status?.running" :loading="opLoading" @click="stopServer">停止</n-button>
-      </n-space>
-    </div>
 
-    <n-grid :cols="3" :x-gap="16" :y-gap="16" style="margin-bottom: 16px">
-      <n-gi>
-        <n-card class="metric-card" size="small" :bordered="false">
+      <!-- Metrics -->
+      <div class="metrics-row">
+        <div class="metric-card">
           <div class="metric-label">监听端口</div>
           <div class="metric-value">{{ status?.running ? status.port : '-' }}</div>
-        </n-card>
-      </n-gi>
-      <n-gi>
-        <n-card class="metric-card" size="small" :bordered="false">
+        </div>
+        <div class="metric-card">
           <div class="metric-label">活跃连接</div>
           <div class="metric-value">{{ status?.activeConnections ?? 0 }}</div>
-        </n-card>
-      </n-gi>
-      <n-gi>
-        <n-card class="metric-card" size="small" :bordered="false">
+        </div>
+        <div class="metric-card">
           <div class="metric-label">在线终端</div>
           <div class="metric-value">{{ devices.length }}</div>
-        </n-card>
-      </n-gi>
-    </n-grid>
-
-    <!-- 连接终端 - 整行 -->
-    <n-card title="连接终端" size="small" style="margin-bottom: 16px">
-      <template #header-extra>
-        <n-text depth="3" style="font-size: 13px">{{ devices.length }} 台在线</n-text>
-      </template>
-      <div v-if="!devices.length" class="empty-devices">
-        <n-text depth="3">暂无已连接终端</n-text>
+        </div>
       </div>
-      <n-data-table
-        v-else
-        :columns="columns"
-        :data="devices"
-        :loading="loading"
-        :bordered="false"
-        size="small"
-        :row-key="(row: RfidDeviceInfo) => row.deviceId"
-      />
-    </n-card>
 
-    <!-- 下方两栏 -->
-    <n-grid :cols="24" :x-gap="16" :y-gap="16" responsive="screen">
-      <n-gi :span="10" :m="24" :s="24" :xs="24">
-        <n-card title="指令控制台" size="small">
+      <!-- Console row: command + log side by side -->
+      <div class="console-row">
+        <n-card title="指令控制台" size="small" style="flex: 2">
           <n-space vertical :size="12">
             <n-form-item label="目标终端" :show-feedback="false">
               <n-select
@@ -123,10 +101,8 @@
             </div>
           </template>
         </n-card>
-      </n-gi>
 
-      <n-gi :span="14" :m="24" :s="24" :xs="24">
-        <n-card title="接收消息日志" size="small">
+        <n-card title="接收消息日志" size="small" style="flex: 2">
           <template #header-extra>
             <n-space :size="8" align="center">
               <n-text depth="3" style="font-size: 13px">{{ records.length }} 条</n-text>
@@ -155,15 +131,40 @@
             />
           </n-flex>
         </n-card>
-      </n-gi>
-    </n-grid>
+      </div>
+    </div>
+
+    <!-- Right column: Connected devices (full height) -->
+    <div class="rfid-right">
+      <n-card title="连接终端" size="small">
+        <template #header-extra>
+          <n-text depth="3" style="font-size: 13px">{{ devices.length }} 台在线</n-text>
+        </template>
+        <div class="devices-body">
+          <div v-if="!devices.length" class="empty-devices">
+            <n-text depth="3">暂无已连接终端</n-text>
+          </div>
+          <n-data-table
+            v-else
+            :columns="columns"
+            :data="devices"
+            :loading="loading"
+            :bordered="false"
+            size="small"
+            flex-height
+            style="height: 100%"
+            :row-key="(row: RfidDeviceInfo) => row.deviceId"
+          />
+        </div>
+      </n-card>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted, onUnmounted, h } from 'vue'
 import {
-  NCard, NDataTable, NButton, NSpace, NFlex, NFormItem, NInput, NTag, NGrid, NGi,
+  NCard, NDataTable, NButton, NSpace, NFlex, NFormItem, NInput, NTag,
   NText, NSpin, NSwitch, NSelect, NDivider, NPagination, useMessage,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
@@ -361,10 +362,42 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.rfid-monitor {
-  max-width: 1200px;
+.rfid-layout {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  gap: 16px;
 }
 
+.rfid-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.rfid-right {
+  width: 520px;
+  flex-shrink: 0;
+}
+
+/* Make devices card fill the full column height */
+.rfid-right :deep(.n-card) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.rfid-right :deep(.n-card__content) {
+  flex: 1;
+  min-height: 0;
+}
+.devices-body {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Status hero */
 .status-hero {
   display: flex;
   justify-content: space-between;
@@ -372,34 +405,16 @@ onUnmounted(() => {
   gap: 16px;
   padding: 20px 24px;
   border-radius: 8px;
-  margin-bottom: 16px;
+  flex-shrink: 0;
   transition: all 0.3s ease;
 }
-.status-hero.loading {
-  background: #f5f5f5;
-}
-.status-hero.running {
-  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
-}
-.status-hero.stopped {
-  background: linear-gradient(135deg, #fbe9e7 0%, #fff3e0 100%);
-}
+.status-hero.loading { background: #f5f5f5; }
+.status-hero.running { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); }
+.status-hero.stopped { background: linear-gradient(135deg, #fbe9e7 0%, #fff3e0 100%); }
 
-.status-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.status-title {
-  font-size: 16px;
-  font-weight: 600;
-}
-.status-meta {
-  margin-top: 4px;
-  padding-left: 18px;
-  font-size: 13px;
-  color: #666;
-}
+.status-row { display: flex; align-items: center; gap: 8px; }
+.status-title { font-size: 16px; font-weight: 600; }
+.status-meta { margin-top: 4px; padding-left: 18px; font-size: 13px; color: #666; }
 
 .pulse-dot {
   display: inline-block;
@@ -419,15 +434,16 @@ onUnmounted(() => {
   100% { box-shadow: 0 0 0 0 rgba(24, 160, 88, 0); }
 }
 
+/* Metrics */
+.metrics-row { display: flex; gap: 12px; flex-shrink: 0; }
 .metric-card {
-  background: #fafafa !important;
+  flex: 1;
+  background: #fafafa;
   text-align: center;
+  padding: 12px 16px;
+  border-radius: 6px;
 }
-.metric-label {
-  font-size: 13px;
-  color: #999;
-  margin-bottom: 4px;
-}
+.metric-label { font-size: 13px; color: #999; margin-bottom: 4px; }
 .metric-value {
   font-size: 28px;
   font-weight: 600;
@@ -435,20 +451,11 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
-.empty-devices {
-  padding: 32px 0;
-  text-align: center;
-}
+/* Console row */
+.console-row { display: flex; gap: 16px; }
 
-.result-summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.msg-id {
-  font-size: 12px;
-  color: #666;
-  word-break: break-all;
-}
+.empty-devices { padding: 32px 0; text-align: center; }
+
+.result-summary { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.msg-id { font-size: 12px; color: #666; word-break: break-all; }
 </style>

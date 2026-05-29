@@ -5,7 +5,7 @@
   "groupId" : "6ce8544b21954e189dc7aeb484aeddfc",
   "name" : "LED绑定列表查询",
   "createTime" : null,
-  "updateTime" : 1779420475213,
+  "updateTime" : 1779987530282,
   "lock" : null,
   "createBy" : null,
   "updateBy" : "admin",
@@ -108,7 +108,7 @@ let sql = """
             and color = #{color}
         </if>
     </where>
-    order by id desc
+    order by location_code desc
 """
 
 return db.page(sql, pageSize, (page-1)*pageSize)

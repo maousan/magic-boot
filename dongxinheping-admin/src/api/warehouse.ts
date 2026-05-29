@@ -21,6 +21,16 @@ export function addWarehouseLocation(data: {
     .then((r) => r.data.data)
 }
 
+export function updateWarehouseLocation(data: {
+  id: string
+  warehouseCode: string
+  locationId: string
+}): Promise<string> {
+  return client
+    .post<ApiResponse<string>>('/location/warehouse-location/update', data)
+    .then((r) => r.data.data)
+}
+
 export function deleteWarehouseLocation(id: string): Promise<string> {
   return client
     .delete<ApiResponse<string>>('/location/warehouse-location/delete', { params: { id } })

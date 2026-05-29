@@ -18,19 +18,27 @@
         <n-layout-header bordered class="admin-header">
           <n-button text @click="handleLogout">退出登录</n-button>
         </n-layout-header>
+        <div ref="tabsRef" class="admin-tabs" @wheel.prevent="onTabsWheel">
+          <div
+            v-for="tab in storeTabs"
+            :ref="(el) => setTabRef(tab.name, el)"
+            :key="tab.name"
+            :class="['admin-tab', { 'admin-tab--active': tab.name === route.name }]"
+            @click="handleTabClick(tab.name)"
+          >
+            <span>{{ tab.label }}</span>
+            <span v-if="tab.name !== 'Dashboard'" class="admin-tab__close" @click.stop="handleTabClose(tab.name)">✕</span>
+          </div>
+        </div>
         <n-layout-content
           class="admin-content"
           content-style="height: 100%; min-height: 0; padding: 24px; box-sizing: border-box; overflow: hidden"
         >
           <div class="admin-page">
             <router-view v-slot="{ Component }">
-              <transition name="fade-slide" mode="out-in">
-                <keep-alive>
-                  <div class="admin-page-content">
-                    <component :is="Component" />
-                  </div>
-                </keep-alive>
-              </transition>
+              <keep-alive :include="cachedNames">
+                <component :is="Component" class="admin-page-content" />
+              </keep-alive>
             </router-view>
           </div>
         </n-layout-content>
@@ -39,15 +47,34 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { NLayout, NLayoutSider, NLayoutHeader, NLayoutContent, NMenu, NButton, useDialog } from 'naive-ui'
 import type { MenuOption } from 'naive-ui'
 import { logout } from '@/auth'
+import { useTabStore } from '@/composables/useTabStore'
 
 const router = useRouter()
 const route = useRoute()
 const dialog = useDialog()
+const { tabs: storeTabs, cachedNames, addTab, removeTab } = useTabStore()
+
+const tabsRef = ref<HTMLElement | null>(null)
+const tabElMap = new Map<string, HTMLElement>()
+
+function setTabRef(name: string, el: unknown) {
+  if (el instanceof HTMLElement) tabElMap.set(name, el)
+}
+
+function onTabsWheel(e: WheelEvent) {
+  tabsRef.value?.scrollBy({ left: e.deltaY, behavior: 'smooth' })
+}
+
+function scrollTabIntoView(name: string) {
+  nextTick(() => {
+    tabElMap.get(name)?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
+  })
+}
 
 const menuOptions: MenuOption[] = [
   { label: '仪表盘', key: 'Dashboard' },
@@ -71,10 +98,12 @@ const menuOptions: MenuOption[] = [
     { label: '用户灯色映射', key: 'UserLightColor' },
   ]},
   { label: '系统管理', key: 'system', children: [
+    { label: 'App 版本管理', key: 'AppVersion' },
     { label: '数据库管理', key: 'DatabaseManagement' },
     { label: '定时任务', key: 'JobManagement' },
     { label: 'AIMS 配置', key: 'AimsConfig' },
     { label: 'Magic-API', key: 'MagicApiConsole' },
+    { label: '实时日志', key: 'RealtimeLog' },
   ]},
 ]
 
@@ -82,6 +111,30 @@ const activeKey = computed(() => String(route.name))
 
 function onMenuSelect(key: string) {
   router.push({ name: key })
+}
+
+function syncTab() {
+  const name = route.name as string
+  if (name) {
+    const label = (route.meta?.label as string) || name
+    addTab(name, label)
+    scrollTabIntoView(name)
+  }
+}
+
+watch(() => route.name, syncTab, { immediate: true })
+
+function handleTabClick(name: string) {
+  if (name !== route.name) {
+    router.push({ name })
+  }
+}
+
+function handleTabClose(name: string) {
+  const nextName = removeTab(name)
+  if (nextName && nextName !== route.name) {
+    router.push({ name: nextName })
+  }
 }
 
 function handleLogout() {
@@ -105,6 +158,10 @@ function handleLogout() {
   height: 100vh;
   min-height: 0;
   overflow: hidden;
+}
+
+.admin-content .n-layout-scroll-container {
+  padding: 0 !important;
 }
 
 .admin-sider {
@@ -162,16 +219,84 @@ function handleLogout() {
   min-height: 100%;
 }
 
-.fade-slide-enter-active,
-.fade-slide-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+.admin-tabs {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 8px;
+  background: #f5f7f9;
+  border-bottom: 1px solid #efeff5;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 4px;
 }
-.fade-slide-enter-from {
-  opacity: 0;
-  transform: translateY(8px);
+
+.admin-tabs::-webkit-scrollbar {
+  height: 4px;
 }
-.fade-slide-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
+
+.admin-tabs::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+  border-radius: 2px;
 }
+
+.admin-tabs::-webkit-scrollbar-thumb:hover {
+  background: #bbb;
+}
+
+.admin-tab {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  color: #666;
+  position: relative;
+}
+
+.admin-tab:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.admin-tab--active {
+  background: rgba(24, 160, 88, 0.06);
+  border-color: transparent;
+  color: #18a058;
+  font-weight: 500;
+}
+
+.admin-tab--active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #18a058;
+}
+
+.admin-tab__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  color: #999;
+  border-radius: 50%;
+  line-height: 1;
+}
+
+.admin-tab__close:hover {
+  background: #ccc;
+  color: #333;
+}
+
 </style>

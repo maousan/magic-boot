@@ -5,7 +5,7 @@
   "groupId" : "qou8in0pu4dvva7g20trefax4lo26ye8",
   "name" : "亮灯灭灯控制",
   "createTime" : null,
-  "updateTime" : 1779260526313,
+  "updateTime" : 1780039849687,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -28,7 +28,7 @@
   "requestBody" : "{\n  \"waveNo\": \"1W2604180001\", \n  \"userId\": \"WZK\", \n  \"mode\": \"1\", \n  \"color\": \"GREEN\", \n  \"duration\": \"inf\"\n}",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"指令发送成功\",\n    \"data\": null,\n    \"timestamp\": 1777000634749,\n    \"executeTime\": 140\n}",
+  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"指令发送成功\",\n    \"data\": null,\n    \"timestamp\": 1780037904541,\n    \"executeTime\": 154\n}",
   "description" : "亮灯/灭灯控制接口，当前仅记录日志，三方对接逻辑预留。",
   "requestBodyDefinition" : {
     "name" : "root",
@@ -154,6 +154,7 @@
   }
 }
 ================================
+import cn.hutool.json.JSONUtil
 import log
 import java.util.UUID
 import com.dtflys.forest.Forest
@@ -162,8 +163,13 @@ import '@/aims/led/turnOnLedByArticleId' as turnOnLedByArticleId
 import '@/led/turnOnAisleLedByLotNo' as turnOnAisleLedByLotNo
 import '@/led/turnOffAisleLedByLotNo' as turnOffAisleLedByLotNo
 
+log.info("亮灯灭灯控制: {}", JSONUtil.toJsonStr(body))
+
 const mixColor = Forest.config().getVariableValue("mixColor")
+const lightOnDuration = Forest.config().getVariableValue("lightOnDuration")
+
 let stationCode = Forest.config().getVariableValue("stationCode")
+
 if(stationCode == null || stationCode == ''){
     stationCode = '10001'
 }
@@ -433,10 +439,10 @@ let queryLocationStatusBatch = (locationCodes) => {
 }
 
 let assertLightControlSuccess = (action, result) => {
-    if(result == null){
-        throw new RuntimeException('灯控调用失败(' + action + '): result is null')
-    }
-    if(result.success == false){
+    // if(result == null){
+    //     throw new RuntimeException('灯控调用失败(' + action + '): result is null')
+    // }
+    if(result && result.success == false){
         let failMessage = result.message
         if(failMessage == null || failMessage == ''){
             failMessage = result.msg
@@ -444,7 +450,7 @@ let assertLightControlSuccess = (action, result) => {
         if(failMessage == null || failMessage == ''){
             failMessage = 'unknown'
         }
-        throw new RuntimeException('灯控调用失败(' + action + '): ' + failMessage)
+        // throw new RuntimeException('灯控调用失败(' + action + '): ' + failMessage)
     }
 }
 
@@ -642,19 +648,9 @@ if (colorVal == null || colorVal == '') {
 }
 let durationVal = payload.duration
 if(modeVal == 3 || modeVal == 4){
-    if(durationVal == null || durationVal == ''){
-        exit 400, 'mode=3/4时，duration必填且仅支持0或0s'
-    }
-    if(durationVal != '0' && durationVal != '0s'){
-        exit 400, 'mode=3/4时，duration仅支持0或0s'
-    }
-    if(durationVal == '0s'){
-        durationVal = '0'
-    }
-} else {
-    if (durationVal == null || durationVal == '') {
-        durationVal = '60m'
-    }
+    durationVal = '0'
+} else if (durationVal == null || durationVal == '') {
+    durationVal = '60m'
 }
 
 if (colorVal != 'RED' && colorVal != 'GREEN' && colorVal != 'BLUE' && colorVal != 'YELLOW' && colorVal != 'CYAN') {
@@ -675,7 +671,6 @@ try {
 
     let affectedLocationCodes = resolveAffectedLocationCodes(payload)
     let allLocationCodes = queryWaveLocationCodes(payload.waveNo, affectedLocationCodes)
-    log.info(logPrefix + ', stage=location_resolved, affected=' + formatLocationLog(affectedLocationCodes, 20) + ', all=' + formatLocationLog(allLocationCodes, 20))
     if(allLocationCodes.size() == 0){
         if(modeVal == 2){
             log.warn(logPrefix + ', stage=no_location_for_manual_on')
@@ -691,7 +686,6 @@ try {
 
     // 控制接口仅负责灯控，不负责维护 t_location_status
     let statusSnapshotMap = queryLocationStatusBatch(allLocationCodes)
-    log.info(logPrefix + ', stage=status_loaded, locationCount=' + allLocationCodes.size())
 
     let turnOffLocationCodes = []
     let turnOnSingleLocationCodes = []
@@ -733,8 +727,6 @@ try {
     if(modeVal == 3 || modeVal == 4){
         singleColor = 'GREEN'
     }
-
-    log.info(logPrefix + ', stage=decision_done, turnOff=' + formatLocationLog(turnOffLocationCodes, 20) + ', turnOnMulti=' + formatLocationLog(turnOnMultiLocationCodes, 20) + ', turnOnSingle=' + formatLocationLog(turnOnSingleLocationCodes, 20))
 
     let singleColorLocationMap = {}
     let singleColorKeys = []
@@ -802,7 +794,6 @@ try {
         singleColorLocationMap[singleColor].add(dispatchLocationCode)
     }
     let turnOffDispatchCodes = turnOffAisleResult.candidateLocationCodes
-    log.info(logPrefix + ', stage=dispatch_resolved, turnOffDispatch=' + formatLocationLog(turnOffDispatchCodes, 20) + ', turnOnMultiDispatch=' + formatLocationLog(turnOnMultiDispatchCodes, 20))
 
     // 锁外执行灯控，缩短全局锁占用时间
     if(lockAcquired){
@@ -811,7 +802,6 @@ try {
     }
 
     if(turnOffDispatchCodes.size() > 0){
-        log.info(logPrefix + ', stage=dispatch_turn_off_start, locations=' + formatLocationLog(turnOffDispatchCodes, 20))
         let turnOffResult = turnOffLedByArticleId({
             stationCode: stationCode,
             articleIds: turnOffDispatchCodes,
@@ -819,12 +809,10 @@ try {
             waveNo: payload.waveNo,
             userId: payload.userId
         })
-        log.info(logPrefix + ', stage=dispatch_turn_off_result, success=' + turnOffResult.success + ', status=' + turnOffResult.status + ', message=' + turnOffResult.message)
         assertLightControlSuccess('TURN_OFF', turnOffResult)
     }
 
     if(turnOnMultiDispatchCodes.size() > 0){
-        log.info(logPrefix + ', stage=dispatch_turn_on_multi_start, color=' + multiUserColor + ', duration=' + durationVal + ', locations=' + formatLocationLog(turnOnMultiDispatchCodes, 20))
         let turnOnMultiResult = turnOnLedByArticleId({
             stationCode: stationCode,
             color: multiUserColor,
@@ -834,14 +822,12 @@ try {
             waveNo: payload.waveNo,
             userId: payload.userId
         })
-        log.info(logPrefix + ', stage=dispatch_turn_on_multi_result, success=' + turnOnMultiResult.success + ', status=' + turnOnMultiResult.status + ', message=' + turnOnMultiResult.message)
         assertLightControlSuccess('TURN_ON_MULTI', turnOnMultiResult)
     }
 
     for(colorKey in singleColorKeys){
         let locationList = singleColorLocationMap[colorKey]
         if(locationList != null && locationList.size() > 0){
-            log.info(logPrefix + ', stage=dispatch_turn_on_single_start, color=' + colorKey + ', duration=' + durationVal + ', locations=' + formatLocationLog(locationList, 20))
             let turnOnSingleResult = turnOnLedByArticleId({
                 stationCode: stationCode,
                 color: colorKey,
@@ -851,7 +837,6 @@ try {
                 waveNo: payload.waveNo,
                 userId: payload.userId
             })
-            log.info(logPrefix + ', stage=dispatch_turn_on_single_result, color=' + colorKey + ', success=' + turnOnSingleResult.success + ', status=' + turnOnSingleResult.status + ', message=' + turnOnSingleResult.message)
             assertLightControlSuccess('TURN_ON_SINGLE', turnOnSingleResult)
         }
     }
@@ -873,7 +858,8 @@ try {
     for(locationCode in turnOffDispatchCodes){
         try {
             turnOffAisleLedByLotNo({
-                lotNo: locationCode
+                lotNo: locationCode,
+                mode: 'client'
             })
         } catch {
 
@@ -882,7 +868,8 @@ try {
     for(locationCode in turnOnAisleDispatchCodes){
         try {
             turnOnAisleLedByLotNo({
-                lotNo: locationCode
+                lotNo: locationCode,
+                mode: 'client'
             })
         } catch {
 

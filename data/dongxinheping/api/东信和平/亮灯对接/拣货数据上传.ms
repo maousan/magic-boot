@@ -5,7 +5,7 @@
   "groupId" : "l5kl0q2xiqa4ryz349c3fkzj3hzm07vw",
   "name" : "拣货数据上传",
   "createTime" : null,
-  "updateTime" : 1779931050920,
+  "updateTime" : 1780041200044,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -25,7 +25,7 @@
     "expression" : null,
     "children" : null
   } ],
-  "requestBody" : "{\n  \"waveNo\": \"WV202603250001\",\n  \"userId\": \"USER001\",\n  \"userName\": \"张三\",\n  \"updateTime\": 1648195200000,\n  \"details\": [\n    {\n      \"id\": \"DTL001\",\n      \"materialCode\": \"MAT001\",\n      \"batchNo\": \"B20260325\",\n      \"locationCode\": \"A1-11-02-01-01\",\n      \"planQuantity\": 100,\n      \"actualQuantity\": 100,\n      \"status\": 0\n    },\n    {\n      \"id\": \"D3003\",\n      \"materialCode\": \"MAT-013\",\n      \"batchNo\": \"BATCH-ERR-3\",\n      \"locationCode\": \"A1-11-01-01-01\",\n      \"planQuantity\": 6,\n      \"actualQuantity\": 0,\n      \"status\": 0\n    }\n  ]\n}",
+  "requestBody" : "{\n  \"waveNo\": \"WV202603250001\",\n  \"userId\": \"USER001\",\n  \"userName\": \"张三\",\n  \"updateTime\": 1648195200000,\n  \"details\": [\n    {\n      \"id\": \"DTL001\",\n      \"materialCode\": \"MAT001\",\n      \"batchNo\": \"B20260325\",\n      \"locationCode\": \"1111A1-11-02-01-01\",\n      \"planQuantity\": 100,\n      \"actualQuantity\": 100,\n      \"status\": 0\n    },\n    {\n      \"id\": \"D3003\",\n      \"materialCode\": \"MAT-013\",\n      \"batchNo\": \"BATCH-ERR-3\",\n      \"locationCode\": \"A1-11-01-01-01\",\n      \"planQuantity\": 6,\n      \"actualQuantity\": 0,\n      \"status\": 0\n    }\n  ]\n}",
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"拣货数据上传成功\",\n    \"data\": null,\n    \"timestamp\": 1779427140525,\n    \"executeTime\": 3242\n}",
@@ -274,6 +274,7 @@
   }
 }
 ================================
+import cn.hutool.json.JSONUtil
 import log
 import java.util.UUID
 import com.dtflys.forest.Forest
@@ -283,6 +284,9 @@ import '@/utils/getUserLightColor' as getUserLightColor
 import '@/led/turnOnAisleLedByLotNo' as turnOnAisleLedByLotNo
 import '@/led/turnOffAisleLedByLotNo' as turnOffAisleLedByLotNo
 
+log.info("拣货数据上传body: {}", JSONUtil.toJsonStr(body))
+
+const mixColor = Forest.config().getVariableValue("mixColor")
 const stationCode = Forest.config().getVariableValue("stationCode")
 
 const globalLockKey = 'light:picking:upload:global'
@@ -707,7 +711,6 @@ let recordLightControlResult = (action, result) => {
         log.warn(logPrefix + ', stage=light_control_failed, action=' + action + ', status=' + result.status + ', message=' + message + ', responseText=' + result.responseText)
         return false
     }
-    log.info(logPrefix + ', stage=light_control_success, action=' + action + ', status=' + result.status + ', message=' + result.message)
     return true
 }
 
@@ -783,7 +786,7 @@ let affectedLocationCodeSet = {}
 try {
     log.info(logPrefix + ', stage=receive, detailCount=' + details.size())
 
-    // 事务1：拣货数据落库
+    // 事务1：拣货数据落库    
     transState = anyline.beginTrans()
 
     let existingMaster = db.table('t_picking_upload').where().eq('wave_no', waveNo).eq('user_id', userId).selectOne()
@@ -899,23 +902,18 @@ try {
     anyline.commitTrans(transState)
     transState = null
 
-    log.info(logPrefix + ', stage=persist_done, affectedCount=' + affectedLocationCodes.size())
-
     // 全局同步锁
     lockAcquired = acquireGlobalLock(globalLockKey, lockTimeoutSeconds)
     if(!lockAcquired){
         log.warn(logPrefix + ', stage=lock_busy, lockKey=' + globalLockKey)
         exit 503, '系统繁忙，请稍后重试'
     }
-    log.info(logPrefix + ', stage=lock_acquired, lockKey=' + globalLockKey)
 
     // 锁内事务2：更新 t_location_status
     transState = anyline.beginTrans()
     let statusSnapshotMap = recalcLocationStatusBatch(affectedLocationCodes)
     anyline.commitTrans(transState)
     transState = null
-
-    log.info(logPrefix + ', stage=status_updated, affectedCount=' + affectedLocationCodes.size())
 
     // 锁内同步灯控
     let turnOffLocationCodes = []
@@ -981,7 +979,7 @@ try {
         try {
             let turnOnMultiResult = turnOnLedByArticleId({
                 stationCode: stationCode,
-                color: 'BLUE',
+                color: mixColor || 'CYAN',
                 articleIds: multiUserLocationCodes,
                 traceId: traceId,
                 waveNo: waveNo,
@@ -1048,6 +1046,5 @@ try {
 } finally {
     if(lockAcquired){
         releaseGlobalLock(globalLockKey)
-        log.info(logPrefix + ', stage=lock_released, lockKey=' + globalLockKey)
     }
 }

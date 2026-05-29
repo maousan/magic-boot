@@ -5,7 +5,7 @@
   "groupId" : "999006442fb54aebbb2015e4a23bdba8",
   "name" : "定时同步article数据",
   "createTime" : 1776664436822,
-  "updateTime" : 1779728713979,
+  "updateTime" : 1779966598824,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -27,11 +27,13 @@ import log
 import java.util.List
 import com.dtflys.forest.Forest
 import '@/aims/articles/updateArticleInfo' as updateArticleInfo
+import '@/aims/articles/deleteArticleInfo' as deleteArticleInfo
 
 const stationCode = Forest.config().getVariableValue("stationCode")
 
 const batchSize = 20
 const maxLocationPages = 3
+const placeholderData = deleteArticleInfo()
 
 let normalizeText = (value) => {
     if(value == null){
@@ -150,26 +152,27 @@ let appendInventoryRowsToArticleData = (articleItem, inventoryRows, pageIndex) =
     let appendedCount = 0
     let rowIndex = 1
     for(row in inventoryRows){
-        let rowLocationId = normalizeText(valueOf(row, 'location_id', 'locationId'))
+        let rowLocationId = normalizeText(row.locationId)
+        placeholderData.locationId = rowLocationId
         if(rowLocationId == ''){
             continue
         }
         if(articleItem.modifiedDate == null || articleItem.modifiedDate == ''){
-            articleItem.modifiedDate = valueOf(row, 'modified_date', 'modifiedDate')
+            articleItem.modifiedDate = row.updateTime
         }
-        putIndexedField(articleItem.data, 'warehouseId', pageIndex, rowIndex, valueOf(row, 'warehouse_id', 'warehouseId'))
-        putIndexedField(articleItem.data, 'locationId', pageIndex, rowIndex, rowLocationId)
-        putIndexedField(articleItem.data, 'sku', pageIndex, rowIndex, valueOf(row, 'sku', 'sku'))
-        putIndexedField(articleItem.data, 'lotAtt09', pageIndex, rowIndex, valueOf(row, 'lot_att09', 'lotAtt09'))
-        putIndexedField(articleItem.data, 'qty', pageIndex, rowIndex, valueOf(row, 'qty', 'qty'))
-        putIndexedField(articleItem.data, 'qtyAllocated', pageIndex, rowIndex, valueOf(row, 'qty_allocated', 'qtyAllocated'))
-        putIndexedField(articleItem.data, 'qtyPa', pageIndex, rowIndex, valueOf(row, 'qty_pa', 'qtyPa'))
-        putIndexedField(articleItem.data, 'editTime', pageIndex, rowIndex, valueOf(row, 'edit_time', 'editTime'))
-        putIndexedField(articleItem.data, 'userDefine1', pageIndex, rowIndex, valueOf(row, 'user_define1', 'userDefine1'))
-        putIndexedField(articleItem.data, 'userDefine2', pageIndex, rowIndex, valueOf(row, 'user_define2', 'userDefine2'))
-        putIndexedField(articleItem.data, 'userDefine3', pageIndex, rowIndex, valueOf(row, 'user_define3', 'userDefine3'))
-        putIndexedField(articleItem.data, 'userDefine4', pageIndex, rowIndex, valueOf(row, 'user_define4', 'userDefine4'))
-        putIndexedField(articleItem.data, 'userDefine5', pageIndex, rowIndex, valueOf(row, 'user_define5', 'userDefine5'))
+        articleItem.data = {...placeholderData, ...articleItem.data}
+        putIndexedField(articleItem.data, 'warehouseId', pageIndex, rowIndex, row.warehouseId)
+        putIndexedField(articleItem.data, 'sku', pageIndex, rowIndex, row.sku)
+        putIndexedField(articleItem.data, 'lotAtt09', pageIndex, rowIndex, row.lotAtt09)
+        putIndexedField(articleItem.data, 'qty', pageIndex, rowIndex, row.qty)
+        putIndexedField(articleItem.data, 'qtyAllocated', pageIndex, rowIndex, row.qtyAllocated)
+        putIndexedField(articleItem.data, 'qtyPa', pageIndex, rowIndex, row.qtyPa)
+        putIndexedField(articleItem.data, 'editTime', pageIndex, rowIndex, row.editTime)
+        // putIndexedField(articleItem.data, 'userDefine1', pageIndex, rowIndex, valueOf(row, 'user_define1', 'userDefine1'))
+        // putIndexedField(articleItem.data, 'userDefine2', pageIndex, rowIndex, valueOf(row, 'user_define2', 'userDefine2'))
+        // putIndexedField(articleItem.data, 'userDefine3', pageIndex, rowIndex, valueOf(row, 'user_define3', 'userDefine3'))
+        // putIndexedField(articleItem.data, 'userDefine4', pageIndex, rowIndex, valueOf(row, 'user_define4', 'userDefine4'))
+        // putIndexedField(articleItem.data, 'userDefine5', pageIndex, rowIndex, valueOf(row, 'user_define5', 'userDefine5'))
         rowIndex = rowIndex + 1
         appendedCount = appendedCount + 1
     }
@@ -178,12 +181,14 @@ let appendInventoryRowsToArticleData = (articleItem, inventoryRows, pageIndex) =
 }
 
 let buildArticleDataItem = (locationId, sku) => {
+    let localPlaceholder = {...placeholderData}
+    localPlaceholder.locationId = locationId
     let articleItem = {
         stationCode,
         id: locationId,
         name: normalizeText(sku),
         eans: [locationId],
-        data: {},
+        data: localPlaceholder,
         modifiedDate: null
     }
     let totalRows = 0
@@ -235,17 +240,14 @@ try {
 
         if(dataList.size() > 0){
             try {
-                let result = updateArticleInfo(dataList)
-                if(result == null || result.success == false){
-                    let message = '调用AIMS更新article失败'
-                    if(result != null && result.message != null && result.message != ''){
-                        message = result.message
-                    }
+                const { success, message } = updateArticleInfo(dataList)
+                if(!success){
+                    let msg = message || '调用AIMS更新article失败'
                     failedBatches.add({
                         offset: offset,
                         locationCount: locationItems.size(),
                         articleCount: dataList.size(),
-                        message: message
+                        message: msg
                     })
                 } else {
                     updatedArticles = updatedArticles + dataList.size()

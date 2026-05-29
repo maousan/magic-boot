@@ -2,6 +2,7 @@
   <n-card
     title="定时任务"
     class="table-page-card"
+    :class="$attrs.class"
     style="height: 100%; min-height: 0; display: flex; flex-direction: column"
     content-style="flex: 1; min-height: 0; display: flex; flex-direction: column"
   >
@@ -56,6 +57,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, h, computed } from 'vue'
+defineOptions({ inheritAttrs: false })
 import { NCard, NDataTable, NButton, NSpace, NTag, NPopconfirm, NModal, useMessage } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { pluginClient } from '@/api/request'

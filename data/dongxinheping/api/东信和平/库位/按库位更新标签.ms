@@ -5,10 +5,10 @@
   "groupId" : "6ce8544b21954e189dc7aeb484aeddfc",
   "name" : "按库位更新标签",
   "createTime" : null,
-  "updateTime" : null,
+  "updateTime" : 1779966603347,
   "lock" : null,
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/warehouse-location/update-article",
   "method" : "POST",
   "parameters" : [ ],
@@ -25,10 +25,10 @@
     "expression" : null,
     "children" : null
   } ],
-  "requestBody" : "{\r\n    \"locationId\":\"\"\r\n}",
+  "requestBody" : "{\r\n    \"locationId\":\"B2-10-05-01-02\"\r\n}",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : null,
+  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": {\n        \"success\": true,\n        \"rowCount\": 7\n    },\n    \"timestamp\": 1779959655198,\n    \"executeTime\": 90\n}",
   "description" : "按单个库位从库存数据构建article并推送到AIMS",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
@@ -56,6 +56,8 @@ let formatValue = (value) => {
     }
     return value + ''
 }
+
+const placeholderData = deleteArticleInfo()
 
 let putIndexedField = (data, fieldName, pageIndex, rowIndex, value) => {
     if(value == null){
@@ -123,12 +125,14 @@ let queryInventoryPage = (pageOffset) => {
 }
 
 // 构建article数据
+placeholderData.locationId = locationId
+
 let articleItem = {
     stationCode,
     id: locationId,
     name: sku,
     eans: [locationId],
-    data: {},
+    data: placeholderData,
     modifiedDate: null
 }
 let totalRows = 0
@@ -143,21 +147,22 @@ while(pageIndex <= maxPages){
     let rowIndex = 1
     for(row in inventoryRows){
         if(articleItem.modifiedDate == null || articleItem.modifiedDate == ''){
-            articleItem.modifiedDate = row.modified_date
+            articleItem.modifiedDate = row.updateTime
         }
-        putIndexedField(articleItem.data, 'warehouseId', pageIndex, rowIndex, row.warehouse_id)
-        putIndexedField(articleItem.data, 'locationId', pageIndex, rowIndex, normalizeText(row.location_id))
+        articleItem.data = {...placeholderData, ...articleItem.data}
+        putIndexedField(articleItem.data, 'warehouseId', pageIndex, rowIndex, row.warehouseId)
+        // putIndexedField(articleItem.data, 'locationId', pageIndex, rowIndex, normalizeText(row.locationId))
         putIndexedField(articleItem.data, 'sku', pageIndex, rowIndex, row.sku)
-        putIndexedField(articleItem.data, 'lotAtt09', pageIndex, rowIndex, row.lot_att09)
+        putIndexedField(articleItem.data, 'lotAtt09', pageIndex, rowIndex, row.lotAtt09)
         putIndexedField(articleItem.data, 'qty', pageIndex, rowIndex, row.qty)
-        putIndexedField(articleItem.data, 'qtyAllocated', pageIndex, rowIndex, row.qty_allocated)
-        putIndexedField(articleItem.data, 'qtyPa', pageIndex, rowIndex, row.qty_pa)
-        putIndexedField(articleItem.data, 'editTime', pageIndex, rowIndex, row.edit_time)
-        putIndexedField(articleItem.data, 'userDefine1', pageIndex, rowIndex, row.user_define1)
-        putIndexedField(articleItem.data, 'userDefine2', pageIndex, rowIndex, row.user_define2)
-        putIndexedField(articleItem.data, 'userDefine3', pageIndex, rowIndex, row.user_define3)
-        putIndexedField(articleItem.data, 'userDefine4', pageIndex, rowIndex, row.user_define4)
-        putIndexedField(articleItem.data, 'userDefine5', pageIndex, rowIndex, row.user_define5)
+        putIndexedField(articleItem.data, 'qtyAllocated', pageIndex, rowIndex, row.qtyAllocated)
+        putIndexedField(articleItem.data, 'qtyPa', pageIndex, rowIndex, row.qtyPa)
+        putIndexedField(articleItem.data, 'editTime', pageIndex, rowIndex, row.editTime)
+        // putIndexedField(articleItem.data, 'userDefine1', pageIndex, rowIndex, row.userDefine1)
+        // putIndexedField(articleItem.data, 'userDefine2', pageIndex, rowIndex, row.userDefine2)
+        // putIndexedField(articleItem.data, 'userDefine3', pageIndex, rowIndex, row.userDefine3)
+        // putIndexedField(articleItem.data, 'userDefine4', pageIndex, rowIndex, row.userDefine4)
+        // putIndexedField(articleItem.data, 'userDefine5', pageIndex, rowIndex, row.userDefine5)
         rowIndex = rowIndex + 1
         totalRows = totalRows + 1
     }
@@ -167,23 +172,20 @@ while(pageIndex <= maxPages){
     pageIndex = pageIndex + 1
 }
 
-if(totalRows == 0){
-    let delResult = deleteArticleInfo(locationId)
-    return {
-        success: true,
-        rowCount: 0,
-        deleted: delResult.success,
-        message: delResult.success ? '该库位无库存数据，已从AIMS删除article' : '该库位无库存数据，从AIMS删除article失败: status=' + delResult.status
-    }
-}
+// if(totalRows == 0){
+//     let delResult = deleteArticleInfo(locationId)
+//     return {
+//         success: true,
+//         rowCount: 0,
+//         deleted: delResult.success,
+//         message: delResult.success ? '该库位无库存数据，已从AIMS删除article' : '该库位无库存数据，从AIMS删除article失败: status=' + delResult.status
+//     }
+// }
 
 // 推送到AIMS
-let result = updateArticleInfo([articleItem])
-if(result == null || result.success == false){
-    let msg = '推送AIMS失败'
-    if(result != null && result.message != null && result.message != ''){
-        msg = result.message
-    }
+const { success, message } = updateArticleInfo([articleItem])
+if(!success){
+    let msg = message || '推送AIMS失败'
     exit 500, msg
 }
 

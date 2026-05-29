@@ -49,13 +49,13 @@ public class TokenHandshakeInterceptor implements HandshakeInterceptor {
                     return true;
                 }
             } catch (Exception e) {
-                // Token无效或已过期
-                return false;
+                // Token无效，允许匿名连接
             }
         }
 
-        // Token无效或未提供，拒绝握手
-        return false;
+        // 无 token 或 token 无效，允许匿名连接
+        attributes.put("userId", "anonymous");
+        return true;
     }
 
     @Override

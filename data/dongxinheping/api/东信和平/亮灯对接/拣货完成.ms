@@ -5,7 +5,7 @@
   "groupId" : "l5kl0q2xiqa4ryz349c3fkzj3hzm07vw",
   "name" : "拣货完成",
   "createTime" : null,
-  "updateTime" : 1777018647086,
+  "updateTime" : 1780033970670,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -250,6 +250,7 @@
   }
 }
 ================================
+import cn.hutool.json.JSONUtil
 import log
 import java.util.UUID
 import com.dtflys.forest.Forest
@@ -258,6 +259,8 @@ import '@/aims/led/turnOffLedByArticleId' as turnOffLedByArticleId
 import '@/utils/getUserLightColor' as getUserLightColor
 import '@/led/turnOnAisleLedByLotNo' as turnOnAisleLedByLotNo
 import '@/led/turnOffAisleLedByLotNo' as turnOffAisleLedByLotNo
+
+log.info("拣货完成body: {}", JSONUtil.toJsonStr(body))
 
 const stationCode = Forest.config().getVariableValue("stationCode")
 const globalLockKey = 'light:picking:upload:global'
@@ -726,7 +729,6 @@ let recordLightControlResult = (action, result) => {
         log.warn(logPrefix + ', stage=light_control_failed, action=' + action + ', status=' + result.status + ', message=' + failMessage + ', responseText=' + result.responseText)
         return false
     }
-    log.info(logPrefix + ', stage=light_control_success, action=' + action + ', status=' + result.status + ', message=' + result.message)
     return true
 }
 
@@ -913,23 +915,18 @@ try {
     anyline.commitTrans(transState)
     transState = null
 
-    log.info(logPrefix + ', stage=persist_done, affectedCount=' + affectedLocationCodes.size())
-
     // 全局同步锁
     lockAcquired = acquireGlobalLock(globalLockKey, lockTimeoutSeconds)
     if(!lockAcquired){
         log.warn(logPrefix + ', stage=lock_busy, lockKey=' + globalLockKey)
         exit 503, '系统繁忙，请稍后重试'
     }
-    log.info(logPrefix + ', stage=lock_acquired, lockKey=' + globalLockKey)
 
     // 锁内事务2：更新 t_location_status
     transState = anyline.beginTrans()
     let statusSnapshotMap = recalcLocationStatusBatch(affectedLocationCodes)
     anyline.commitTrans(transState)
     transState = null
-
-    log.info(logPrefix + ', stage=status_updated, affectedCount=' + affectedLocationCodes.size())
 
     // 锁内同步灯控
     let turnOffLocationCodes = []
@@ -1125,7 +1122,6 @@ try {
 } finally {
     if(lockAcquired){
         releaseGlobalLock(globalLockKey)
-        log.info(logPrefix + ', stage=lock_released, lockKey=' + globalLockKey)
     }
 }
 

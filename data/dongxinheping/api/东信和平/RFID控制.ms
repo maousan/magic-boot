@@ -5,7 +5,7 @@
   "groupId" : "2ud9c5419ag5484mbxxsafin0b0myji0",
   "name" : "RFID控制",
   "createTime" : 1778052000000,
-  "updateTime" : 1779259832321,
+  "updateTime" : 1779965299219,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -25,7 +25,7 @@
     "expression" : null,
     "children" : null
   } ],
-  "requestBody" : "{\n  \"mode\": \"on\",\n  \"data\": {\n    \"locationId\": \"A001\",\n    \"sku\": \"SKU-10001\"\n  }\n}",
+  "requestBody" : "{\n  \"deviceId\": \"DEVICE-001\",\n  \"mode\": \"on\",\n  \"data\": {\n    \"locationId\": \"A001\",\n    \"sku\": \"SKU-10001\"\n  }\n}",
   "headers" : [ ],
   "paths" : [ ],
   "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": \"操作成功\",\n    \"timestamp\": 1779259352420,\n    \"executeTime\": 239\n}",
@@ -42,6 +42,18 @@
     "error" : "",
     "expression" : "",
     "children" : [ {
+      "name" : "deviceId",
+      "value" : "DEVICE-001",
+      "description" : "设备唯一标识（设备序列号、MAC或自定义ID），不传时尝试用客户端IP兜底",
+      "required" : true,
+      "dataType" : "String",
+      "type" : null,
+      "defaultValue" : null,
+      "validateType" : "",
+      "error" : "",
+      "expression" : "",
+      "children" : [ ]
+    }, {
       "name" : "data",
       "value" : "",
       "description" : "当mode为on的时候必填",
@@ -94,10 +106,13 @@
   "responseBodyDefinition" : null
 }
 ================================
+import cn.hutool.json.JSONUtil
 import request
 import log
 import java.net.InetAddress
 import com.dtflys.forest.Forest
+
+log.info("rfid body: {}", JSONUtil.toJsonStr(body))
 
 let apiResponse = (code, message) => {
     return {

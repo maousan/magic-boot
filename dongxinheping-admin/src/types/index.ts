@@ -229,6 +229,18 @@ export interface PickingUploadDetail {
   createTime: string
 }
 
+// App 版本管理
+export interface AppVersion {
+  id: string
+  version_code: number
+  version_name: string
+  apk_url: string
+  apk_size: string
+  force_update: number
+  description: string
+  create_date: string
+}
+
 // Zintis Netty 服务状态
 export interface ZintisNettyServerStatus {
   running: boolean

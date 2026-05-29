@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "appversion000000000000000000001",
+  "name" : "版本管理",
+  "type" : "api",
+  "parentId" : "appmgmt0000000000000000000001",
+  "path" : "/version",
+  "createTime" : null,
+  "updateTime" : null,
+  "createBy" : null,
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

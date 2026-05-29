@@ -38,25 +38,24 @@ public class TokenHandshakeInterceptor implements HandshakeInterceptor {
         }
 
         try {
-            // 提取请求URL中的token参数
+            // 提取请求URL中的token参数（可选）
             String token = extractTokenFromRequest(servletRequest);
 
-            if (token == null || token.trim().isEmpty()) {
-                log.warn("WebSocket握手失败: 缺少token参数");
-                return false;
+            if (token != null && !token.trim().isEmpty()) {
+                // 有 token 时验证
+                if (!StpUtil.isLogin()) {
+                    log.warn("WebSocket握手: token无效或已过期");
+                } else {
+                    Object loginId = StpUtil.getLoginId();
+                    attributes.put(USER_ID_ATTRIBUTE, loginId);
+                    log.info("WebSocket握手成功(认证): userId={}", loginId);
+                    return true;
+                }
             }
 
-            // 验证token
-            if (!StpUtil.isLogin()) {
-                log.warn("WebSocket握手失败: token无效或已过期, token={}", token);
-                return false;
-            }
-
-            // 获取用户ID并存储到WebSocket会话属性中
-            Object loginId = StpUtil.getLoginId();
-            attributes.put(USER_ID_ATTRIBUTE, loginId);
-
-            log.info("WebSocket握手成功: userId={}", loginId);
+            // 无 token 或 token 无效，允许匿名连接
+            attributes.put(USER_ID_ATTRIBUTE, "anonymous");
+            log.info("WebSocket握手成功(匿名)");
             return true;
 
         } catch (Exception e) {

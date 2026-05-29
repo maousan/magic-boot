@@ -67,6 +67,17 @@
     <n-modal v-model:show="showDeleteModal" title="确认删除" preset="dialog" type="warning" positive-text="确认删除" negative-text="取消" @positive-click="handleDelete">
       确定要删除库位 <b>{{ deleteTarget?.locationId }}</b> 吗？
     </n-modal>
+
+    <n-modal v-model:show="showEditModal" title="编辑库位" preset="dialog" positive-text="确认" negative-text="取消" @positive-click="handleEdit">
+      <n-form ref="editFormRef" :model="editForm" :rules="editRules" style="margin-top: 16px">
+        <n-form-item label="仓库编码" path="warehouseCode">
+          <n-input v-model:value="editForm.warehouseCode" placeholder="请输入仓库编码" />
+        </n-form-item>
+        <n-form-item label="库位ID" path="locationId">
+          <n-input v-model:value="editForm.locationId" placeholder="请输入库位ID" />
+        </n-form-item>
+      </n-form>
+    </n-modal>
   </n-card>
 </template>
 
@@ -80,7 +91,7 @@ import {
 } from 'naive-ui'
 import type { DataTableColumns, FormRules, DropdownOption } from 'naive-ui'
 import type { UploadCustomRequestOptions } from 'naive-ui'
-import { getWarehouseLocations, addWarehouseLocation, deleteWarehouseLocation, importWarehouseLocations, syncLocationInventory, updateLocationArticle } from '@/api/warehouse'
+import { getWarehouseLocations, addWarehouseLocation, updateWarehouseLocation, deleteWarehouseLocation, importWarehouseLocations, syncLocationInventory, updateLocationArticle } from '@/api/warehouse'
 import type { WarehouseLocation, ImportResult } from '@/types'
 
 const message = useMessage()
@@ -104,7 +115,15 @@ const addForm = reactive({ warehouseCode: '', locationId: '' })
 const showDeleteModal = ref(false)
 const deleteTarget = ref<WarehouseLocation | null>(null)
 
+const showEditModal = ref(false)
+const editForm = reactive({ id: '', warehouseCode: '', locationId: '' })
+
 const addRules: FormRules = {
+  warehouseCode: { required: true, message: '请输入仓库编码', trigger: 'blur' },
+  locationId: { required: true, message: '请输入库位ID', trigger: 'blur' },
+}
+
+const editRules: FormRules = {
   warehouseCode: { required: true, message: '请输入仓库编码', trigger: 'blur' },
   locationId: { required: true, message: '请输入库位ID', trigger: 'blur' },
 }
@@ -120,7 +139,7 @@ const columns: DataTableColumns<WarehouseLocation> = [
   {
     title: '操作',
     key: 'actions',
-    width: 300,
+    width: 360,
     fixed: 'right',
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
@@ -142,6 +161,11 @@ const columns: DataTableColumns<WarehouseLocation> = [
             }, () => '更新标签'),
           default: () => `确认更新库位「${row.locationId}」的标签数据？`,
         }),
+        h(NButton, {
+          size: 'small',
+          type: 'warning',
+          onClick: () => openEdit(row),
+        }, () => '编辑'),
         h(NButton, {
           size: 'small',
           type: 'error',
@@ -225,6 +249,28 @@ async function handleAdd() {
     showAddModal.value = false
     addForm.warehouseCode = ''
     addForm.locationId = ''
+    loadData()
+  } catch {
+    return false
+  }
+}
+
+function openEdit(row: WarehouseLocation) {
+  editForm.id = row.id
+  editForm.warehouseCode = row.warehouseCode
+  editForm.locationId = row.locationId
+  showEditModal.value = true
+}
+
+async function handleEdit() {
+  if (!editForm.warehouseCode || !editForm.locationId) {
+    message.warning('请填写完整信息')
+    return false
+  }
+  try {
+    await updateWarehouseLocation(editForm)
+    message.success('编辑成功')
+    showEditModal.value = false
     loadData()
   } catch {
     return false

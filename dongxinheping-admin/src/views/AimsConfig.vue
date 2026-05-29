@@ -76,7 +76,7 @@ async function loadConfig() {
   try {
     const cfg = await getAimsConfig()
     form.aimsHost = cfg.aimsHost ?? ''
-    form.stationCode = cfg.stationCode ?? ''
+    form.stationCode = String(cfg.stationCode ?? '')
     form.mixColor = cfg.mixColor || 'CYAN'
     form.controlDispatchAsync = cfg.controlDispatchAsync === 'true'
     form.lightOnDuration = cfg.lightOnDuration || '60m'

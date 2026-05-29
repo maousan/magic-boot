@@ -1,77 +1,54 @@
 <template>
-  <div class="netty-monitor">
-    <!-- Status Hero -->
-    <div class="status-hero" :class="statusClass">
-      <div>
-        <div class="status-row">
-          <span class="pulse-dot" :class="{ active: status?.running }" />
-          <span class="status-title">Netty TCP 服务</span>
-          <n-tag v-if="status" :type="status.running ? 'success' : 'error'" size="small" :bordered="false" round>
-            {{ status.running ? '运行中' : '已停止' }}
-          </n-tag>
-          <n-spin v-else size="small" />
+  <div class="netty-layout">
+    <!-- Left column -->
+    <div class="netty-left">
+      <!-- Status hero -->
+      <div class="status-hero" :class="statusClass">
+        <div>
+          <div class="status-row">
+            <span class="pulse-dot" :class="{ active: status?.running }" />
+            <span class="status-title">Netty TCP 服务</span>
+            <n-tag v-if="status" :type="status.running ? 'success' : 'error'" size="small" :bordered="false" round>
+              {{ status.running ? '运行中' : '已停止' }}
+            </n-tag>
+            <n-spin v-else size="small" />
+          </div>
+          <div class="status-meta">
+            <template v-if="status?.running">
+              端口 {{ status.port }}
+              <template v-if="status.activeConnections !== undefined"> · {{ status.activeConnections }} 个活跃连接</template>
+            </template>
+            <template v-else-if="status">服务未启动</template>
+          </div>
         </div>
-        <div class="status-meta">
-          <template v-if="status?.running">
-            端口 {{ status.port }}
-            <template v-if="status.activeConnections !== undefined"> · {{ status.activeConnections }} 个活跃连接</template>
-          </template>
-          <template v-else-if="status">服务未启动</template>
-        </div>
+        <n-space :size="8" align="center">
+          <n-text depth="3" style="font-size: 12px">自动刷新</n-text>
+          <n-switch v-model:value="autoRefresh" size="small" />
+          <n-button size="small" secondary @click="refreshAll">刷新</n-button>
+          <n-button size="small" type="success" :disabled="status?.running ?? false" :loading="opLoading" @click="startServer">启动</n-button>
+          <n-button size="small" type="error" :disabled="!status?.running" :loading="opLoading" @click="stopServer">停止</n-button>
+        </n-space>
       </div>
-      <n-space :size="8" align="center">
-        <n-text depth="3" style="font-size: 12px">自动刷新</n-text>
-        <n-switch v-model:value="autoRefresh" size="small" />
-        <n-button size="small" secondary @click="refreshAll">刷新</n-button>
-        <n-button size="small" type="success" :disabled="status?.running ?? false" :loading="opLoading" @click="startServer">启动</n-button>
-        <n-button size="small" type="error" :disabled="!status?.running" :loading="opLoading" @click="stopServer">停止</n-button>
-      </n-space>
-    </div>
 
-    <!-- Metrics -->
-    <n-grid :cols="3" :x-gap="16" :y-gap="16" style="margin-bottom: 16px">
-      <n-gi>
-        <n-card class="metric-card" size="small" :bordered="false">
+      <!-- Metrics -->
+      <div class="metrics-row">
+        <div class="metric-card">
           <div class="metric-label">监听端口</div>
           <div class="metric-value">{{ status?.port ?? '-' }}</div>
-        </n-card>
-      </n-gi>
-      <n-gi>
-        <n-card class="metric-card" size="small" :bordered="false">
+        </div>
+        <div class="metric-card">
           <div class="metric-label">活跃连接</div>
           <div class="metric-value">{{ status?.activeConnections ?? 0 }}</div>
-        </n-card>
-      </n-gi>
-      <n-gi>
-        <n-card class="metric-card" size="small" :bordered="false">
+        </div>
+        <div class="metric-card">
           <div class="metric-label">已连接设备</div>
           <div class="metric-value">{{ clients?.totalClients ?? 0 }}</div>
-        </n-card>
-      </n-gi>
-    </n-grid>
-
-    <!-- 连接设备 - 整行 -->
-    <n-card title="连接设备" size="small" style="margin-bottom: 16px">
-      <template #header-extra>
-        <n-text depth="3" style="font-size: 13px">{{ clients?.clientDetails?.length ?? 0 }} 台在线</n-text>
-      </template>
-      <div v-if="!clients?.clientDetails?.length" class="empty-clients">
-        <n-text depth="3">暂无已连接设备</n-text>
+        </div>
       </div>
-      <n-data-table
-        v-else
-        :columns="clientColumns"
-        :data="clients?.clientDetails ?? []"
-        :bordered="false"
-        size="small"
-        :row-key="(row: any) => row.remoteAddress"
-      />
-    </n-card>
 
-    <!-- 下方两栏 -->
-    <n-grid :cols="24" :x-gap="16" :y-gap="16" responsive="screen">
-      <n-gi :span="10" :m="24" :s="24" :xs="24">
-        <n-card title="消息控制台" size="small">
+      <!-- Console row: message + result side by side -->
+      <div class="console-row">
+        <n-card title="消息控制台" size="small" style="flex: 2">
           <n-space vertical :size="12">
             <n-form-item label="目标客户端" :show-feedback="false">
               <n-select
@@ -106,10 +83,8 @@
             </n-space>
           </n-space>
         </n-card>
-      </n-gi>
 
-      <n-gi :span="14" :m="24" :s="24" :xs="24">
-        <n-card title="发送结果" size="small">
+        <n-card title="发送结果" size="small" style="flex: 2">
           <template #header-extra>
             <n-text v-if="sendResult" depth="3" style="font-size: 13px">
               成功 <span class="text-success">{{ sendResult.successCount }}</span> / {{ sendResult.totalTargets }}
@@ -128,8 +103,46 @@
             />
           </template>
         </n-card>
-      </n-gi>
-    </n-grid>
+      </div>
+    </div>
+
+    <!-- Right column: Connected devices (full height) -->
+    <div class="netty-right">
+      <n-card title="连接设备" size="small">
+        <template #header-extra>
+          <n-text depth="3" style="font-size: 13px">{{ clients?.clientDetails?.length ?? 0 }} 台在线</n-text>
+        </template>
+        <div class="devices-body">
+          <div v-if="!clients?.clientDetails?.length" class="empty-clients">
+            <n-text depth="3">暂无已连接设备</n-text>
+          </div>
+          <n-data-table
+            v-else
+            :columns="clientColumns"
+            :data="clients?.clientDetails ?? []"
+            :bordered="false"
+            size="small"
+            flex-height
+            style="height: 100%"
+            :row-key="(row: any) => row.remoteAddress"
+          />
+        </div>
+      </n-card>
+    </div>
+
+    <!-- 控灯弹窗 -->
+    <n-modal v-model:show="showLight" :title="'控灯 - ' + (lightDevice?.macAddress || '')" preset="card" style="width: 420px">
+      <n-grid :cols="4" :x-gap="8" :y-gap="8">
+        <n-gi><n-button block type="success" :loading="lightLoading" @click="sendLight('ON', 'GREEN')">开绿灯</n-button></n-gi>
+        <n-gi><n-button block type="warning" :loading="lightLoading" @click="sendLight('ON', 'YELLOW')">开黄灯</n-button></n-gi>
+        <n-gi><n-button block type="error" :loading="lightLoading" @click="sendLight('ON', 'RED')">开红灯</n-button></n-gi>
+        <n-gi><n-button block type="primary" :loading="lightLoading" @click="sendLight('ON', 'ALL')">全部开</n-button></n-gi>
+        <n-gi><n-button block type="success" :loading="lightLoading" @click="sendLight('OFF', 'GREEN')">关绿灯</n-button></n-gi>
+        <n-gi><n-button block type="warning" :loading="lightLoading" @click="sendLight('OFF', 'YELLOW')">关黄灯</n-button></n-gi>
+        <n-gi><n-button block type="error" :loading="lightLoading" @click="sendLight('OFF', 'RED')">关红灯</n-button></n-gi>
+        <n-gi><n-button block type="primary" :loading="lightLoading" @click="sendLight('OFF', 'ALL')">全部关</n-button></n-gi>
+      </n-grid>
+    </n-modal>
   </div>
 </template>
 
@@ -137,14 +150,16 @@
 import { ref, reactive, computed, watch, onMounted, onUnmounted, h } from 'vue'
 import {
   NCard, NSpace, NButton, NText,
-  NDataTable, NGrid, NGi, NFormItem, NInput, NSelect,
+  NDataTable, NFormItem, NInput, NSelect,
   NRadioGroup, NRadioButton, NSwitch, NTag, NSpin,
+  NModal, NGrid, NGi,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import {
   zintisNettyStart, zintisNettyStop, zintisNettyStatus, zintisNettyClients,
   zintisNettySend, zintisNettyBroadcast,
 } from '@/api/zintis-netty'
+import { controlLedDevice } from '@/api/led-device'
 import type {
   ZintisNettyServerStatus, ZintisNettyClientList,
   ZintisNettySendResponse, ZintisNettySendResult,
@@ -156,10 +171,13 @@ const status = ref<ZintisNettyServerStatus | null>(null)
 const clients = ref<ZintisNettyClientList | null>(null)
 const sendResult = ref<ZintisNettySendResponse | null>(null)
 const autoRefresh = ref(false)
+const showLight = ref(false)
+const lightLoading = ref(false)
+const lightDevice = ref<{ remoteAddress: string; macAddress: string } | null>(null)
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 
 const sendForm = reactive({
-  remoteAddress: '',
+  remoteAddress: undefined,
   payload: '',
   payloadFormat: 'ascii' as 'ascii' | 'hex',
   waitResponse: false,
@@ -177,6 +195,13 @@ const clientOptions = computed(() =>
 const clientColumns: DataTableColumns<{ remoteAddress: string; macAddress: string }> = [
   { title: '地址', key: 'remoteAddress' },
   { title: 'MAC', key: 'macAddress' },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 80,
+    render: (row) =>
+      h(NButton, { size: 'small', type: 'primary', onClick: () => openLight(row) }, () => '控灯'),
+  },
 ]
 
 const responseColumns: DataTableColumns<ZintisNettySendResult> = [
@@ -190,6 +215,21 @@ const responseColumns: DataTableColumns<ZintisNettySendResult> = [
 
 async function fetchStatus() {
   status.value = await zintisNettyStatus()
+}
+
+function openLight(row: { remoteAddress: string; macAddress: string }) {
+  lightDevice.value = row
+  showLight.value = true
+}
+
+async function sendLight(command: 'ON' | 'OFF', port: 'ALL' | 'RED' | 'YELLOW' | 'GREEN') {
+  if (!lightDevice.value) return
+  lightLoading.value = true
+  try {
+    await controlLedDevice({ mode: 'client', ledId: lightDevice.value.macAddress, command, port })
+  } finally {
+    lightLoading.value = false
+  }
 }
 
 async function fetchClients() {
@@ -246,44 +286,62 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
 </script>
 
 <style scoped>
-.netty-monitor {
-  max-width: 1200px;
+.netty-layout {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  gap: 16px;
 }
 
+.netty-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.netty-right {
+  width: 520px;
+  flex-shrink: 0;
+}
+
+/* Make devices card fill the full column height */
+.netty-right :deep(.n-card) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.netty-right :deep(.n-card__content) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.devices-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Status hero */
 .status-hero {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
   border-radius: 8px;
-  margin-bottom: 16px;
+  flex-shrink: 0;
   transition: all 0.3s ease;
 }
-.status-hero.loading {
-  background: #f5f5f5;
-}
-.status-hero.running {
-  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
-}
-.status-hero.stopped {
-  background: linear-gradient(135deg, #fbe9e7 0%, #fff3e0 100%);
-}
+.status-hero.loading { background: #f5f5f5; }
+.status-hero.running { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); }
+.status-hero.stopped { background: linear-gradient(135deg, #fbe9e7 0%, #fff3e0 100%); }
 
-.status-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.status-title {
-  font-size: 16px;
-  font-weight: 600;
-}
-.status-meta {
-  margin-top: 4px;
-  padding-left: 18px;
-  font-size: 13px;
-  color: #666;
-}
+.status-row { display: flex; align-items: center; gap: 8px; }
+.status-title { font-size: 16px; font-weight: 600; }
+.status-meta { margin-top: 4px; padding-left: 18px; font-size: 13px; color: #666; }
 
 .pulse-dot {
   display: inline-block;
@@ -303,15 +361,16 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
   100% { box-shadow: 0 0 0 0 rgba(24, 160, 88, 0); }
 }
 
+/* Metrics */
+.metrics-row { display: flex; gap: 12px; flex-shrink: 0; }
 .metric-card {
-  background: #fafafa !important;
+  flex: 1;
+  background: #fafafa;
   text-align: center;
+  padding: 12px 16px;
+  border-radius: 6px;
 }
-.metric-label {
-  font-size: 13px;
-  color: #999;
-  margin-bottom: 4px;
-}
+.metric-label { font-size: 13px; color: #999; margin-bottom: 4px; }
 .metric-value {
   font-size: 28px;
   font-weight: 600;
@@ -319,11 +378,10 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
   font-variant-numeric: tabular-nums;
 }
 
-.empty-clients {
-  padding: 32px 0;
-  text-align: center;
-}
+/* Console row */
+.console-row { display: flex; gap: 16px; }
 
+.empty-clients { padding: 32px 0; text-align: center; }
 .text-success { color: #18a058; }
 .text-error   { color: #d03050; }
 </style>

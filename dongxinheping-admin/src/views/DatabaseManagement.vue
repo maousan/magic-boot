@@ -1,91 +1,127 @@
 <template>
-  <div style="display: flex; flex-direction: column; height: 100%; min-height: 0">
-    <!-- Header -->
-    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px">
-      <h3 style="margin: 0">数据库管理</h3>
-      <n-tag v-if="tables.length" size="small" :bordered="false" type="info">{{ tables.length }} 张表</n-tag>
-      <div style="margin-left: auto">
-        <n-button quaternary size="small" @click="sidebarCollapsed = !sidebarCollapsed">
-          {{ sidebarCollapsed ? '显示 Schema' : '隐藏 Schema' }}
-        </n-button>
-      </div>
+  <n-config-provider :theme="darkTheme" :theme-overrides="themeOverrides">
+  <div class="db-term">
+    <!-- Title bar -->
+    <div class="db-term__bar">
+      <div class="db-term__dots"><span /><span /><span /></div>
+      <span class="db-term__bar-title">Database Terminal</span>
+      <button class="db-term__bar-btn" @click="sidebarCollapsed = !sidebarCollapsed">
+        {{ sidebarCollapsed ? '[ + ] schema' : '[ - ] schema' }}
+      </button>
     </div>
 
-    <!-- Main -->
-    <div style="display: flex; flex: 1; min-height: 0; gap: 16px">
-      <!-- Left sidebar: Schema Tree -->
-      <div
-        v-if="!sidebarCollapsed"
-        style="width: 300px; flex-shrink: 0; border: 1px solid var(--n-border-color); border-radius: var(--n-border-radius); display: flex; flex-direction: column; overflow: hidden"
-      >
-        <div style="padding: 8px 12px; font-size: 12px; font-weight: 500; color: #999; border-bottom: 1px solid var(--n-border-color)">
-          Schema
-        </div>
-        <div v-if="tablesLoading" style="display: flex; align-items: center; justify-content: center; padding: 32px">
-          <n-spin size="small" />
-        </div>
-        <div v-else style="flex: 1; overflow: auto; padding: 4px">
-          <n-tree :data="treeData" block-line selectable :default-expand-all="false" @update:selected-keys="handleSelectTable" />
+    <!-- Body -->
+    <div class="db-term__body">
+      <!-- Sidebar: Schema Tree -->
+      <div v-if="!sidebarCollapsed" class="db-term__side">
+        <div class="db-term__side-head">SCHEMA · {{ tables.length }} tables</div>
+        <div v-if="tablesLoading" class="db-term__side-loading"><span class="db-term__blink">█</span></div>
+        <div v-else class="db-term__side-tree">
+          <n-tree
+            :data="treeData"
+            block-line
+            selectable
+            :default-expand-all="false"
+            @update:selected-keys="handleSelectTable"
+          />
         </div>
       </div>
 
-      <!-- Right area -->
-      <div style="flex: 1; display: flex; flex-direction: column; min-width: 0; gap: 12px">
-        <!-- SQL Editor -->
-        <div style="flex-shrink: 0">
-          <n-input
-            v-model:value="sql"
-            type="textarea"
-            :rows="6"
-            placeholder="输入 SQL 语句，如: SELECT * FROM t_inventory LIMIT 10"
-            @keydown="handleKeydown"
-          />
-          <div style="margin-top: 8px">
-            <n-button type="primary" size="small" :loading="queryLoading" @click="handleExecute">执行</n-button>
-            <span style="margin-left: 8px; font-size: 12px; color: #999">Ctrl+Enter 快捷执行</span>
+      <!-- Main panel -->
+      <div class="db-term__main">
+        <div class="db-term__prompt">
+          <div class="db-term__prompt-row">
+            <span class="db-term__chevron">mysql&gt;</span>
+            <textarea
+              v-model="sql"
+              class="db-term__textarea"
+              rows="4"
+              placeholder="SELECT * FROM table_name LIMIT 100"
+              @keydown="handleKeydown"
+              spellcheck="false"
+            />
+          </div>
+          <div class="db-term__toolbar">
+            <button class="db-term__run" :disabled="queryLoading" @click="handleExecute">
+              {{ queryLoading ? '...' : '▶ Run' }}
+            </button>
+            <span class="db-term__shortcut">Ctrl+Enter</span>
           </div>
         </div>
 
-        <!-- Result -->
-        <div style="flex: 1; min-height: 0; display: flex; flex-direction: column">
-          <div v-if="queryResult" style="flex: 1; min-height: 0; display: flex; flex-direction: column">
-            <div style="margin-bottom: 4px; font-size: 12px; color: #999">
-              {{ queryResult.rowCount }} 行 · {{ queryResult.duration_ms }}ms
-              <n-tag v-if="queryResult.hasMore" size="tiny" type="warning" :bordered="false" style="margin-left: 4px">可能还有更多</n-tag>
+        <div class="db-term__output">
+          <template v-if="queryResult">
+            <div class="db-term__result-head">
+              {{ queryResult.rowCount }} rows · {{ queryResult.duration_ms }}ms
+              <span v-if="queryResult.hasMore" class="db-term__warn">may have more</span>
             </div>
-            <n-data-table
-              :columns="resultColumns"
-              :data="queryResult.list"
-              :bordered="true"
-              flex-height
-              style="height: 100%"
-              size="small"
-              :scroll-x="resultColumns.length * 150"
-            />
+            <div class="db-term__table-wrap">
+              <n-data-table
+                :columns="resultColumns"
+                :data="queryResult.list"
+                :bordered="false"
+                flex-height
+                style="height: 100%"
+                size="small"
+                :scroll-x="resultColumns.length * 150"
+              />
+            </div>
+          </template>
+          <div v-else-if="executeResult && !executeResult.preview" class="db-term__ok">
+            Query OK, {{ executeResult.affected }} rows affected ({{ executeResult.duration_ms }}ms)
           </div>
-          <div v-else-if="executeResult && !executeResult.preview" style="padding: 12px; background: #f6ffed; border-radius: 4px; font-size: 13px">
-            执行成功，影响 {{ executeResult.affected }} 行 ({{ executeResult.duration_ms }}ms)
-          </div>
-          <div
-            v-else
-            style="flex: 1; display: flex; align-items: center; justify-content: center; color: #999; font-size: 13px"
-          >
-            输入 SQL 语句并执行
-          </div>
+          <div v-else class="db-term__idle"><span class="db-term__blink">█</span></div>
         </div>
       </div>
     </div>
   </div>
+  </n-config-provider>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, h } from 'vue'
-import { NTag, NButton, NInput, NDataTable, NTree, NSpin, useMessage, useDialog } from 'naive-ui'
+import { NConfigProvider, NDataTable, NTree, darkTheme, useMessage, useDialog } from 'naive-ui'
 import type { TreeOption, DataTableColumns } from 'naive-ui'
-import { getTables, executeQuery, executeWrite, type TableMeta, type QueryResponse, type ExecuteResponse } from '@/api/database'
+import {
+  getTables,
+  executeQuery,
+  executeWrite,
+  type TableMeta,
+  type QueryResponse,
+  type ExecuteResponse,
+} from '@/api/database'
 
 const message = useMessage()
 const dialog = useDialog()
+
+const themeOverrides = {
+  common: {
+    primaryColor: '#7dcfff',
+    primaryColorHover: '#a3dfff',
+    primaryColorPressed: '#5cb8e6',
+    bodyColor: '#1a1b26',
+    cardColor: '#24283b',
+    modalColor: '#24283b',
+    popoverColor: '#24283b',
+    borderColor: '#3b4261',
+    textColor1: '#c0caf5',
+    textColor2: '#a9b1d6',
+    textColor3: '#565f89',
+  },
+  DataTable: {
+    thColor: '#24283b',
+    tdColor: '#1a1b26',
+    thTextColor: '#565f89',
+    tdTextColor: '#c0caf5',
+    borderColor: '#3b4261',
+  },
+  Tree: {
+    nodeTextColor: '#c0caf5',
+    nodeColorHover: 'rgba(255, 255, 255, 0.05)',
+    nodeColorActive: 'rgba(255, 255, 255, 0.08)',
+    nodeColorSelected: 'rgba(157, 206, 106, 0.12)',
+  },
+}
 
 const tables = ref<TableMeta[]>([])
 const tablesLoading = ref(false)
@@ -95,25 +131,20 @@ const queryResult = ref<QueryResponse | null>(null)
 const executeResult = ref<ExecuteResponse | null>(null)
 const sidebarCollapsed = ref(false)
 
-const treeData = computed<TreeOption[]>(() =>
+const treeData = computed(() =>
   tables.value.map((table) => ({
     key: table.name,
     label: table.name,
     suffix: () =>
-      h(NTag, { size: 'small', bordered: false, type: 'info' }, () => `${table.rowCount ?? 0}`),
+      h('span', { style: 'color: #565f89; font-size: 11px; margin-left: 6px' }, `${table.rowCount ?? 0}`),
     children: (table.columns || []).map((col) => ({
       key: `${table.name}.${col.name}`,
       label: `${col.name}  (${col.type})`,
       suffix: () => {
-        const tags: string[] = []
-        if (col.pk) tags.push('PK')
-        if (col.notnull) tags.push('NN')
-        if (!tags.length) return null
-        return h(
-          'span',
-          { style: 'font-size: 11px; color: #999; margin-left: 4px' },
-          tags.join(' '),
-        )
+        const parts = [col.type]
+        if (col.pk) parts.push('PK')
+        if (col.notnull) parts.push('NN')
+        return h('span', { style: 'color: #565f89; font-size: 11px; margin-left: 6px' }, parts.join(' '))
       },
     })),
   })),
@@ -121,7 +152,7 @@ const treeData = computed<TreeOption[]>(() =>
 
 const resultColumns = computed<DataTableColumns>(() => {
   if (!queryResult.value?.list?.length) return []
-  const keys = Object.keys(queryResult.value?.list?.[0] ?? {})
+  const keys = Object.keys(queryResult.value.list[0] ?? {})
   return keys.map((key) => ({
     title: key,
     key: key,
@@ -129,7 +160,7 @@ const resultColumns = computed<DataTableColumns>(() => {
     ellipsis: true,
     render: (row: Record<string, unknown>) => {
       const val = row[key]
-      if (val === null || val === undefined) return h('span', { style: 'color: #bbb' }, 'NULL')
+      if (val === null || val === undefined) return h('span', { style: 'color: #565f89' }, 'NULL')
       const str = String(val)
       return str.length > 200 ? str.slice(0, 200) + '...' : str
     },
@@ -162,22 +193,31 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
+const WRITE_KEYWORDS = ['INSERT', 'UPDATE', 'DELETE', 'CREATE', 'ALTER', 'DROP', 'TRUNCATE']
+const SENSITIVE_KEYWORDS = ['DELETE', 'TRUNCATE', 'DROP']
+
 async function handleExecute() {
   const trimmed = sql.value.trim()
   if (!trimmed) return
 
   const firstWord = trimmed.split(/\s+/)[0]?.toUpperCase() || ''
-  const isWrite = ['INSERT', 'UPDATE', 'DELETE', 'CREATE', 'ALTER', 'DROP', 'TRUNCATE'].includes(firstWord)
+  const isWrite = WRITE_KEYWORDS.includes(firstWord)
+  const isSensitive = SENSITIVE_KEYWORDS.includes(firstWord)
 
   queryLoading.value = true
   executeResult.value = null
 
   try {
-    if (isWrite) {
-      await handleWriteExecute(trimmed)
-    } else {
+    if (!isWrite) {
       const res = await executeQuery(trimmed)
       queryResult.value = res
+    } else if (isSensitive) {
+      await confirmAndExecute(trimmed)
+    } else {
+      const res = await executeWrite(trimmed, true)
+      executeResult.value = res
+      queryResult.value = null
+      fetchTables()
     }
   } catch (err) {
     message.error((err as Error).message || '执行失败')
@@ -186,11 +226,10 @@ async function handleExecute() {
   }
 }
 
-async function handleWriteExecute(sqlStr: string) {
+async function confirmAndExecute(sqlStr: string) {
   const preview = await executeWrite(sqlStr, false)
-
   dialog.warning({
-    title: '确认执行写操作',
+    title: '⚠ 确认执行危险操作',
     content: `${preview.message}\n\nSQL:\n${sqlStr}`,
     positiveText: '确认执行',
     negativeText: '取消',
@@ -210,3 +249,163 @@ async function handleWriteExecute(sqlStr: string) {
 
 onMounted(fetchTables)
 </script>
+
+<style scoped>
+.db-term {
+  --t-bg: #1a1b26;
+  --t-surface: #24283b;
+  --t-border: #3b4261;
+  --t-text: #c0caf5;
+  --t-text-dim: #565f89;
+  --t-green: #9ece6a;
+  --t-cyan: #7dcfff;
+  --t-red: #f7768e;
+  --t-yellow: #e0af68;
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--t-bg);
+  color: var(--t-text);
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, 'Courier New', monospace;
+  font-size: 13px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Title bar */
+.db-term__bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--t-surface);
+  border-bottom: 1px solid var(--t-border);
+  user-select: none;
+}
+.db-term__dots { display: flex; gap: 6px; }
+.db-term__dots span { width: 12px; height: 12px; border-radius: 50%; }
+.db-term__dots span:nth-child(1) { background: #ff5f57; }
+.db-term__dots span:nth-child(2) { background: #febc2e; }
+.db-term__dots span:nth-child(3) { background: #28c840; }
+.db-term__bar-title { flex: 1; color: var(--t-text-dim); font-size: 12px; }
+.db-term__bar-btn {
+  background: none;
+  border: 1px solid var(--t-border);
+  color: var(--t-text-dim);
+  padding: 2px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+}
+.db-term__bar-btn:hover { color: var(--t-text); border-color: var(--t-text-dim); }
+
+/* Body layout */
+.db-term__body { flex: 1; display: flex; min-height: 0; }
+
+/* Sidebar */
+.db-term__side {
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--t-border);
+  display: flex;
+  flex-direction: column;
+}
+.db-term__side-head {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--t-text-dim);
+  border-bottom: 1px solid var(--t-border);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.db-term__side-loading,
+.db-term__side-tree { flex: 1; overflow: auto; padding: 4px 8px; }
+.db-term__side-loading { display: flex; align-items: flex-start; padding-top: 16px; padding-left: 12px; }
+
+/* Main panel */
+.db-term__main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+/* Prompt area */
+.db-term__prompt { flex-shrink: 0; padding: 12px; border-bottom: 1px solid var(--t-border); }
+.db-term__prompt-row { display: flex; align-items: flex-start; }
+.db-term__chevron {
+  flex-shrink: 0;
+  color: var(--t-cyan);
+  margin-right: 8px;
+  padding-top: 2px;
+  font-weight: 700;
+  user-select: none;
+}
+.db-term__textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--t-text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+}
+.db-term__textarea::placeholder { color: var(--t-text-dim); }
+.db-term__toolbar { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.db-term__run {
+  background: var(--t-green);
+  color: #1a1b26;
+  border: none;
+  padding: 3px 14px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+.db-term__run:disabled { opacity: 0.5; cursor: not-allowed; }
+.db-term__run:hover:not(:disabled) { background: #b9f27c; }
+.db-term__shortcut { color: var(--t-text-dim); font-size: 11px; }
+
+/* Output */
+.db-term__output { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.db-term__result-head {
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--t-text-dim);
+  border-bottom: 1px solid var(--t-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.db-term__warn { color: var(--t-yellow); font-size: 10px; }
+.db-term__table-wrap { flex: 1; min-height: 0; }
+.db-term__ok { padding: 12px; color: var(--t-green); }
+.db-term__idle { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--t-text-dim); }
+
+/* Blink cursor */
+.db-term__blink { animation: blink 1s step-end infinite; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* ── Naive UI font overrides ── */
+.db-term :deep(.n-data-table-th) {
+  font-family: inherit;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.3px;
+}
+.db-term :deep(.n-data-table-td) { font-family: inherit; font-size: 12px; }
+.db-term :deep(.n-tree) { font-size: 12px; }
+.db-term :deep(.n-tree-node-content) { font-family: inherit; }
+.db-term :deep(.n-tree--block-line .n-tree-node-content) {
+  border-bottom: 1px solid rgba(59, 66, 97, 0.3);
+}
+
+/* Scrollbar */
+.db-term ::-webkit-scrollbar { width: 6px; height: 6px; }
+.db-term ::-webkit-scrollbar-track { background: var(--t-bg); }
+.db-term ::-webkit-scrollbar-thumb { background: var(--t-border); border-radius: 3px; }
+.db-term ::-webkit-scrollbar-thumb:hover { background: var(--t-text-dim); }
+</style>

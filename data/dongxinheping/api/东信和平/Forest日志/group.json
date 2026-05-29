@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "forestlog001a2b3c4d5e6f7a8b9c0d1e2f",
+  "name" : "Forest日志",
+  "type" : "api",
+  "parentId" : "2ud9c5419ag5484mbxxsafin0b0myji0",
+  "path" : "/forest-log",
+  "createTime" : null,
+  "updateTime" : null,
+  "createBy" : null,
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

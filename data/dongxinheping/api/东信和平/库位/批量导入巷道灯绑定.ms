@@ -69,11 +69,27 @@ let normalizeText = (value) => {
     return (value + '').trim()
 }
 
+let normalizeKey = (key) => {
+    if(key == null){
+        return ''
+    }
+    return (key + '').trim().toLowerCase().replace('_', '')
+}
+
 let firstValue = (row, keys) => {
+    let normalizedKeys = []
     for(key in keys){
-        let value = row[key]
-        if(value != null && (value + '').trim() != ''){
-            return (value + '').trim()
+        normalizedKeys.add(normalizeKey(key))
+    }
+    for(key in row.keySet()){
+        let nk = normalizeKey(key)
+        for(nk2 in normalizedKeys){
+            if(nk == nk2){
+                let value = row.get(key)
+                if(value != null && (value + '').trim() != ''){
+                    return (value + '').trim()
+                }
+            }
         }
     }
     return ''
@@ -92,7 +108,7 @@ if(fileName == null){
 }
 fileName = fileName.toLowerCase()
 
-let rows
+let rows = []
 if(fileName.endsWith('.csv')){
     let csvConfig = CsvReadConfig.defaultConfig()
     csvConfig.setContainsHeader(true)
@@ -101,12 +117,26 @@ if(fileName.endsWith('.csv')){
     if(bytes.length >= 3 && (bytes[0] & 0xFF) == 0xEF && (bytes[1] & 0xFF) == 0xBB && (bytes[2] & 0xFF) == 0xBF){
         csvContent = new String(bytes, 3, bytes.length - 3, 'UTF-8')
     }else{
-        csvContent = new String(bytes, 'UTF-8')
+        csvContent = new String(bytes, 'GBK')
     }
     let csvData = CsvUtil.getReader(csvConfig).readFromStr(csvContent)
-    rows = []
+    let headerList = csvData.getHeader()
+    let cleanedHeaders = []
+    if(headerList != null){
+        for(h in headerList){
+            cleanedHeaders.add(normalizeText(h))
+        }
+    }
     for(csvRow in csvData.getRows()){
-        rows.add(csvRow.getFieldMap())
+        let fieldMap = csvRow.getFieldMap()
+        let cleanedMap = {}
+        if(fieldMap != null){
+            for(key in fieldMap.keySet()){
+                let cleanKey = normalizeText(key)
+                cleanedMap[cleanKey] = fieldMap.get(key)
+            }
+        }
+        rows.add(cleanedMap)
     }
 }else{
     rows = ExcelUtil.getReader(new ByteArrayInputStream(uploadedFile.getBytes())).readAll()

@@ -46,8 +46,10 @@ cd dongxinheping-admin && npm run build
 在 `magic-plugin-dongxinheping/` 目录执行（不要从项目根目录用 `-pl`，Windows 下模块定位不稳定）：
 
 ```bash
-cd magic-plugin-dongxinheping && mvn package -DskipTests -q
+cd magic-plugin-dongxinheping && mvn clean package -DskipTests -q
 ```
+
+**必须用 `clean`**：Vite 构建产物带 content hash 文件名（如 `index-B69zvDgT.js`），每次构建生成新文件。Maven 的 `resources` 插件只做增量复制到 `target/classes/`，不会删除旧 hash 文件，导致 JAR 体积随构建次数无限膨胀。`mvn clean` 会清空整个 `target/` 目录。
 
 ### Step 3：替换插件 JAR
 
@@ -73,7 +75,7 @@ cp magic-plugin-dongxinheping/target/magic-plugin-dongxinheping.jar plugins/magi
 
 ```bash
 cd dongxinheping-admin && npm run build && \
-cd ../magic-plugin-dongxinheping && mvn package -DskipTests -q && \
+cd ../magic-plugin-dongxinheping && mvn clean package -DskipTests -q && \
 cp target/magic-plugin-dongxinheping.jar ../plugins/magic-plugin-dongxinheping.jar
 ```
 
@@ -81,6 +83,7 @@ cp target/magic-plugin-dongxinheping.jar ../plugins/magic-plugin-dongxinheping.j
 
 | 问题 | 原因 | 解决 |
 |---|---|---|
+| JAR 体积持续膨胀 | Vite 生成新 hash 文件名，Maven 增量复制不删旧文件 | 必须用 `mvn clean package` |
 | `vue-tsc` 类型错误 | TS 类型不匹配 | 修复类型声明后重新构建 |
 | `Copy-Item` 文件被锁 | 后端 Java 进程未停止 | 先 `taskkill` 再复制 |
 | `-pl` 找不到模块 | Windows 下 Maven reactor 不稳定 | 在模块目录内直接执行 `mvn` |
