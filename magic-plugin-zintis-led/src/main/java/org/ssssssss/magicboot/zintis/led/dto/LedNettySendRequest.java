@@ -14,6 +14,9 @@ public class LedNettySendRequest {
     @Schema(description = "客户端远端地址（IP:Port）", example = "192.168.2.102:51853")
     private String remoteAddress;
 
+    @Schema(description = "客户端 MAC 地址。发送失败时用于缓存指令并在设备重连后按新连接重试", example = "3A:69:7A:08:D0:A5")
+    private String macAddress;
+
     @Schema(description = "负载文本，payloadFormat=ascii/hex 时生效；hex 支持 `66AB` 或 `0x66 0xAB`", example = "0x66 0x35 0xBA 0x3C 0x07")
     private String payload;
 

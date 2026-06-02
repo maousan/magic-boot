@@ -263,6 +263,7 @@ import '@/led/turnOffAisleLedByLotNo' as turnOffAisleLedByLotNo
 log.info("拣货完成body: {}", JSONUtil.toJsonStr(body))
 
 const stationCode = Forest.config().getVariableValue("stationCode")
+const completeTurnOffMode = Forest.config().getVariableValue("completeTurnOffMode")
 const globalLockKey = 'light:picking:upload:global'
 const lockTimeoutSeconds = 10
 const locationChunkSize = 200
@@ -938,7 +939,11 @@ try {
         if(snapshot != null && snapshot.status0UserCount != null){
             status0UserCount = snapshot.status0UserCount
         }
-        if(status0UserCount <= 0){
+        // direct: 拣货完成后直接灭灯，不管库位上是否还有其他用户在拣
+        // status(默认): 根据库位上剩余未完成用户数决定——无人则灭灯、多人则亮蓝灯、单人则亮该用户颜色灯
+        if('direct' == completeTurnOffMode){
+            turnOffLocationCodes.add(locationCode)
+        } else if(status0UserCount <= 0){
             turnOffLocationCodes.add(locationCode)
         } else if(status0UserCount > 1){
             multiUserLocationCodes.add(locationCode)
@@ -1039,11 +1044,11 @@ try {
         lockAcquired = false
     }
 
-    if(turnOffDispatchCodes.size() > 0){
+    if(turnOffLocationCodes.size() > 0){
         try {
             let turnOffResult = turnOffLedByArticleId({
                 stationCode: stationCode,
-                articleIds: turnOffDispatchCodes,
+                articleIds: turnOffLocationCodes,
                 traceId: traceId,
                 waveNo: waveNo,
                 userId: userId
@@ -1108,7 +1113,7 @@ try {
         }
     }
 
-    log.info(logPrefix + ', stage=dispatch_done, turnOff=' + turnOffDispatchCodes.size() + ', turnOnMulti=' + turnOnMultiDispatchCodes.size() + ', turnOnSingle=' + turnOnSingleDispatchCount + ', aisleTurnOn=' + turnOnAisleDispatchCodes.size() + ', aisleTurnOff=' + turnOffDispatchCodes.size())
+    log.info(logPrefix + ', stage=dispatch_done, articleTurnOff=' + turnOffLocationCodes.size() + ', turnOnMulti=' + turnOnMultiDispatchCodes.size() + ', turnOnSingle=' + turnOnSingleDispatchCount + ', aisleTurnOn=' + turnOnAisleDispatchCodes.size() + ', aisleTurnOff=' + turnOffDispatchCodes.size())
     exit 200, '拣货完成同步成功'
 } catch (e) {
     if(transState != null){

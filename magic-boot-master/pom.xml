@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>org.ssssssss</groupId>
+        <groupId>io.github.maousan</groupId>
         <artifactId>magic-boot</artifactId>
         <version>${revision}</version>
     </parent>
@@ -36,7 +36,7 @@
             <artifactId>flyway-mysql</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.ssssssss</groupId>
+            <groupId>io.github.maousan</groupId>
             <artifactId>magic-api-spring-boot-starter</artifactId>
         </dependency>
         <dependency>
@@ -48,11 +48,11 @@
             <artifactId>forest-jakarta-xml</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.ssssssss</groupId>
+            <groupId>io.github.maousan</groupId>
             <artifactId>magic-api-plugin-springdoc</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.ssssssss</groupId>
+            <groupId>io.github.maousan</groupId>
             <artifactId>magic-api-plugin-excel</artifactId>
         </dependency>
         <dependency>
@@ -60,11 +60,11 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.ssssssss</groupId>
+            <groupId>io.github.maousan</groupId>
             <artifactId>magic-api-plugin-redis</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.ssssssss</groupId>
+            <groupId>io.github.maousan</groupId>
             <artifactId>magic-api-plugin-file</artifactId>
         </dependency>
         <!-- 文件存储插件依赖 -->
@@ -87,7 +87,7 @@
             <version>1.12.600</version>
         </dependency>
         <dependency>
-            <groupId>org.ssssssss</groupId>
+            <groupId>io.github.maousan</groupId>
             <artifactId>magic-api-plugin-liteflow</artifactId>
         </dependency>
         <dependency>
@@ -118,7 +118,7 @@
             <artifactId>commons-pool2</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.ssssssss</groupId>
+            <groupId>io.github.maousan</groupId>
             <artifactId>magic-api-plugin-job</artifactId>
         </dependency>
         <dependency>
@@ -158,7 +158,7 @@
         <!--end anyline -->
         <!-- PF4J 插件系统 -->
         <dependency>
-            <groupId>org.ssssssss</groupId>
+            <groupId>io.github.maousan</groupId>
             <artifactId>magic-plugin</artifactId>
             <version>${revision}</version>
             <exclusions>
@@ -171,7 +171,7 @@
 
         <!-- 插件扩展点 API -->
         <dependency>
-            <groupId>org.ssssssss</groupId>
+            <groupId>io.github.maousan</groupId>
             <artifactId>magic-plugin-api</artifactId>
             <version>${revision}</version>
         </dependency>
@@ -195,7 +195,7 @@
 
         <!-- Tiga 脚本引擎 -->
         <dependency>
-            <groupId>com.ocean.tiga</groupId>
+            <groupId>io.github.maousan</groupId>
             <artifactId>tiga-engine-spring</artifactId>
         </dependency>
 

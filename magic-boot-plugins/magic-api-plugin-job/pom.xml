@@ -4,9 +4,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>org.ssssssss</groupId>
+        <groupId>io.github.maousan</groupId>
         <artifactId>magic-boot-plugins</artifactId>
-        <version>2.2.2</version>
+        <version>${revision}</version>
     </parent>
     <artifactId>magic-api-plugin-job</artifactId>
     <packaging>jar</packaging>
@@ -31,10 +31,10 @@
             <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
-        <!-- MyBatis Plus -->
         <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+            <scope>provided</scope>
         </dependency>
         <!-- Test dependencies -->
         <dependency>

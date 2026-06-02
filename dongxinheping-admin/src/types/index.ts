@@ -61,20 +61,46 @@ export interface ImportResult {
 export interface LedControlCommand {
   mode: 'client'
   ledId: string
-  command: 'ON' | 'OFF'
-  port: 'ALL' | 'RED' | 'YELLOW' | 'GREEN'
+  command:
+    | 'ON'
+    | 'OFF'
+    | 'CONTROL_ON'
+    | 'CONTROL_OFF'
+    | 'CONTROL_PULSE'
+    | 'QUERY'
+    | 'SYSTEM_INFO'
+    | 'SIGNAL_STRENGTH'
+    | 'NETWORK'
+    | 'TCP_SERVER_OPEN'
+    | 'TCP_SERVER_CLOSE'
+    | 'TCP_CLIENT_OPEN'
+    | 'TCP_CLIENT_CLOSE'
+    | 'OTA_UPDATE'
+  port?: 'ALL' | 'RED' | 'YELLOW' | 'GREEN'
+  dataCommand?: number
+  targetIp?: string
+  targetPort?: number
+  version?: string
+  timeoutMs?: number
+  waitResponse?: boolean
 }
 
 // LED 控制响应
 export interface LedControlResult {
   ledId: string
   deviceIp: string
+  remoteAddress?: string
   command: string
-  port: string
+  port?: string
   timeoutMs: number
-  executedCount: number
-  executed: number
-  failed: number
+  success?: boolean
+  payloadAscii?: string
+  payloadHex?: string
+  rawRequestHex?: string
+  rawResponseHex?: string
+  executedCount?: number
+  executed?: unknown
+  failed?: unknown
 }
 
 // 库存数据
@@ -164,6 +190,14 @@ export interface ZintisLedTcpConfigRequest extends ZintisLedControlRequest {
   targetPort?: number
 }
 
+export interface ZintisLedOtaUpdateRequest {
+  deviceIp: string
+  devicePort?: number
+  hostAddress: number
+  version: string
+  timeoutMs?: number
+}
+
 // Zintis LAN 扫描请求
 export interface ZintisLanScanRequest {
   subnetPrefix?: string
@@ -246,6 +280,13 @@ export interface ZintisNettyServerStatus {
   running: boolean
   port: number
   activeConnections: number
+  heartbeatEnabled: boolean
+  heartbeatRunning: boolean
+  clientReportRegistrationEnabled: boolean
+  lastHeartbeatAt?: number
+  lastHeartbeatTargets: number
+  lastHeartbeatSuccessCount: number
+  lastHeartbeatFailedCount: number
   message: string
 }
 
@@ -264,6 +305,7 @@ export interface ZintisNettyClientList {
 // Zintis Netty 发送请求
 export interface ZintisNettySendRequest {
   remoteAddress: string
+  macAddress?: string
   payload?: string
   payloadArray?: number[]
   payloadFormat?: 'ascii' | 'hex'

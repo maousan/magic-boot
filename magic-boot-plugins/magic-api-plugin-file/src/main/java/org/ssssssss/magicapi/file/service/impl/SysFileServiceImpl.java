@@ -1,16 +1,17 @@
 package org.ssssssss.magicapi.file.service.impl;
 
 import cn.hutool.core.util.IdUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.ssssssss.magicapi.file.mapper.SysFileMapper;
 import org.ssssssss.magicapi.file.model.SysFile;
 import org.ssssssss.magicapi.file.service.SysFileService;
+import org.ssssssss.magicapi.file.starter.FilePluginProperties;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -22,25 +23,27 @@ import java.util.Objects;
  */
 @Service
 @RequiredArgsConstructor
-public class SysFileServiceImpl extends ServiceImpl<SysFileMapper, SysFile> implements SysFileService {
-    @SuppressWarnings("unused")
-    private final SysFileMapper sysFileMapper;
+public class SysFileServiceImpl implements SysFileService {
+
+    private final JdbcTemplate jdbcTemplate;
+    private final FilePluginProperties props;
+
+    private String table() {
+        return props.getTableName();
+    }
 
     @Override
     public SysFile getByPath(String filePath) {
-        return getOne(new LambdaQueryWrapper<SysFile>()
-                .eq(SysFile::getFilePath, filePath)
-                .eq(SysFile::getIsDeleted, 0)
-                .last("limit 1"));
+        String sql = "SELECT * FROM " + table() + " WHERE file_path = ? AND is_deleted = 0 LIMIT 1";
+        List<SysFile> list = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(SysFile.class), filePath);
+        return list.isEmpty() ? null : list.get(0);
     }
 
     @Override
     public SysFile findByPath(String storageKey, String filePath) {
-        return getOne(new LambdaQueryWrapper<SysFile>()
-                .eq(SysFile::getStorageKey, storageKey)
-                .eq(SysFile::getFilePath, filePath)
-                .eq(SysFile::getIsDeleted, 0)
-                .last("limit 1"));
+        String sql = "SELECT * FROM " + table() + " WHERE storage_key = ? AND file_path = ? AND is_deleted = 0 LIMIT 1";
+        List<SysFile> list = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(SysFile.class), storageKey, filePath);
+        return list.isEmpty() ? null : list.get(0);
     }
 
     @Override
@@ -56,19 +59,20 @@ public class SysFileServiceImpl extends ServiceImpl<SysFileMapper, SysFile> impl
 
     @Override
     public List<SysFile> listChildren(String storageKey, String parentId) {
-        LambdaQueryWrapper<SysFile> wrapper = new LambdaQueryWrapper<SysFile>()
-                .eq(SysFile::getIsDeleted, 0)
-                .orderByDesc(SysFile::getFileType)
-                .orderByAsc(SysFile::getFileName);
+        StringBuilder sql = new StringBuilder("SELECT * FROM " + table() + " WHERE is_deleted = 0");
+        List<Object> params = new ArrayList<>();
         if (StringUtils.hasText(storageKey)) {
-            wrapper.eq(SysFile::getStorageKey, storageKey);
+            sql.append(" AND storage_key = ?");
+            params.add(storageKey);
         }
         if (StringUtils.hasText(parentId)) {
-            wrapper.eq(SysFile::getParentId, parentId);
+            sql.append(" AND parent_id = ?");
+            params.add(parentId);
         } else {
-            wrapper.isNull(SysFile::getParentId);
+            sql.append(" AND parent_id IS NULL");
         }
-        return list(wrapper);
+        sql.append(" ORDER BY file_type DESC, file_name ASC");
+        return jdbcTemplate.query(sql.toString(), new BeanPropertyRowMapper<>(SysFile.class), params.toArray());
     }
 
     @Override
@@ -76,25 +80,23 @@ public class SysFileServiceImpl extends ServiceImpl<SysFileMapper, SysFile> impl
         if (!StringUtils.hasText(md5)) {
             return null;
         }
-        return getOne(new LambdaQueryWrapper<SysFile>()
-                .eq(SysFile::getMd5, md5)
-                .eq(SysFile::getIsDeleted, 0)
-                .last("limit 1"));
+        String sql = "SELECT * FROM " + table() + " WHERE md5 = ? AND is_deleted = 0 LIMIT 1";
+        List<SysFile> list = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(SysFile.class), md5);
+        return list.isEmpty() ? null : list.get(0);
     }
 
     @Override
     public boolean existsByPath(String filePath) {
-        return count(new LambdaQueryWrapper<SysFile>()
-                .eq(SysFile::getFilePath, filePath)
-                .eq(SysFile::getIsDeleted, 0)) > 0;
+        String sql = "SELECT COUNT(*) FROM " + table() + " WHERE file_path = ? AND is_deleted = 0";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, filePath);
+        return count != null && count > 0;
     }
 
     @Override
     public boolean existsByPath(String storageKey, String filePath) {
-        return count(new LambdaQueryWrapper<SysFile>()
-                .eq(SysFile::getStorageKey, storageKey)
-                .eq(SysFile::getFilePath, filePath)
-                .eq(SysFile::getIsDeleted, 0)) > 0;
+        String sql = "SELECT COUNT(*) FROM " + table() + " WHERE storage_key = ? AND file_path = ? AND is_deleted = 0";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, storageKey, filePath);
+        return count != null && count > 0;
     }
 
     @Override
@@ -149,7 +151,7 @@ public class SysFileServiceImpl extends ServiceImpl<SysFileMapper, SysFile> impl
             existed.setMd5(md5);
             existed.setParentId(parentId);
             fillFileExt(existed, normalizedName);
-            updateById(existed);
+            updateByIdInternal(existed);
             return existed;
         }
 
@@ -166,10 +168,11 @@ public class SysFileServiceImpl extends ServiceImpl<SysFileMapper, SysFile> impl
         sysFile.setMd5(md5);
         sysFile.setCreateTime(LocalDateTime.now());
         sysFile.setCreateBy(createBy);
+        sysFile.setUpdateTime(LocalDateTime.now());
         sysFile.setIsDeleted(0);
         fillFileExt(sysFile, normalizedName);
 
-        save(sysFile);
+        insert(sysFile);
         return sysFile;
     }
 
@@ -184,11 +187,8 @@ public class SysFileServiceImpl extends ServiceImpl<SysFileMapper, SysFile> impl
 
     @Override
     public boolean deleteByPath(String storageKey, String filePath, String updateBy) {
-        return update(new LambdaUpdateWrapper<SysFile>()
-                .eq(SysFile::getStorageKey, storageKey)
-                .eq(SysFile::getFilePath, filePath)
-                .eq(SysFile::getIsDeleted, 0)
-                .set(SysFile::getIsDeleted, 1));
+        String sql = "UPDATE " + table() + " SET is_deleted = 1, update_time = ? WHERE storage_key = ? AND file_path = ? AND is_deleted = 0";
+        return jdbcTemplate.update(sql, LocalDateTime.now(), storageKey, filePath) > 0;
     }
 
     @Override
@@ -199,11 +199,8 @@ public class SysFileServiceImpl extends ServiceImpl<SysFileMapper, SysFile> impl
             return false;
         }
         String prefix = node.getFilePath();
-        return update(new LambdaUpdateWrapper<SysFile>()
-                .eq(SysFile::getStorageKey, storageKey)
-                .eq(SysFile::getIsDeleted, 0)
-                .likeRight(SysFile::getFilePath, prefix)
-                .set(SysFile::getIsDeleted, 1));
+        String sql = "UPDATE " + table() + " SET is_deleted = 1, update_time = ? WHERE storage_key = ? AND is_deleted = 0 AND file_path LIKE ?";
+        return jdbcTemplate.update(sql, LocalDateTime.now(), storageKey, prefix + "%") > 0;
     }
 
     @Override
@@ -277,23 +274,149 @@ public class SysFileServiceImpl extends ServiceImpl<SysFileMapper, SysFile> impl
     @Override
     public List<SysFile> listPendingPhysicalDelete(LocalDateTime cutoffTime, int limit) {
         int safeLimit = Math.max(limit, 1);
-        return list(new LambdaQueryWrapper<SysFile>()
-                .eq(SysFile::getIsDeleted, 1)
-                .eq(SysFile::getFileType, SysFile.TYPE_FILE)
-                .le(SysFile::getUpdateTime, cutoffTime)
-                .and(wrapper -> wrapper.isNull(SysFile::getMetadata)
-                        .or()
-                        .notLike(SysFile::getMetadata, "\"gcDone\":true"))
-                .orderByAsc(SysFile::getUpdateTime)
-                .last("limit " + safeLimit));
+        String sql = "SELECT * FROM " + table()
+                + " WHERE is_deleted = 1 AND file_type = ? AND update_time <= ?"
+                + " AND (metadata IS NULL OR metadata NOT LIKE ?)"
+                + " ORDER BY update_time ASC LIMIT ?";
+        return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(SysFile.class),
+                SysFile.TYPE_FILE, cutoffTime, "%\"gcDone\":true%", safeLimit);
     }
 
     @Override
     public boolean markPhysicalDeleteDone(String id) {
-        return update(new LambdaUpdateWrapper<SysFile>()
-                .eq(SysFile::getId, id)
-                .setSql("metadata = JSON_SET(COALESCE(metadata, JSON_OBJECT()), '$.gcDone', true, '$.gcTime', NOW())"));
+        if ("mysql".equalsIgnoreCase(props.getDialect())) {
+            String sql = "UPDATE " + table()
+                    + " SET metadata = JSON_SET(COALESCE(metadata, JSON_OBJECT()), '$.gcDone', true, '$.gcTime', NOW())"
+                    + " WHERE id = ?";
+            return jdbcTemplate.update(sql, id) > 0;
+        }
+        // Non-MySQL dialect: application-level JSON handling
+        SysFile file = getById(id);
+        if (file == null) {
+            return false;
+        }
+        String metadataStr = file.getMetadata();
+        JSONObject meta;
+        if (StringUtils.hasText(metadataStr)) {
+            meta = JSON.parseObject(metadataStr);
+        } else {
+            meta = new JSONObject();
+        }
+        meta.put("gcDone", true);
+        meta.put("gcTime", LocalDateTime.now().toString());
+        String sql = "UPDATE " + table() + " SET metadata = ? WHERE id = ?";
+        return jdbcTemplate.update(sql, meta.toJSONString(), id) > 0;
     }
+
+    // ---- Basic CRUD helpers ----
+
+    @Override
+    public SysFile getById(String id) {
+        String sql = "SELECT * FROM " + table() + " WHERE id = ? LIMIT 1";
+        List<SysFile> list = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(SysFile.class), id);
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    @Override
+    public boolean save(SysFile sysFile) {
+        if (sysFile.getId() == null) {
+            sysFile.setId(IdUtil.fastSimpleUUID());
+        }
+        if (sysFile.getCreateTime() == null) {
+            sysFile.setCreateTime(LocalDateTime.now());
+        }
+        if (sysFile.getUpdateTime() == null) {
+            sysFile.setUpdateTime(LocalDateTime.now());
+        }
+        if (sysFile.getIsDeleted() == null) {
+            sysFile.setIsDeleted(0);
+        }
+        insert(sysFile);
+        return true;
+    }
+
+    @Override
+    public boolean updateById(SysFile sysFile) {
+        updateByIdInternal(sysFile);
+        return true;
+    }
+
+    private void insert(SysFile sysFile) {
+        String sql = "INSERT INTO " + table()
+                + " (id, storage_key, file_path, parent_id, file_name, file_type, file_size,"
+                + " content_type, file_ext, md5, url, metadata, create_time, create_by, update_time, is_deleted)"
+                + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        jdbcTemplate.update(sql,
+                sysFile.getId(),
+                sysFile.getStorageKey(),
+                sysFile.getFilePath(),
+                sysFile.getParentId(),
+                sysFile.getFileName(),
+                sysFile.getFileType(),
+                sysFile.getFileSize(),
+                sysFile.getContentType(),
+                sysFile.getFileExt(),
+                sysFile.getMd5(),
+                sysFile.getUrl(),
+                sysFile.getMetadata(),
+                sysFile.getCreateTime(),
+                sysFile.getCreateBy(),
+                sysFile.getUpdateTime(),
+                sysFile.getIsDeleted());
+    }
+
+    private void updateByIdInternal(SysFile sysFile) {
+        String sql = "UPDATE " + table()
+                + " SET storage_key = ?, file_path = ?, parent_id = ?, file_name = ?, file_type = ?,"
+                + " file_size = ?, content_type = ?, file_ext = ?, md5 = ?, url = ?, metadata = ?,"
+                + " update_time = ?, is_deleted = ?"
+                + " WHERE id = ?";
+        jdbcTemplate.update(sql,
+                sysFile.getStorageKey(),
+                sysFile.getFilePath(),
+                sysFile.getParentId(),
+                sysFile.getFileName(),
+                sysFile.getFileType(),
+                sysFile.getFileSize(),
+                sysFile.getContentType(),
+                sysFile.getFileExt(),
+                sysFile.getMd5(),
+                sysFile.getUrl(),
+                sysFile.getMetadata(),
+                LocalDateTime.now(),
+                sysFile.getIsDeleted(),
+                sysFile.getId());
+    }
+
+    private void updateBatchById(List<SysFile> files) {
+        String sql = "UPDATE " + table()
+                + " SET storage_key = ?, file_path = ?, parent_id = ?, file_name = ?, file_type = ?,"
+                + " file_size = ?, content_type = ?, file_ext = ?, md5 = ?, url = ?, metadata = ?,"
+                + " update_time = ?, is_deleted = ?"
+                + " WHERE id = ?";
+        List<Object[]> batchArgs = new ArrayList<>(files.size());
+        for (SysFile f : files) {
+            batchArgs.add(new Object[]{
+                    f.getStorageKey(),
+                    f.getFilePath(),
+                    f.getParentId(),
+                    f.getFileName(),
+                    f.getFileType(),
+                    f.getFileSize(),
+                    f.getContentType(),
+                    f.getFileExt(),
+                    f.getMd5(),
+                    f.getUrl(),
+                    f.getMetadata(),
+                    LocalDateTime.now(),
+                    f.getIsDeleted(),
+                    f.getId()
+            });
+        }
+        jdbcTemplate.batchUpdate(sql, batchArgs);
+    }
+
+    // ---- Private helper methods ----
 
     private SysFile createDirectoryRecord(String storageKey, String parentId, String fullPath, String dirName, String createBy) {
         if (existsByPath(storageKey, fullPath)) {
@@ -309,17 +432,17 @@ public class SysFileServiceImpl extends ServiceImpl<SysFileMapper, SysFile> impl
         sysFile.setFileSize(0L);
         sysFile.setCreateTime(LocalDateTime.now());
         sysFile.setCreateBy(createBy);
+        sysFile.setUpdateTime(LocalDateTime.now());
         sysFile.setIsDeleted(0);
-        save(sysFile);
+        insert(sysFile);
         return sysFile;
     }
 
     private void rewriteDescendantPaths(String storageKey, String oldPrefix, String newPrefix) {
-        List<SysFile> descendants = list(new LambdaQueryWrapper<SysFile>()
-                .eq(SysFile::getStorageKey, storageKey)
-                .eq(SysFile::getIsDeleted, 0)
-                .likeRight(SysFile::getFilePath, oldPrefix)
-                .ne(SysFile::getFilePath, oldPrefix));
+        String sql = "SELECT * FROM " + table()
+                + " WHERE storage_key = ? AND is_deleted = 0 AND file_path LIKE ? AND file_path <> ?";
+        List<SysFile> descendants = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(SysFile.class),
+                storageKey, oldPrefix + "%", oldPrefix);
         if (descendants.isEmpty()) {
             return;
         }

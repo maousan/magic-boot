@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LedNettyServerHandlerTest {
@@ -97,5 +98,72 @@ class LedNettyServerHandlerTest {
         assertEquals("3A:69:7A:08:D0:A5", reportedMac.get());
         assertEquals("192.168.2.102", reportedIp.get());
         channel.finishAndReleaseAll();
+    }
+
+    @Test
+    void channelRead_shouldNotReportDevice_whenClientReportRegistrationDisabled() {
+        AtomicReference<String> reportedMac = new AtomicReference<>();
+        LedNettyServerHandler handler = new LedNettyServerHandler((macAddress, ipAddress) -> reportedMac.set(macAddress));
+        handler.setClientReportRegistrationEnabled(false);
+        EmbeddedChannel channel = new EmbeddedChannel(handler);
+
+        channel.writeInbound(Unpooled.wrappedBuffer(clientReportFrame()));
+
+        assertNull(reportedMac.get());
+        channel.finishAndReleaseAll();
+    }
+
+    @Test
+    void channelRead_shouldNotReportDevice_whenFrameIsNotClientReport() {
+        AtomicReference<String> reportedMac = new AtomicReference<>();
+        LedNettyServerHandler handler = new LedNettyServerHandler((macAddress, ipAddress) -> reportedMac.set(macAddress));
+        EmbeddedChannel channel = new EmbeddedChannel(handler);
+        byte[] frame = new byte[]{
+                0x66, (byte) 0xAB, (byte) 0x97,
+                0x4D, 0x41, 0x43, 0x3A, 0x41, 0x41, 0x2D, 0x42, 0x42, 0x2D, 0x43, 0x43, 0x2D, 0x44, 0x44, 0x2D, 0x45, 0x45, 0x2D, 0x46, 0x46,
+                0x31, 0x32
+        };
+
+        channel.writeInbound(Unpooled.wrappedBuffer(frame));
+
+        assertNull(reportedMac.get());
+        channel.finishAndReleaseAll();
+    }
+
+    @Test
+    void channelRead_shouldReplySameFrame_whenClientSendsHeartbeat() {
+        LedNettyServerHandler handler = new LedNettyServerHandler();
+        EmbeddedChannel channel = new EmbeddedChannel(handler);
+        byte[] heartbeat = new byte[]{0x38, 0x46, 0x55, 0x64, 0x73, (byte) 0x82};
+
+        channel.writeInbound(Unpooled.wrappedBuffer(heartbeat));
+        Object outbound = channel.readOutbound();
+
+        assertEquals(Unpooled.wrappedBuffer(heartbeat), outbound);
+        channel.finishAndReleaseAll();
+    }
+
+    @Test
+    void channelRead_shouldReplyHeartbeat_whenClientReportsMacAndIp() {
+        LedNettyServerHandler handler = new LedNettyServerHandler();
+        EmbeddedChannel channel = new EmbeddedChannel(handler);
+        byte[] report = clientReportFrame();
+        byte[] heartbeat = new byte[]{0x38, 0x46, 0x55, 0x64, 0x73, (byte) 0x82};
+
+        channel.writeInbound(Unpooled.wrappedBuffer(report));
+        Object outbound = channel.readOutbound();
+
+        assertEquals(Unpooled.wrappedBuffer(heartbeat), outbound);
+        channel.finishAndReleaseAll();
+    }
+
+    private byte[] clientReportFrame() {
+        return new byte[]{
+                0x66, (byte) 0xAB, (byte) 0x97,
+                0x11, 0x0D,
+                0x33, 0x41, 0x3A, 0x36, 0x39, 0x3A, 0x37, 0x41, 0x3A, 0x30, 0x38, 0x3A, 0x44, 0x30, 0x3A, 0x41, 0x35,
+                0x31, 0x39, 0x32, 0x2E, 0x31, 0x36, 0x38, 0x2E, 0x32, 0x2E, 0x31, 0x30, 0x32,
+                (byte) 0x90, 0x78
+        };
     }
 }

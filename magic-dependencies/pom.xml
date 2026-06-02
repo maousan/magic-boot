@@ -4,16 +4,35 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.ssssssss</groupId>
+    <groupId>io.github.maousan</groupId>
     <artifactId>magic-dependencies</artifactId>
     <version>${revision}</version>
     <packaging>pom</packaging>
     <name>magic-dependencies</name>
     <description>Magic Boot 依赖版本管理</description>
+    <url>https://github.com/maousan/magic-boot</url>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>maou</name>
+        </developer>
+    </developers>
+
+    <scm>
+        <url>https://github.com/maousan/magic-boot</url>
+        <connection>scm:git:https://github.com/maousan/magic-boot.git</connection>
+    </scm>
 
     <properties>
         <!-- 统一版本管理 (CI-Friendly) -->
-        <revision>0.0.2</revision>
+        <revision>0.0.3</revision>
         <!-- Java 版本 -->
         <java.version>17</java.version>
         <maven.compiler.source>17</maven.compiler.source>
@@ -103,48 +122,18 @@
 
             <!-- Magic API 相关 -->
             <dependency>
-                <groupId>org.ssssssss</groupId>
+                <groupId>io.github.maousan</groupId>
                 <artifactId>magic-api</artifactId>
                 <version>${magic-api.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.ssssssss</groupId>
+                <groupId>io.github.maousan</groupId>
                 <artifactId>magic-script</artifactId>
                 <version>${magic-script.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.ssssssss</groupId>
+                <groupId>io.github.maousan</groupId>
                 <artifactId>magic-api-spring-boot-starter</artifactId>
-                <version>${magic-api.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.ssssssss</groupId>
-                <artifactId>magic-api-plugin-springdoc</artifactId>
-                <version>${magic-api.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.ssssssss</groupId>
-                <artifactId>magic-api-plugin-excel</artifactId>
-                <version>${magic-api.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.ssssssss</groupId>
-                <artifactId>magic-api-plugin-file</artifactId>
-                <version>${magic-api.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.ssssssss</groupId>
-                <artifactId>magic-api-plugin-redis</artifactId>
-                <version>${magic-api.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.ssssssss</groupId>
-                <artifactId>magic-api-plugin-liteflow</artifactId>
-                <version>${magic-api.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.ssssssss</groupId>
-                <artifactId>magic-api-plugin-job</artifactId>
                 <version>${magic-api.version}</version>
             </dependency>
 
@@ -350,8 +339,13 @@
 
             <!-- 插件扩展点 API -->
             <dependency>
-                <groupId>org.ssssssss</groupId>
+                <groupId>io.github.maousan</groupId>
                 <artifactId>magic-plugin-api</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.maousan</groupId>
+                <artifactId>magic-plugin</artifactId>
                 <version>${revision}</version>
             </dependency>
 
@@ -384,12 +378,12 @@
 
             <!-- Tiga 引擎模块 -->
             <dependency>
-                <groupId>com.ocean.tiga</groupId>
+                <groupId>io.github.maousan</groupId>
                 <artifactId>tiga-engine</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
-                <groupId>com.ocean.tiga</groupId>
+                <groupId>io.github.maousan</groupId>
                 <artifactId>tiga-engine-spring</artifactId>
                 <version>${revision}</version>
             </dependency>
@@ -420,7 +414,138 @@
                 <version>${fastjson2.version}</version>
             </dependency>
 
+            <!-- magic-editor -->
+            <dependency>
+                <groupId>io.github.maousan</groupId>
+                <artifactId>magic-editor</artifactId>
+                <version>${revision}</version>
+            </dependency>
+
+            <!-- magic-boot-plugins 子模块 -->
+            <dependency>
+                <groupId>io.github.maousan</groupId>
+                <artifactId>magic-api-plugin-redis</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.maousan</groupId>
+                <artifactId>magic-api-plugin-job</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.maousan</groupId>
+                <artifactId>magic-api-plugin-excel</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.maousan</groupId>
+                <artifactId>magic-api-plugin-file</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.maousan</groupId>
+                <artifactId>magic-api-plugin-liteflow</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.maousan</groupId>
+                <artifactId>magic-api-plugin-mqtt</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.maousan</groupId>
+                <artifactId>magic-api-plugin-springdoc</artifactId>
+                <version>${revision}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                    <pomElements>
+                        <dependencyManagement>keep</dependencyManagement>
+                    </pomElements>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.7.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                    <autoPublish>true</autoPublish>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>3.3.0</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals><goal>jar-no-fork</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>3.6.0</version>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals><goal>jar</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals><goal>sign</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>

@@ -12,6 +12,7 @@ import org.ssssssss.magicboot.zintis.led.dto.LedQueryResponse;
 import org.ssssssss.magicboot.zintis.led.dto.LedSignalStrengthResponse;
 import org.ssssssss.magicboot.zintis.led.dto.LedSystemInfoResponse;
 import org.ssssssss.magicboot.zintis.led.dto.LedSystemNetworkResponse;
+import org.ssssssss.magicboot.zintis.led.dto.LedOtaUpdateRequest;
 import org.ssssssss.magicboot.zintis.led.dto.LedTcpConfigRequest;
 import org.ssssssss.magicboot.zintis.led.protocol.Crc16Modbus;
 import org.ssssssss.magicboot.zintis.led.protocol.LedCommandConstants;
@@ -233,6 +234,26 @@ class LedControlServiceTest {
         assertEquals(LedCommandConstants.SUB_CLOSE_TCP_CLIENT & 0xFF, parsedFrame.getDataCommand());
     }
 
+    @Test
+    void otaUpdate_shouldEncodeVersionAsAsciiPayload() throws Exception {
+        when(tcpClientManager.sendAndReceive(anyString(), anyInt(), any(), anyInt()))
+                .thenReturn(codec.buildControlFrame(0xEA, LedCommandConstants.CMD_QUERY, LedCommandConstants.RESP_SUCCESS));
+
+        LedControlResponse response = ledControlService.otaUpdate(baseOtaUpdateRequest());
+
+        assertTrue(response.isSuccess());
+        ArgumentCaptor<byte[]> frameCaptor = ArgumentCaptor.forClass(byte[].class);
+        verify(tcpClientManager).sendAndReceive(anyString(), anyInt(), frameCaptor.capture(), anyInt());
+        byte[] frame = frameCaptor.getValue();
+        assertEquals("0xEA 0x9F 0x56 0x30 0x2E 0x32 0x2E 0x31 0x2E 0x62 0x69 0x6E 0x3A 0x68",
+                LedProtocolCodec.toPrefixedHex(frame));
+        LedProtocolCodec.ParsedFrame parsedFrame = codec.parseFrame(frame);
+        assertEquals(0xEA, parsedFrame.getHostAddress());
+        assertEquals(LedCommandConstants.CMD_OTA & 0xFF, parsedFrame.getControlCommand());
+        assertEquals('V', parsedFrame.getDataCommand());
+        assertArrayEquals("0.2.1.bin".getBytes(java.nio.charset.StandardCharsets.US_ASCII), parsedFrame.getPayload());
+    }
+
     private LedControlRequest baseRequest() {
         LedControlRequest request = new LedControlRequest();
         request.setDeviceIp("127.0.0.1");
@@ -248,6 +269,16 @@ class LedControlServiceTest {
         request.setDeviceIp("192.168.2.198");
         request.setDevicePort(9527);
         request.setHostAddress(198);
+        request.setTimeoutMs(2000);
+        return request;
+    }
+
+    private LedOtaUpdateRequest baseOtaUpdateRequest() {
+        LedOtaUpdateRequest request = new LedOtaUpdateRequest();
+        request.setDeviceIp("192.168.2.198");
+        request.setDevicePort(9527);
+        request.setHostAddress(0xEA);
+        request.setVersion("1.0.7.bin");
         request.setTimeoutMs(2000);
         return request;
     }

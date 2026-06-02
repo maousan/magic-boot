@@ -5,7 +5,7 @@
   "groupId" : "6ce8544b21954e189dc7aeb484aeddfc",
   "name" : "标签灭灯",
   "createTime" : null,
-  "updateTime" : 1779931247428,
+  "updateTime" : 1780047816032,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -49,7 +49,7 @@ items.push({
     color: "RED",
     duration: "0",
     labelCode: labelCode,
-    patternId: 0
+    patternId: 1
 })
 
 return controlByLabelCode(items)

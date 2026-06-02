@@ -7,6 +7,7 @@ import type {
   ZintisLedSignalStrengthResponse,
   ZintisLedNetworkResponse,
   ZintisLedTcpConfigRequest,
+  ZintisLedOtaUpdateRequest,
 } from '@/types'
 
 const BASE = '/plugin/zintis-led-plugin/api'
@@ -53,4 +54,8 @@ export function zintisTcpClientOpen(data: ZintisLedTcpConfigRequest): Promise<Zi
 
 export function zintisTcpClientClose(data: ZintisLedTcpConfigRequest): Promise<ZintisLedControlResponse> {
   return client.post(`${BASE}/tcp/client/close`, data).then((r) => r.data)
+}
+
+export function zintisOtaUpdate(data: ZintisLedOtaUpdateRequest): Promise<ZintisLedControlResponse> {
+  return client.post(`${BASE}/ota/update`, data).then((r) => r.data)
 }

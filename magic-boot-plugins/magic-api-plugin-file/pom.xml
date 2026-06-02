@@ -4,9 +4,9 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>org.ssssssss</groupId>
+		<groupId>io.github.maousan</groupId>
 		<artifactId>magic-boot-plugins</artifactId>
-		<version>2.2.2</version>
+		<version>${revision}</version>
 	</parent>
 	<artifactId>magic-api-plugin-file</artifactId>
 	<packaging>jar</packaging>
@@ -17,7 +17,7 @@
 		<dependencies>
 			<!-- 引入依赖版本管理 -->
 			<dependency>
-				<groupId>org.ssssssss</groupId>
+				<groupId>io.github.maousan</groupId>
 				<artifactId>magic-dependencies</artifactId>
 				<version>${revision}</version>
 				<type>pom</type>
@@ -32,11 +32,14 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 			<scope>provided</scope>
 		</dependency>
-		<!-- MyBatis-Plus -->
 		<dependency>
-			<groupId>com.baomidou</groupId>
-			<artifactId>mybatis-plus-spring-boot3-starter</artifactId>
-			<version>3.5.15</version>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-jdbc</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>cn.hutool</groupId>
+			<artifactId>hutool-core</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -118,7 +121,8 @@
 							<goal>exec</goal>
 						</goals>
 						<configuration>
-							<executable>npm</executable>
+							<skip>${skip.npm}</skip>
+						<executable>npm</executable>
 							<arguments>
 								<argument>install</argument>
 							</arguments>
@@ -132,7 +136,8 @@
 							<goal>exec</goal>
 						</goals>
 						<configuration>
-							<executable>npm</executable>
+							<skip>${skip.npm}</skip>
+						<executable>npm</executable>
 							<arguments>
 								<argument>run</argument>
 								<argument>build</argument>

@@ -16,5 +16,12 @@ public class LedNettyServerStatusResponse {
     private boolean running;
     private int port;
     private int activeConnections;
+    private boolean heartbeatEnabled;
+    private boolean heartbeatRunning;
+    private boolean clientReportRegistrationEnabled;
+    private Long lastHeartbeatAt;
+    private int lastHeartbeatTargets;
+    private int lastHeartbeatSuccessCount;
+    private int lastHeartbeatFailedCount;
     private String message;
 }

@@ -6,75 +6,96 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.ssssssss</groupId>
+        <groupId>io.github.maousan</groupId>
         <artifactId>magic-boot</artifactId>
         <version>${revision}</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <groupId>com.ocean.tiga</groupId>
+    <groupId>io.github.maousan</groupId>
     <artifactId>tiga-engine</artifactId>
     <packaging>jar</packaging>
     <name>Tiga Engine Core</name>
     <description>Framework-agnostic script engine core module</description>
+    <url>https://github.com/maousan/magic-boot</url>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>maou</name>
+        </developer>
+    </developers>
+
+    <scm>
+        <url>https://github.com/maousan/magic-boot</url>
+        <connection>scm:git:https://github.com/maousan/magic-boot.git</connection>
+    </scm>
 
     <dependencies>
-        <!-- Groovy -->
         <dependency>
             <groupId>org.apache.groovy</groupId>
             <artifactId>groovy</artifactId>
+            <version>4.0.21</version>
         </dependency>
         <dependency>
             <groupId>org.apache.groovy</groupId>
             <artifactId>groovy-json</artifactId>
+            <version>4.0.21</version>
         </dependency>
-        <!-- Magic Script -->
         <dependency>
-            <groupId>org.ssssssss</groupId>
+            <groupId>io.github.maousan</groupId>
             <artifactId>magic-script</artifactId>
+            <version>1.9.0</version>
         </dependency>
-        <!-- Apache Calcite -->
         <dependency>
             <groupId>org.apache.calcite</groupId>
             <artifactId>calcite-core</artifactId>
+            <version>1.36.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.calcite</groupId>
             <artifactId>calcite-linq4j</artifactId>
+            <version>1.36.0</version>
         </dependency>
-        <!-- Monitoring -->
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
-        <!-- Logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
-        <!-- Utilities -->
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
+            <version>5.8.35</version>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.77</version>
         </dependency>
         <dependency>
             <groupId>com.alibaba.fastjson2</groupId>
             <artifactId>fastjson2</artifactId>
+            <version>2.0.43</version>
         </dependency>
-        <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+            <version>1.18.28</version>
             <scope>provided</scope>
         </dependency>
-        <!-- Testing -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
+            <version>4.13.2</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

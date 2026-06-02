@@ -2,9 +2,11 @@ package org.ssssssss.magicapi.file.starter;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.ssssssss.magicapi.core.config.MagicPluginConfiguration;
 import org.ssssssss.magicapi.core.model.Plugin;
@@ -12,7 +14,6 @@ import org.ssssssss.magicapi.core.web.MagicControllerRegister;
 import org.ssssssss.magicapi.file.FileModule;
 import org.ssssssss.magicapi.file.event.FileEventPublisher;
 import org.ssssssss.magicapi.file.event.FileOperationEventListener;
-import org.ssssssss.magicapi.file.mapper.SysFileMapper;
 import org.ssssssss.magicapi.file.service.FileMagicDynamicRegistry;
 import org.ssssssss.magicapi.file.service.FileMagicResourceStorage;
 import org.ssssssss.magicapi.file.service.MagicDynamicFileClient;
@@ -25,6 +26,7 @@ import org.ssssssss.magicapi.file.web.MagicFileController;
  */
 @Configuration
 @EnableAsync
+@EnableConfigurationProperties(FilePluginProperties.class)
 public class MagicFileConfiguration implements MagicPluginConfiguration {
 
     private MagicDynamicFileClient magicDynamicFileClient;
@@ -72,8 +74,8 @@ public class MagicFileConfiguration implements MagicPluginConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public SysFileService sysFileService(SysFileMapper sysFileMapper) {
-       return new SysFileServiceImpl(sysFileMapper);
+    public SysFileService sysFileService(JdbcTemplate jdbcTemplate, FilePluginProperties properties) {
+       return new SysFileServiceImpl(jdbcTemplate, properties);
     }
 
     @Bean

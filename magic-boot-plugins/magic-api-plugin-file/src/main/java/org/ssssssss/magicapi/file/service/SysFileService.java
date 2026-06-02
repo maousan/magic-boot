@@ -1,6 +1,5 @@
 package org.ssssssss.magicapi.file.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
 import org.ssssssss.magicapi.file.model.SysFile;
 
 import java.time.LocalDateTime;
@@ -9,7 +8,7 @@ import java.util.List;
 /**
  * 文件元数据 Service。
  */
-public interface SysFileService extends IService<SysFile> {
+public interface SysFileService {
 
     SysFile getByPath(String filePath);
 
@@ -46,4 +45,10 @@ public interface SysFileService extends IService<SysFile> {
     List<SysFile> listPendingPhysicalDelete(LocalDateTime cutoffTime, int limit);
 
     boolean markPhysicalDeleteDone(String id);
+
+    boolean updateById(SysFile sysFile);
+
+    SysFile getById(String id);
+
+    boolean save(SysFile sysFile);
 }

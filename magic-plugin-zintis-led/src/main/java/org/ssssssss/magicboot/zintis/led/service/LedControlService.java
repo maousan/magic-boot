@@ -8,6 +8,7 @@ import org.ssssssss.magicboot.zintis.led.dto.LedQueryResponse;
 import org.ssssssss.magicboot.zintis.led.dto.LedSignalStrengthResponse;
 import org.ssssssss.magicboot.zintis.led.dto.LedSystemInfoResponse;
 import org.ssssssss.magicboot.zintis.led.dto.LedSystemNetworkResponse;
+import org.ssssssss.magicboot.zintis.led.dto.LedOtaUpdateRequest;
 import org.ssssssss.magicboot.zintis.led.dto.LedTcpConfigRequest;
 import org.ssssssss.magicboot.zintis.led.protocol.LedCommandConstants;
 import org.ssssssss.magicboot.zintis.led.protocol.LedProtocolCodec;
@@ -66,6 +67,69 @@ public class LedControlService {
 
     public LedControlResponse closeTcpClient(LedTcpConfigRequest request) {
         return executeTcpConfig(request, LedCommandConstants.SUB_CLOSE_TCP_CLIENT, null, "Close TCP client");
+    }
+
+    public LedControlResponse otaUpdate(LedOtaUpdateRequest request) {
+        byte[] versionBytes = request.getVersion().getBytes(StandardCharsets.US_ASCII);
+        byte dataCommand = versionBytes[0];
+        byte[] payload = new byte[versionBytes.length - 1];
+        if (payload.length > 0) {
+            System.arraycopy(versionBytes, 1, payload, 0, payload.length);
+        }
+        byte[] frame = protocolCodec.buildFrame(
+                request.getHostAddress(),
+                LedCommandConstants.CMD_OTA,
+                dataCommand,
+                payload);
+        String requestHex = LedProtocolCodec.toPrefixedHex(frame);
+
+        try {
+            byte[] response = tcpClientManager.sendAndReceive(
+                    request.getDeviceIp(),
+                    request.getDevicePort(),
+                    frame,
+                    request.getTimeoutMs());
+            LedProtocolCodec.ParsedFrame parsed = protocolCodec.parseFrame(response);
+
+            boolean deviceError = parsed.getDataCommand() == (LedCommandConstants.RESP_ERROR & 0xFF);
+            if (deviceError) {
+                return LedControlResponse.builder()
+                        .success(false)
+                        .message("Device returned error code")
+                        .errorCode("DEVICE_ERROR")
+                        .hostAddress(parsed.getHostAddress())
+                        .controlCommand(formatByteHex(LedCommandConstants.CMD_OTA))
+                        .dataCommand(formatByteHex(dataCommand))
+                        .responseControlCommand(formatCommandHex(parsed.getControlCommand()))
+                        .responseDataCommand(formatCommandHex(parsed.getDataCommand()))
+                        .rawRequestHex(requestHex)
+                        .rawResponseHex(LedProtocolCodec.toPrefixedHex(response))
+                        .build();
+            }
+
+            return LedControlResponse.builder()
+                    .success(true)
+                    .message("OTA update success")
+                    .hostAddress(parsed.getHostAddress())
+                    .controlCommand(formatByteHex(LedCommandConstants.CMD_OTA))
+                    .dataCommand(formatByteHex(dataCommand))
+                    .responseControlCommand(formatCommandHex(parsed.getControlCommand()))
+                    .responseDataCommand(formatCommandHex(parsed.getDataCommand()))
+                    .rawRequestHex(requestHex)
+                    .rawResponseHex(LedProtocolCodec.toPrefixedHex(response))
+                    .build();
+        } catch (SocketTimeoutException exception) {
+            return failure("TIMEOUT", "Request timeout", requestHex);
+        } catch (ConnectException | UnknownHostException exception) {
+            return failure("CONNECTION_FAILED", "Connection failed", requestHex);
+        } catch (IllegalArgumentException exception) {
+            String errorCode = exception.getMessage() != null && exception.getMessage().contains("CRC")
+                    ? "CRC_ERROR" : "PROTOCOL_ERROR";
+            return failure(errorCode, exception.getMessage(), requestHex);
+        } catch (IOException exception) {
+            log.warn("OTA update io error: {}", exception.getMessage());
+            return failure("IO_ERROR", "Network IO error", requestHex);
+        }
     }
 
     public LedQueryResponse query(LedControlRequest request) {

@@ -21,6 +21,14 @@ export function zintisNettyStatus(): Promise<ZintisNettyServerStatus> {
   return client.get(`${BASE}/netty/server/status`).then((r) => r.data)
 }
 
+export function zintisNettyHeartbeat(enabled: boolean): Promise<ZintisNettyServerStatus> {
+  return client.post(`${BASE}/netty/server/heartbeat`, { enabled }).then((r) => r.data)
+}
+
+export function zintisNettyClientReportRegistration(enabled: boolean): Promise<ZintisNettyServerStatus> {
+  return client.post(`${BASE}/netty/server/client-report-registration`, { enabled }).then((r) => r.data)
+}
+
 export function zintisNettyClients(): Promise<ZintisNettyClientList> {
   return client.get(`${BASE}/netty/server/clients`).then((r) => r.data)
 }

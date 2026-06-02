@@ -19,6 +19,7 @@ forest:
     mixColor: CYAN
     controlDispatchAsync: false
     lightOnDuration: 60m
+    completeTurnOffMode: status # status(默认): 根据库位上剩余未完成用户数决定——无人则灭灯、多人则亮蓝灯、单人则亮该用户颜色灯; direct: 拣货完成后直接灭灯，不管库位上是否还有其他用户在拣
   log-response-content: false
 
 # 插件路径

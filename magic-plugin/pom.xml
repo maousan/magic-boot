@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>org.ssssssss</groupId>
+        <groupId>io.github.maousan</groupId>
         <artifactId>magic-boot</artifactId>
         <version>${revision}</version>
     </parent>
@@ -23,7 +23,7 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>org.ssssssss</groupId>
+                <groupId>io.github.maousan</groupId>
                 <artifactId>magic-dependencies</artifactId>
                 <version>${revision}</version>
                 <type>pom</type>
@@ -35,7 +35,7 @@
     <dependencies>
         <!-- 插件扩展点 API -->
         <dependency>
-            <groupId>org.ssssssss</groupId>
+            <groupId>io.github.maousan</groupId>
             <artifactId>magic-plugin-api</artifactId>
             <version>${revision}</version>
         </dependency>
@@ -62,12 +62,6 @@
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
-        </dependency>
-
-        <!-- Sa-Token -->
-        <dependency>
-            <groupId>cn.dev33</groupId>
-            <artifactId>sa-token-spring-boot3-starter</artifactId>
         </dependency>
 
         <!-- Lombok -->

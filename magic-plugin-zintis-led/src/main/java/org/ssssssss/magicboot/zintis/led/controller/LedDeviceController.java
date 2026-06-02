@@ -17,10 +17,13 @@ import org.ssssssss.magicboot.zintis.led.dto.LedLanScanRequest;
 import org.ssssssss.magicboot.zintis.led.dto.LedLanScanResponse;
 import org.ssssssss.magicboot.zintis.led.dto.LedNettyBroadcastRequest;
 import org.ssssssss.magicboot.zintis.led.dto.LedNettyClientListResponse;
+import org.ssssssss.magicboot.zintis.led.dto.LedNettyClientReportRegistrationRequest;
+import org.ssssssss.magicboot.zintis.led.dto.LedNettyHeartbeatRequest;
 import org.ssssssss.magicboot.zintis.led.dto.LedNettySendRequest;
 import org.ssssssss.magicboot.zintis.led.dto.LedNettySendResponse;
 import org.ssssssss.magicboot.zintis.led.dto.LedNettyServerStartRequest;
 import org.ssssssss.magicboot.zintis.led.dto.LedNettyServerStatusResponse;
+import org.ssssssss.magicboot.zintis.led.dto.LedOtaUpdateRequest;
 import org.ssssssss.magicboot.zintis.led.dto.LedSystemInfoResponse;
 import org.ssssssss.magicboot.zintis.led.dto.LedTcpConfigRequest;
 import org.ssssssss.magicboot.zintis.led.service.LedControlService;
@@ -142,6 +145,15 @@ public class LedDeviceController {
         return ledControlService.closeTcpClient(request);
     }
 
+    @Operation(summary = "OTA 升级", description = "根据设备 IP 与端口下发 OTA 升级指令，版本号按 ASCII 字节发送")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "执行成功", content = @Content(schema = @Schema(implementation = LedControlResponse.class)))
+    })
+    @PostMapping("/ota/update")
+    public LedControlResponse otaUpdate(@Valid @RequestBody LedOtaUpdateRequest request) {
+        return ledControlService.otaUpdate(request);
+    }
+
     @Operation(summary = "局域网扫描设备", description = "扫描指定网段内可发现的 LED 设备")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "扫描完成", content = @Content(schema = @Schema(implementation = LedLanScanResponse.class)))
@@ -177,6 +189,25 @@ public class LedDeviceController {
     @GetMapping("/netty/server/status")
     public LedNettyServerStatusResponse nettyServerStatus() {
         return ledNettyServerService.status();
+    }
+
+    @Operation(summary = "设置 Netty 心跳", description = "动态开启或关闭服务端心跳广播，开启后每 3 秒向已连接客户端发送心跳指令")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "设置成功", content = @Content(schema = @Schema(implementation = LedNettyServerStatusResponse.class)))
+    })
+    @PostMapping("/netty/server/heartbeat")
+    public LedNettyServerStatusResponse updateNettyHeartbeat(@Valid @RequestBody LedNettyHeartbeatRequest request) {
+        return ledNettyServerService.updateHeartbeat(Boolean.TRUE.equals(request.getEnabled()));
+    }
+
+    @Operation(summary = "设置客户端上报自动入库", description = "动态开启或关闭客户端上报 MAC/IP 后自动保存设备信息")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "设置成功", content = @Content(schema = @Schema(implementation = LedNettyServerStatusResponse.class)))
+    })
+    @PostMapping("/netty/server/client-report-registration")
+    public LedNettyServerStatusResponse updateClientReportRegistration(
+            @Valid @RequestBody LedNettyClientReportRegistrationRequest request) {
+        return ledNettyServerService.updateClientReportRegistration(Boolean.TRUE.equals(request.getEnabled()));
     }
 
     @Operation(summary = "查询活跃客户端列表", description = "返回当前已连接 Netty 客户端远端地址列表")

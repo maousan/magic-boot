@@ -5,7 +5,7 @@
   "groupId" : "qou8in0pu4dvva7g20trefax4lo26ye8",
   "name" : "亮灯灭灯控制",
   "createTime" : null,
-  "updateTime" : 1780039849687,
+  "updateTime" : 1780050350477,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -165,14 +165,14 @@ import '@/led/turnOffAisleLedByLotNo' as turnOffAisleLedByLotNo
 
 log.info("亮灯灭灯控制: {}", JSONUtil.toJsonStr(body))
 
+if (body == null) {
+    exit 400, '请求体不能为空'
+}
+
 const mixColor = Forest.config().getVariableValue("mixColor")
 const lightOnDuration = Forest.config().getVariableValue("lightOnDuration")
+const stationCode = Forest.config().getVariableValue("stationCode")
 
-let stationCode = Forest.config().getVariableValue("stationCode")
-
-if(stationCode == null || stationCode == ''){
-    stationCode = '10001'
-}
 const globalLockKey = 'light:picking:upload:global'
 const lockTimeoutSeconds = 10
 const locationChunkSize = 200
@@ -617,10 +617,6 @@ let resolveAisleLedTurnOffCandidates = (turnOffLocationCodes) => {
         }
     }
     return result
-}
-
-if (body == null) {
-    exit 400, '请求体不能为空'
 }
 
 let payload = body

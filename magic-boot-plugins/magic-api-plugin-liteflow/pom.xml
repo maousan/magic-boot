@@ -5,9 +5,9 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>org.ssssssss</groupId>
+    <groupId>io.github.maousan</groupId>
     <artifactId>magic-boot-plugins</artifactId>
-    <version>2.2.2</version>
+    <version>${revision}</version>
   </parent>
 
   <artifactId>magic-api-plugin-liteflow</artifactId>
@@ -33,7 +33,7 @@
       <artifactId>liteflow-script-qlexpress</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.ssssssss</groupId>
+      <groupId>io.github.maousan</groupId>
       <artifactId>magic-api</artifactId>
       <scope>provided</scope>
     </dependency>

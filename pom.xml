@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
@@ -10,46 +10,52 @@
         <relativePath/>
     </parent>
 
-    <groupId>org.ssssssss</groupId>
+    <groupId>io.github.maousan</groupId>
     <artifactId>magic-boot</artifactId>
     <version>${revision}</version>
     <packaging>pom</packaging>
     <name>magic-boot</name>
     <description>magic-boot</description>
+    <url>https://github.com/maousan/magic-boot</url>
 
-    <modules>
-        <module>magic-dependencies</module>
-        <module>magic-api-parent</module>
-        <module>magic-boot-plugins</module>
-        <module>magic-editor</module>
-        <module>magic-boot-master</module>
-        <module>magic-plugin</module>
-<!--        <module>magic-plugin-demo</module>-->
-        <module>magic-plugin-api</module>
-        <module>magic-script</module>
-        <module>tiga-engine</module>
-        <module>tiga-engine-spring</module>
-<!--        <module>magic-plugin-zintis-led</module>-->
-<!--        <module>magic-plugin-dongxinheping</module>-->
-<!--        <module>magic-plugin-zintis-rfid</module>-->
-    </modules>
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>maou</name>
+        </developer>
+    </developers>
+
+    <scm>
+        <url>https://github.com/maousan/magic-boot</url>
+        <connection>scm:git:https://github.com/maousan/magic-boot.git</connection>
+    </scm>
 
     <properties>
         <!-- 版本号统一管理（CI-Friendly） -->
-        <revision>0.0.2</revision>
+        <revision>0.0.3</revision>
 
         <java.version>17</java.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- 上游 fork 版本（独立版本生命周期） -->
+        <magic-api.version>2.2.2</magic-api.version>
+        <magic-script.version>1.9.0</magic-script.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
             <!-- 导入统一依赖管理 BOM -->
             <dependency>
-                <groupId>org.ssssssss</groupId>
+                <groupId>io.github.maousan</groupId>
                 <artifactId>magic-dependencies</artifactId>
                 <version>${revision}</version>
                 <type>pom</type>
@@ -57,6 +63,95 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <profiles>
+        <!-- 日常开发：构建全部模块 -->
+        <profile>
+            <id>default</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <modules>
+                <module>magic-dependencies</module>
+                <module>magic-api-parent</module>
+                <module>magic-boot-plugins</module>
+                <module>magic-editor</module>
+                <module>magic-boot-master</module>
+                <module>magic-plugin</module>
+                <module>magic-plugin-api</module>
+                <module>magic-script</module>
+                <module>tiga-engine</module>
+                <module>tiga-engine-spring</module>
+                <module>magic-boot-starter</module>
+            </modules>
+        </profile>
+
+        <!-- 发布基座：只构建要发布到 Maven Central 的模块 -->
+        <profile>
+            <id>release</id>
+            <modules>
+                <module>magic-dependencies</module>
+                <module>magic-api-parent</module>
+                <module>magic-boot-plugins</module>
+                <module>magic-editor</module>
+                <module>magic-plugin</module>
+                <module>magic-plugin-api</module>
+                <module>magic-script</module>
+                <module>tiga-engine</module>
+                <module>tiga-engine-spring</module>
+                <module>magic-boot-starter</module>
+            </modules>
+            <build>
+                <plugins>
+                    <!-- Source -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <!-- Javadoc -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>3.11.2</version>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <doclint>none</doclint>
+                        </configuration>
+                    </plugin>
+                    <!-- GPG -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>3.2.7</version>
+                        <executions>
+                            <execution>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
     <build>
         <plugins>
@@ -68,6 +163,9 @@
                 <configuration>
                     <updatePomFile>true</updatePomFile>
                     <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                    <pomElements>
+                        <dependencyManagement>keep</dependencyManagement>
+                    </pomElements>
                 </configuration>
                 <executions>
                     <execution>
@@ -85,6 +183,17 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <!-- Sonatype Central（替代 maven-deploy-plugin） -->
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.7.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                    <autoPublish>true</autoPublish>
+                </configuration>
             </plugin>
         </plugins>
     </build>

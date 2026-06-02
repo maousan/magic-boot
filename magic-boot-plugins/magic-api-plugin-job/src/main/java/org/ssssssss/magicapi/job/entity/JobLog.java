@@ -1,58 +1,26 @@
 package org.ssssssss.magicapi.job.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-
 import java.time.LocalDateTime;
 
-@TableName("magic_job_log")
 public class JobLog {
 
-    @TableId(type = IdType.AUTO)
     private Long id;
-
-    @TableField("job_id")
     private String jobId;
-
-    @TableField("job_name")
     private String jobName;
-
-    @TableField("job_group")
     private String jobGroup;
-
-    @TableField("start_time")
     private LocalDateTime startTime;
-
-    @TableField("end_time")
     private LocalDateTime endTime;
-
     private Long duration;
-
-    private String status; // RUNNING/SUCCESS/FAILED
-
+    private String status;
     private String result;
-
-    @TableField("exception_message")
     private String exceptionMessage;
-
-    @TableField("exception_stack")
     private String exceptionStack;
-
-    @TableField("trigger_type")
-    private String triggerType; // CRON/MANUAL
-
-    @TableField("triggered_by")
+    private String triggerType;
     private String triggeredBy;
-
-    @TableField("create_time")
     private LocalDateTime createTime;
 
-    // 构造函数
     public JobLog() {}
 
-    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

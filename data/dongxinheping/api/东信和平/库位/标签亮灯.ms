@@ -5,7 +5,7 @@
   "groupId" : "6ce8544b21954e189dc7aeb484aeddfc",
   "name" : "标签亮灯",
   "createTime" : null,
-  "updateTime" : null,
+  "updateTime" : 1780047813541,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -59,7 +59,7 @@ items.push({
     color: color,
     duration: duration,
     labelCode: labelCode,
-    patternId: 0
+    patternId: 1
 })
 
 return controlByLabelCode(items)

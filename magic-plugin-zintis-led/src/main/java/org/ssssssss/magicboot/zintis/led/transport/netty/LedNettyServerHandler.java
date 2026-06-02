@@ -11,12 +11,11 @@ import io.netty.handler.timeout.IdleStateEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.ssssssss.magicboot.zintis.led.protocol.LedProtocolCodec;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -42,13 +41,18 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
             "\\b([0-9A-F]{2}([-:])){5}[0-9A-F]{2}\\b|\\b[0-9A-F]{12}\\b",
             Pattern.CASE_INSENSITIVE
     );
+    private static final byte[] HEARTBEAT_FRAME = new byte[]{0x38, 0x46, 0x55, 0x64, 0x73, (byte) 0x82};
 
     private final Set<SocketAddress> activeConnections = ConcurrentHashMap.newKeySet();
     private final Map<SocketAddress, Channel> activeChannels = new ConcurrentHashMap<>();
     private final Map<SocketAddress, String> activeClientMacAddresses = new ConcurrentHashMap<>();
     private final Map<SocketAddress, ConcurrentLinkedQueue<CompletableFuture<ClientResponse>>> pendingResponses = new ConcurrentHashMap<>();
-    private final LedNettyMessageReportStore reportStore = new LedNettyMessageReportStore();
     private final DeviceReporter deviceReporter;
+    private volatile boolean clientReportRegistrationEnabled = true;
+    private volatile ClientReportListener clientReportListener = (macAddress, ipAddress, remoteAddress) -> {
+    };
+    private volatile OutboundSender outboundSender = (channel, data) ->
+            channel.writeAndFlush(Unpooled.wrappedBuffer(data)).syncUninterruptibly();
 
     public LedNettyServerHandler() {
         this((macAddress, ipAddress) -> {
@@ -64,7 +68,7 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
     public void channelActive(ChannelHandlerContext ctx) {
         activeConnections.add(ctx.channel().remoteAddress());
         activeChannels.put(ctx.channel().remoteAddress(), ctx.channel());
-        log.info("LED netty server connection active: {}", ctx.channel().remoteAddress());
+        log.debug("LED netty server connection active: {}", ctx.channel().remoteAddress());
         ctx.fireChannelActive();
     }
 
@@ -74,7 +78,7 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
         activeChannels.remove(ctx.channel().remoteAddress());
         activeClientMacAddresses.remove(ctx.channel().remoteAddress());
         pendingResponses.remove(ctx.channel().remoteAddress());
-        log.info("LED netty server connection inactive: {}", ctx.channel().remoteAddress());
+        log.debug("LED netty server connection inactive: {}", ctx.channel().remoteAddress());
         ctx.fireChannelInactive();
     }
 
@@ -84,18 +88,21 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
             byte[] data = new byte[byteBuf.readableBytes()];
             byteBuf.readBytes(data);
             byteBuf.release();
+            boolean clientReportFrame = isClientReportFrame(data);
             byte[] payload = extractPayload(data);
-            String payloadAscii = toAsciiText(payload);
-            String mac = extractMac(payload);
-            if (!mac.isBlank()) {
-                activeClientMacAddresses.put(ctx.channel().remoteAddress(), mac);
-            }
-            String ip = extractIp(payload);
-            if (ip.isBlank()) {
-                ip = extractRemoteIp(ctx.channel().remoteAddress());
-            }
-            if (!mac.isBlank()) {
-                deviceReporter.report(mac, ip);
+            String payloadAscii = clientReportFrame ? toAsciiText(payload) : "";
+            String mac = clientReportFrame ? extractMac(payload) : "";
+            String ip = clientReportFrame ? extractIp(payload) : "";
+            if (clientReportFrame) {
+                if (!mac.isBlank()) {
+                    activeClientMacAddresses.put(ctx.channel().remoteAddress(), mac);
+                }
+                if (ip.isBlank()) {
+                    ip = extractRemoteIp(ctx.channel().remoteAddress());
+                }
+                if (clientReportRegistrationEnabled && !mac.isBlank()) {
+                    deviceReporter.report(mac, ip);
+                }
             }
             String crc = extractCrcHex(data);
             ClientResponse response = new ClientResponse(
@@ -109,27 +116,23 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
                     crc
             );
             completePendingResponse(ctx.channel().remoteAddress(), response);
-            log.info(
-                    "LED netty server recv from {}: hex={}, payloadAscii={}, mac={}, ip={}, crc={}",
-                    ctx.channel().remoteAddress(),
-                    LedProtocolCodec.toHex(data),
-                    payloadAscii,
-                    mac,
-                    ip,
-                    crc
-            );
-            try {
-                reportStore.save(new LedNettyMessageReportStore.NettyReceiveReport(
-                        Instant.now().toString(),
-                        String.valueOf(ctx.channel().remoteAddress()),
+            if (shouldReplyHeartbeat(data)) {
+                outboundSender.send(ctx.channel(), HEARTBEAT_FRAME);
+                log.info("LED netty server heartbeat reply sent to {}", ctx.channel().remoteAddress());
+            }
+            if (clientReportFrame && !mac.isBlank()) {
+                clientReportListener.onReport(mac, ip, normalizeRemoteAddress(String.valueOf(ctx.channel().remoteAddress())));
+            }
+            if (clientReportFrame) {
+                log.info(
+                        "LED netty server recv client report from {}: hex={}, payloadAscii={}, mac={}, ip={}, crc={}",
+                        ctx.channel().remoteAddress(),
                         LedProtocolCodec.toHex(data),
                         payloadAscii,
                         mac,
                         ip,
                         crc
-                ));
-            } catch (IOException exception) {
-                log.warn("save netty recv report failed: {}", exception.getMessage());
+                );
             }
             return;
         }
@@ -160,6 +163,21 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
         return activeConnections.size();
     }
 
+    public void setOutboundSender(OutboundSender outboundSender) {
+        this.outboundSender = outboundSender == null
+                ? (channel, data) -> channel.writeAndFlush(Unpooled.wrappedBuffer(data)).syncUninterruptibly()
+                : outboundSender;
+    }
+
+    public void setClientReportRegistrationEnabled(boolean clientReportRegistrationEnabled) {
+        this.clientReportRegistrationEnabled = clientReportRegistrationEnabled;
+    }
+
+    public void setClientReportListener(ClientReportListener clientReportListener) {
+        this.clientReportListener = clientReportListener == null ? (macAddress, ipAddress, remoteAddress) -> {
+        } : clientReportListener;
+    }
+
     public void resetActiveConnections() {
         activeConnections.clear();
         activeChannels.clear();
@@ -186,6 +204,35 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
         }
         result.sort((left, right) -> left.remoteAddress().compareTo(right.remoteAddress()));
         return result;
+    }
+
+    public String findActiveRemoteAddressByMac(String macAddress) {
+        String normalizedMac = normalizeMac(macAddress);
+        if (normalizedMac.isBlank()) {
+            return "";
+        }
+        for (Map.Entry<SocketAddress, String> entry : activeClientMacAddresses.entrySet()) {
+            if (normalizedMac.equalsIgnoreCase(entry.getValue())) {
+                Channel channel = activeChannels.get(entry.getKey());
+                if (channel != null && channel.isActive()) {
+                    return normalizeRemoteAddress(String.valueOf(entry.getKey()));
+                }
+            }
+        }
+        return "";
+    }
+
+    public String findActiveMacByRemoteAddress(String remoteAddress) {
+        String normalizedRemoteAddress = normalizeRemoteAddress(remoteAddress);
+        if (normalizedRemoteAddress.isBlank()) {
+            return "";
+        }
+        for (Map.Entry<SocketAddress, String> entry : activeClientMacAddresses.entrySet()) {
+            if (normalizedRemoteAddress.equals(normalizeRemoteAddress(String.valueOf(entry.getKey())))) {
+                return entry.getValue();
+            }
+        }
+        return "";
     }
 
     public SendResult sendTo(String remoteAddress, byte[] data) {
@@ -248,6 +295,26 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
             return value.substring(1);
         }
         return value;
+    }
+
+    private boolean shouldReplyHeartbeat(byte[] data) {
+        return Arrays.equals(data, HEARTBEAT_FRAME) || isClientReportFrame(data);
+    }
+
+    private boolean isClientReportFrame(byte[] data) {
+        if (data == null || data.length < 8) {
+            return false;
+        }
+        if (data[0] != 0x66 || data[1] != (byte) 0xAB || data[2] != (byte) 0x97) {
+            return false;
+        }
+        byte[] payload = extractPayload(data);
+        if (payload.length < 2) {
+            return false;
+        }
+        int macLen = payload[0] & 0xFF;
+        int ipLen = payload[1] & 0xFF;
+        return macLen > 0 && ipLen > 0 && 2 + macLen + ipLen == payload.length;
     }
 
     private CompletableFuture<ClientResponse> registerResponseWaiter(SocketAddress address) {
@@ -320,6 +387,16 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
     @FunctionalInterface
     public interface DeviceReporter {
         void report(String macAddress, String ipAddress);
+    }
+
+    @FunctionalInterface
+    public interface ClientReportListener {
+        void onReport(String macAddress, String ipAddress, String remoteAddress);
+    }
+
+    @FunctionalInterface
+    public interface OutboundSender {
+        void send(Channel channel, byte[] data);
     }
 
     static String toAsciiText(byte[] data) {

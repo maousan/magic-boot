@@ -8,30 +8,18 @@ import java.time.Duration;
 @ConfigurationProperties("magic-api.job")
 public class MagicJobConfig {
 
-	/**
-	 * 是否启用定时任务
-	 */
+	private static final String DEFAULT_TABLE_NAME = "magic_job_log";
+
 	private boolean enabled = true;
 
-	/**
-	 * 是否打印日志
-	 * @since 2.1.0
-	 */
 	private boolean log = false;
 
-	/**
-	 * 线程池相关配置
-	 */
+	private String tableName = DEFAULT_TABLE_NAME;
+
 	private final Pool pool = new Pool();
 
-	/**
-	 * 关闭时相关配置
-	 */
 	private final Shutdown shutdown = new Shutdown();
 
-	/**
-	 * 线程池前缀
-	 */
 	private String threadNamePrefix = "magic-task-";
 
 	public boolean isLog() {
@@ -40,6 +28,14 @@ public class MagicJobConfig {
 
 	public void setLog(boolean log) {
 		this.log = log;
+	}
+
+	public String getTableName() {
+		return tableName;
+	}
+
+	public void setTableName(String tableName) {
+		this.tableName = tableName;
 	}
 
 	public Pool getPool() {
@@ -68,9 +64,6 @@ public class MagicJobConfig {
 
 	public static class Pool {
 
-		/**
-		 * 线程池大小
-		 */
 		private int size = Runtime.getRuntime().availableProcessors();
 
 		public int getSize() {
@@ -85,14 +78,8 @@ public class MagicJobConfig {
 
 	public static class Shutdown {
 
-		/**
-		 * 关闭时是否等待任务执行完毕，默认为false
-		 */
 		private boolean awaitTermination;
 
-		/**
-		 * 关闭时最多等待任务执行完毕的时间
-		 */
 		private Duration awaitTerminationPeriod;
 
 		public boolean isAwaitTermination() {

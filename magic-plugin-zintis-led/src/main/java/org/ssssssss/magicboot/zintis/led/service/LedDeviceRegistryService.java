@@ -38,7 +38,7 @@ public class LedDeviceRegistryService {
                     on duplicate key update
                         ip = values(ip)
                     """, normalizedMac, normalizedIp, "Netty客户端自动注册");
-            log.info("LED netty client device saved: macAddress={}, ip={}", normalizedMac, normalizedIp);
+            log.debug("LED netty client device saved: macAddress={}, ip={}", normalizedMac, normalizedIp);
         } catch (Exception exception) {
             log.warn("save LED netty client device failed, macAddress={}, ip={}, error={}",
                     normalizedMac, normalizedIp, exception.getMessage());

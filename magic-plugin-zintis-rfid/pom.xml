@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>org.ssssssss</groupId>
+        <groupId>io.github.maousan</groupId>
         <artifactId>magic-boot</artifactId>
         <version>${revision}</version>
     </parent>
@@ -22,7 +22,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.ssssssss</groupId>
+            <groupId>io.github.maousan</groupId>
             <artifactId>magic-plugin-api</artifactId>
             <version>${revision}</version>
             <scope>provided</scope>

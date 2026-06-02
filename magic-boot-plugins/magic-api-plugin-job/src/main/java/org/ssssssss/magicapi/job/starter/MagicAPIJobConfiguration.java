@@ -6,13 +6,13 @@ import org.springframework.boot.autoconfigure.quartz.QuartzAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.ssssssss.magicapi.core.config.MagicPluginConfiguration;
 import org.ssssssss.magicapi.core.model.Plugin;
 import org.ssssssss.magicapi.core.web.MagicControllerRegister;
 import org.ssssssss.magicapi.job.service.*;
 import org.ssssssss.magicapi.job.web.ExtendedMagicJobController;
 import org.ssssssss.magicapi.job.web.MagicJobController;
-import org.ssssssss.magicapi.job.mapper.JobLogMapper;
 
 import org.quartz.Scheduler;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,7 +43,6 @@ public class MagicAPIJobConfiguration implements MagicPluginConfiguration {
 		if (config.isEnabled()) {
 			return new JobMagicDynamicRegistryForQuartz(jobInfoMagicResourceStorage, scheduler, config.isLog());
 		} else {
-			// 如果禁止 job 功能，返回一个空实现的调度器
 			return new JobMagicDynamicRegistryForQuartz(jobInfoMagicResourceStorage, null, config.isLog());
 		}
 	}
@@ -71,7 +70,7 @@ public class MagicAPIJobConfiguration implements MagicPluginConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public JobLogService jobLogService(JobLogMapper jobLogMapper, Scheduler scheduler) {
-        return new JobLogService(jobLogMapper, scheduler);
+    public JobLogService jobLogService(JdbcTemplate jdbcTemplate, Scheduler scheduler) {
+        return new JobLogService(jdbcTemplate, scheduler, config);
     }
 }

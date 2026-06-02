@@ -12,7 +12,9 @@ import java.util.Set;
 public class LedNettyFrameDecoder extends ByteToMessageDecoder {
 
     private static final int MIN_FRAME_LENGTH = 5;
+    private static final int HEARTBEAT_FRAME_LENGTH = 6;
     private static final int MAX_FRAME_LENGTH = 512;
+    private static final byte[] HEARTBEAT_FRAME = new byte[]{0x38, 0x46, 0x55, 0x64, 0x73, (byte) 0x82};
     private static final Crc16Modbus CRC16 = new Crc16Modbus();
     private static final Set<Integer> VALID_CONTROL_COMMANDS = Set.of(
             LedCommandConstants.CMD_QUERY & 0xFF,
@@ -44,6 +46,9 @@ public class LedNettyFrameDecoder extends ByteToMessageDecoder {
 
     private int findFrameLength(byte[] window) {
         for (int frameLen = MIN_FRAME_LENGTH; frameLen <= window.length; frameLen++) {
+            if (isHeartbeatFrame(window, frameLen)) {
+                return HEARTBEAT_FRAME_LENGTH;
+            }
             if (!isPotentialFrame(window, frameLen)) {
                 continue;
             }
@@ -62,5 +67,17 @@ public class LedNettyFrameDecoder extends ByteToMessageDecoder {
         }
         int controlCommand = frame[1] & 0xFF;
         return VALID_CONTROL_COMMANDS.contains(controlCommand);
+    }
+
+    private boolean isHeartbeatFrame(byte[] window, int frameLen) {
+        if (frameLen != HEARTBEAT_FRAME_LENGTH || window.length < HEARTBEAT_FRAME_LENGTH) {
+            return false;
+        }
+        for (int i = 0; i < HEARTBEAT_FRAME_LENGTH; i++) {
+            if (window[i] != HEARTBEAT_FRAME[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 }

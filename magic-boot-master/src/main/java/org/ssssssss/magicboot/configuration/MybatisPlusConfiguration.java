@@ -12,9 +12,7 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 @MapperScan({
-    "org.ssssssss.magicboot.**.mapper",
-    "org.ssssssss.magicapi.job.mapper",
-    "org.ssssssss.magicapi.file.mapper"
+    "org.ssssssss.magicboot.**.mapper"
 })
 public class MybatisPlusConfiguration {
 

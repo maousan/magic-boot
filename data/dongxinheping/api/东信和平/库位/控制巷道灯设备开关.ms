@@ -38,6 +38,7 @@ import log
 import com.dtflys.forest.Forest
 import org.ssssssss.magicapi.utils.JsonUtils
 import java.util.Map
+import java.nio.charset.StandardCharsets
 import '@/led/sendToClient' as sendToClient
 
 if (body == null) {
@@ -77,6 +78,53 @@ let buildControlFrame = (hostAddress, controlCommand, dataCommand) => {
     frame.add((crc >> 8) & 0xFF)
     frame.add(crc & 0xFF)
     return frame
+}
+
+let buildFrame = (hostAddress, controlCommand, dataCommand, payload) => {
+    let frame = [hostAddress & 0xFF, controlCommand & 0xFF, dataCommand & 0xFF]
+    if (payload != null) {
+        for (item in payload) {
+            frame.add(item & 0xFF)
+        }
+    }
+    let crc = crc16Modbus(frame)
+    frame.add((crc >> 8) & 0xFF)
+    frame.add(crc & 0xFF)
+    return frame
+}
+
+let toPrefixedHex = (items) => {
+    if (items == null) {
+        return ''
+    }
+    let text = ''
+    for (item in items) {
+        if (text != '') {
+            text = text + ' '
+        }
+        let hex = Integer.toHexString(item & 0xFF).toUpperCase()
+        if (hex.length() == 1) {
+            hex = '0' + hex
+        }
+        text = text + '0x' + hex
+    }
+    return text
+}
+
+let asciiBytes = (text) => {
+    if (text == null) {
+        return []
+    }
+    let value = text + ''
+    if (value == '') {
+        return []
+    }
+    let rawBytes = value.getBytes(StandardCharsets.US_ASCII)
+    let bytes = []
+    for (item in rawBytes) {
+        bytes.add(item & 0xFF)
+    }
+    return bytes
 }
 
 let parseJsonMap = (text) => {
@@ -166,9 +214,9 @@ if (command == null || command == '') {
     command = 'ON'
 }
 command = (command + '').trim().toUpperCase()
-if (command != 'ON' && command != 'OFF') {
-    exit 400, 'command仅支持ON/OFF'
-}
+
+let advancedCommand = command
+let lightCommand = command == 'ON' || command == 'OFF'
 
 let port = body.port
 if (port == null || port == '') {
@@ -232,6 +280,9 @@ if (port == 'ALL') {
 let pluginUrl = null
 let activeClient = null
 if (mode == 'SERVER') {
+    if (!lightCommand) {
+        exit 400, '高级指令仅支持client模式'
+    }
     if (command == 'ON') {
         pluginUrl = Forest.config().getVariableValue('zintisLedControlOnUrl')
         if (pluginUrl == null || pluginUrl == '') {
@@ -253,6 +304,115 @@ if (mode == 'SERVER') {
 
 let executed = []
 let failed = []
+
+let parseSendResponse = (sendResult) => {
+    let payload = {
+        success: parseSendSuccess(sendResult),
+        message: sendResult == null ? '' : sendResult.message,
+        payloadAscii: '',
+        payloadHex: '',
+        rawResponseHex: ''
+    }
+    if (sendResult == null || sendResult.responseText == null || sendResult.responseText == '') {
+        return payload
+    }
+    let responseMap = parseJsonMap(sendResult.responseText)
+    payload.message = responseMap["message"]
+    let responses = responseMap["responses"]
+    if (responses != null && responses.size() > 0) {
+        let first = responses[0]
+        payload.payloadAscii = first["payloadAscii"] == null ? '' : first["payloadAscii"]
+        payload.rawResponseHex = first["rawResponseHex"] == null ? '' : first["rawResponseHex"]
+    }
+    return payload
+}
+
+if (!lightCommand) {
+    let frame = null
+    let waitResponse = body.waitResponse
+    if (waitResponse == null) {
+        waitResponse = true
+    }
+
+    if (advancedCommand == 'CONTROL_ON') {
+        frame = buildControlFrame(hostAddress, 0x35, body.dataCommand == null ? 1 : body.dataCommand)
+        waitResponse = body.waitResponse == true
+    } else if (advancedCommand == 'CONTROL_OFF') {
+        frame = buildControlFrame(hostAddress, 0xFA, body.dataCommand == null ? 1 : body.dataCommand)
+        waitResponse = body.waitResponse == true
+    } else if (advancedCommand == 'CONTROL_PULSE') {
+        frame = buildControlFrame(hostAddress, 0x36, body.dataCommand == null ? 1 : body.dataCommand)
+        waitResponse = body.waitResponse == true
+    } else if (advancedCommand == 'QUERY') {
+        frame = buildControlFrame(hostAddress, 0xAB, body.dataCommand == null ? 1 : body.dataCommand)
+    } else if (advancedCommand == 'SYSTEM_INFO') {
+        frame = buildControlFrame(hostAddress, 0xAB, body.dataCommand == null ? 1 : body.dataCommand)
+    } else if (advancedCommand == 'SIGNAL_STRENGTH') {
+        frame = buildControlFrame(hostAddress, 0xAB, 0xBF)
+    } else if (advancedCommand == 'NETWORK') {
+        frame = buildControlFrame(hostAddress, 0xAB, 0x97)
+    } else if (advancedCommand == 'TCP_SERVER_OPEN') {
+        frame = buildControlFrame(hostAddress, 0xBF, 0x23)
+        waitResponse = body.waitResponse == true
+    } else if (advancedCommand == 'TCP_SERVER_CLOSE') {
+        frame = buildControlFrame(hostAddress, 0xBF, 0x2E)
+        waitResponse = body.waitResponse == true
+    } else if (advancedCommand == 'TCP_CLIENT_OPEN') {
+        let targetIp = body.targetIp
+        let targetPort = body.targetPort
+        if (targetIp == null || targetIp == '' || targetPort == null) {
+            exit 400, '开启TCP客户端需要targetIp和targetPort'
+        }
+        frame = buildFrame(hostAddress, 0xBF, 0x33, asciiBytes((targetIp + '').trim() + ':' + targetPort))
+        waitResponse = body.waitResponse == true
+    } else if (advancedCommand == 'TCP_CLIENT_CLOSE') {
+        frame = buildControlFrame(hostAddress, 0xBF, 0x3E)
+        waitResponse = body.waitResponse == true
+    } else if (advancedCommand == 'OTA_UPDATE') {
+        let version = body.version
+        if (version == null || version == '') {
+            exit 400, 'OTA升级需要version'
+        }
+        let versionBytes = asciiBytes(version)
+        if (versionBytes.size() == 0) {
+            exit 400, 'version不能为空'
+        }
+        let payload = []
+        if (versionBytes.size() > 1) {
+            let versionIndex = 1
+            while (versionIndex < versionBytes.size()) {
+                payload.add(versionBytes[versionIndex])
+                versionIndex = versionIndex + 1
+            }
+        }
+        frame = buildFrame(hostAddress, 0x9F, versionBytes[0], payload)
+        waitResponse = body.waitResponse == true
+    } else {
+        exit 400, '不支持的指令: ' + advancedCommand
+    }
+
+    let sendResult = sendToClient(activeClient.remoteAddress, null, null, frame, 'json', waitResponse == true)
+    let parsed = parseSendResponse(sendResult)
+    if (parsed.success != true) {
+        failed.add({ command: advancedCommand, remoteAddress: activeClient.remoteAddress, frame: frame, sendResult: sendResult })
+        log.warn('led-device-control client command failed, ledId=' + ledId + ', command=' + advancedCommand + ', failed=' + failed)
+        exit 502, '指令执行失败: ' + failed
+    }
+    return {
+        mode: 'client',
+        ledId: ledId,
+        deviceIp: deviceIp,
+        remoteAddress: activeClient.remoteAddress,
+        command: advancedCommand,
+        timeoutMs: timeoutMs,
+        success: true,
+        payloadAscii: parsed.payloadAscii,
+        payloadHex: parsed.payloadHex,
+        rawRequestHex: toPrefixedHex(frame),
+        rawResponseHex: parsed.rawResponseHex,
+        sendResult: sendResult
+    }
+}
 
 for (color in ports) {
     let dataCommand = null

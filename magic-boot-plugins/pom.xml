@@ -4,13 +4,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>org.ssssssss</groupId>
+        <groupId>io.github.maousan</groupId>
         <artifactId>magic-boot</artifactId>
         <version>${revision}</version>
     </parent>
 
     <artifactId>magic-boot-plugins</artifactId>
-    <version>2.2.2</version>
     <packaging>pom</packaging>
     <name>magic-boot-plugins</name>
     <description>auto generate http api</description>
@@ -27,13 +26,14 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <skip.npm>true</skip.npm>
     </properties>
 
     <dependencyManagement>
         <dependencies>
             <!-- 引入依赖版本管理 -->
             <dependency>
-                <groupId>org.ssssssss</groupId>
+                <groupId>io.github.maousan</groupId>
                 <artifactId>magic-dependencies</artifactId>
                 <version>${revision}</version>
                 <type>pom</type>
@@ -49,12 +49,12 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.ssssssss</groupId>
+            <groupId>io.github.maousan</groupId>
             <artifactId>magic-api</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.ssssssss</groupId>
+            <groupId>io.github.maousan</groupId>
             <artifactId>magic-script</artifactId>
             <scope>provided</scope>
         </dependency>
