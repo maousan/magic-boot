@@ -50,8 +50,11 @@
 
     <n-modal v-model:show="showBind" title="绑定批次 EPC" preset="dialog">
       <n-space vertical>
-        <n-form-item label="批次ID">
-          <n-input v-model:value="bindForm.batchId" placeholder="请输入批次ID" />
+        <n-form-item label="库位号">
+          <n-input v-model:value="bindForm.locationId" placeholder="请输入库位号" />
+        </n-form-item>
+        <n-form-item label="外箱二维码">
+          <n-input v-model:value="bindForm.batchId" placeholder="请扫描外箱二维码" />
         </n-form-item>
         <n-form-item label="EPC">
           <n-input v-model:value="bindForm.epc" placeholder="请输入 EPC" />
@@ -60,6 +63,21 @@
       <template #action>
         <n-button @click="showBind = false">取消</n-button>
         <n-button type="primary" :loading="binding" @click="handleBind">确认</n-button>
+      </template>
+    </n-modal>
+
+    <n-modal v-model:show="showEdit" title="编辑批次 EPC" preset="dialog">
+      <n-space vertical>
+        <n-form-item label="批次ID">
+          <n-input v-model:value="editForm.batchId" placeholder="请输入批次ID" />
+        </n-form-item>
+        <n-form-item label="EPC">
+          <n-input v-model:value="editForm.epc" placeholder="请输入 EPC" />
+        </n-form-item>
+      </n-space>
+      <template #action>
+        <n-button @click="showEdit = false">取消</n-button>
+        <n-button type="primary" :loading="editing" @click="handleEdit">确认</n-button>
       </template>
     </n-modal>
 
@@ -80,15 +98,17 @@ import {
   NPopconfirm, useMessage,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
-import { getBatchEpcList, bindBatchEpc, unbindBatchEpc, deleteBatchEpc } from '@/api/batch-epc'
+import { getBatchEpcList, bindBatchEpc, unbindBatchEpc, updateBatchEpc, deleteBatchEpc } from '@/api/batch-epc'
 import type { BatchEpcBinding } from '@/types'
 
 const message = useMessage()
 const loading = ref(false)
 const binding = ref(false)
+const editing = ref(false)
 const unbinding = ref(false)
 const deletingIds = ref<Set<string>>(new Set())
 const showBind = ref(false)
+const showEdit = ref(false)
 const showUnbind = ref(false)
 const searchKeyword = ref('')
 const searchStatus = ref<number | null>(null)
@@ -100,7 +120,8 @@ const bindings = reactive<{ list: BatchEpcBinding[]; total: number }>({
 })
 
 const pagination = reactive({ page: 1, pageSize: 10, itemCount: 0 })
-const bindForm = reactive({ batchId: '', epc: '' })
+const bindForm = reactive({ locationId: '', batchId: '', epc: '' })
+const editForm = reactive({ id: '', batchId: '', epc: '' })
 
 const statusOptions = [
   { label: '已绑定', value: 1 },
@@ -127,6 +148,11 @@ const columns: DataTableColumns<BatchEpcBinding> = [
     fixed: 'right',
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
+        h(
+          NButton,
+          { size: 'small', type: 'primary', ghost: true, onClick: () => openEdit(row) },
+          () => '编辑',
+        ),
         row.status === 1
           ? h(
               NButton,
@@ -179,16 +205,36 @@ async function fetchData() {
 }
 
 async function handleBind() {
-  if (!bindForm.batchId || !bindForm.epc) return
+  if (!bindForm.locationId || !bindForm.batchId || !bindForm.epc) return
   binding.value = true
   try {
-    await bindBatchEpc({ batchId: bindForm.batchId, epc: bindForm.epc })
+    await bindBatchEpc({ locationId: bindForm.locationId, batchId: bindForm.batchId, epc: bindForm.epc })
     showBind.value = false
+    bindForm.locationId = ''
     bindForm.batchId = ''
     bindForm.epc = ''
     await fetchData()
   } finally {
     binding.value = false
+  }
+}
+
+function openEdit(row: BatchEpcBinding) {
+  editForm.id = row.id
+  editForm.batchId = row.batchId
+  editForm.epc = row.epc
+  showEdit.value = true
+}
+
+async function handleEdit() {
+  if (!editForm.batchId || !editForm.epc) return
+  editing.value = true
+  try {
+    await updateBatchEpc({ id: editForm.id, batchId: editForm.batchId, epc: editForm.epc })
+    showEdit.value = false
+    await fetchData()
+  } finally {
+    editing.value = false
   }
 }
 

@@ -5,7 +5,7 @@
   "groupId" : "89d74bcccfbc468a8dfcd06d6cc2fc56",
   "name" : "解析lot",
   "createTime" : 1775200271549,
-  "updateTime" : 1775555577606,
+  "updateTime" : 1780477809116,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -38,7 +38,8 @@ if(!raw){
     exit 400, 'raw不能为空'
 }
 
-var decoded = URLDecoder.decode(raw, StandardCharsets.UTF_8.name())
+var decoded = raw
+// var decoded = URLDecoder.decode(raw, StandardCharsets.UTF_8.name())
 var normalized = decoded == null ? '' : decoded.trim()
 
 var result = new LinkedHashMap()

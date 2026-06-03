@@ -5,7 +5,7 @@
   "groupId" : "2ud9c5419ag5484mbxxsafin0b0myji0",
   "name" : "RFID控制",
   "createTime" : 1778052000000,
-  "updateTime" : 1779965299219,
+  "updateTime" : 1780482578128,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -25,13 +25,13 @@
     "expression" : null,
     "children" : null
   } ],
-  "requestBody" : "{\n  \"deviceId\": \"DEVICE-001\",\n  \"mode\": \"on\",\n  \"data\": {\n    \"locationId\": \"A001\",\n    \"sku\": \"SKU-10001\"\n  }\n}",
+  "requestBody" : "{\n  \"deviceId\": \"192.168.2.134\",\n  \"mode\": \"on\",\n  \"data\": {\n    \"locationId\": \"A1-11-01-01-02\",\n    \"sku\": \"2.01.26.01.20306\",\n    \"lotNo\":\"20260113_2025122365-1+01(1)_YS12_YS-JK-001_002\"\n  }\n}",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": \"操作成功\",\n    \"timestamp\": 1779259352420,\n    \"executeTime\": 239\n}",
+  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": \"操作成功\",\n    \"timestamp\": 1780482568749,\n    \"executeTime\": 62\n}",
   "description" : "RFID控制：on=寻卡，off=停止寻卡。",
   "requestBodyDefinition" : {
-    "name" : "root",
+    "name" : "",
     "value" : "",
     "description" : "RFID控制请求",
     "required" : true,
@@ -43,8 +43,20 @@
     "expression" : "",
     "children" : [ {
       "name" : "deviceId",
-      "value" : "DEVICE-001",
+      "value" : "192.168.2.134",
       "description" : "设备唯一标识（设备序列号、MAC或自定义ID），不传时尝试用客户端IP兜底",
+      "required" : true,
+      "dataType" : "String",
+      "type" : null,
+      "defaultValue" : null,
+      "validateType" : "",
+      "error" : "",
+      "expression" : "",
+      "children" : [ ]
+    }, {
+      "name" : "mode",
+      "value" : "on",
+      "description" : "寻卡/停止寻卡：on=寻卡；off=停止寻卡",
       "required" : true,
       "dataType" : "String",
       "type" : null,
@@ -66,7 +78,7 @@
       "expression" : "",
       "children" : [ {
         "name" : "locationId",
-        "value" : "A001",
+        "value" : "A1-11-01-01-02",
         "description" : "库位号",
         "required" : false,
         "dataType" : "String",
@@ -78,7 +90,7 @@
         "children" : [ ]
       }, {
         "name" : "sku",
-        "value" : "SKU-10001",
+        "value" : "2.01.26.01.20306",
         "description" : "物料号",
         "required" : false,
         "dataType" : "String",
@@ -88,19 +100,19 @@
         "error" : "",
         "expression" : "",
         "children" : [ ]
+      }, {
+        "name" : "lotNo",
+        "value" : "",
+        "description" : "",
+        "required" : false,
+        "dataType" : "String",
+        "type" : null,
+        "defaultValue" : null,
+        "validateType" : "",
+        "error" : "",
+        "expression" : "",
+        "children" : [ ]
       } ]
-    }, {
-      "name" : "mode",
-      "value" : "on",
-      "description" : "寻卡/停止寻卡：on=寻卡；off=停止寻卡",
-      "required" : true,
-      "dataType" : "String",
-      "type" : null,
-      "defaultValue" : null,
-      "validateType" : "",
-      "error" : "",
-      "expression" : "",
-      "children" : [ ]
     } ]
   },
   "responseBodyDefinition" : null
@@ -190,14 +202,28 @@ if(mode == 'on'){
     }
     let locationId = normalizeText(requestData.locationId)
     let sku = normalizeText(requestData.sku)
+    let lotNo = normalizeText(requestData.lotNo)
     if(locationId == ''){
         exit 400, 'mode为on时data.locationId不能为空'
     }
     if(sku == ''){
         exit 400, 'mode为on时data.sku不能为空'
     }
+    if(lotNo == ''){
+        exit 400, 'mode为on时data.lotNo不能为空'
+    }
     requestData.locationId = locationId
     requestData.sku = sku
+    requestData.lotNo = lotNo
+
+    let batchId = locationId + '_' + sku + '_' + lotNo
+    let epcRecord = db.selectOne("select epc from t_batch_epc where batch_id = #{batchId} and status = 1", {batchId})
+    if(epcRecord != null){
+        requestData.epc = epcRecord.epc
+        log.info('resolved epc for batchId=' + batchId + ', epc=' + epcRecord.epc)
+    } else {
+        log.warn('no active epc binding found for batchId=' + batchId)
+    }
 }
 if(requestData == null){
     requestData = {}

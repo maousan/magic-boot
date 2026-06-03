@@ -5,7 +5,7 @@
   "groupId" : "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
   "name" : "绑定",
   "createTime" : null,
-  "updateTime" : 1779777789031,
+  "updateTime" : 1780477311521,
   "lock" : null,
   "createBy" : null,
   "updateBy" : "admin",
@@ -25,29 +25,51 @@
     "expression" : null,
     "children" : null
   } ],
-  "requestBody" : "{\"batchId\":\"1\",\"epc\":\"1\"}",
+  "requestBody" : "{\"locationId\":\"A001\",\"batchId\":\"外箱二维码内容\",\"epc\":\"1\"}",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 400,\n    \"message\": \"批次ID已绑定EPC: 1\",\n    \"data\": null,\n    \"timestamp\": 1779772766572,\n    \"executeTime\": 120\n}",
-  "description" : "绑定业务批次ID与RFID EPC的一对一关系。",
+  "responseBody" : null,
+  "description" : "绑定业务批次ID与RFID EPC的一对一关系。batchId为外箱二维码原始内容，后端自动解析MtlCode和Lot，与locationId拼接为最终batchId。",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
 }
 ================================
 import log
 import cn.hutool.core.util.IdUtil
+import '@/utils/parseLot' as parseLot
 
-let batchId = body.batchId
+let locationId = body.locationId
+let raw = body.batchId
 let epc = body.epc
 
-if(batchId == null || (batchId + '').trim() == ''){
-    exit 400, '批次ID不能为空'
+if(locationId == null || (locationId + '').trim() == ''){
+    exit 400, '库位号不能为空'
+}
+if(raw == null || (raw + '').trim() == ''){
+    exit 400, '外箱二维码不能为空'
 }
 if(epc == null || (epc + '').trim() == ''){
     exit 400, 'EPC不能为空'
 }
-batchId = (batchId + '').trim()
+
+locationId = (locationId + '').trim()
+raw = (raw + '').trim()
 epc = (epc + '').trim()
+
+let parsed = parseLot(raw)
+let sku = parsed.MtlCode
+let lotNo = parsed.Lot
+
+if(sku == null || (sku + '').trim() == ''){
+    exit 400, '二维码中未找到MtlCode'
+}
+if(lotNo == null || (lotNo + '').trim() == ''){
+    exit 400, '二维码中未找到Lot'
+}
+
+sku = (sku + '').trim()
+lotNo = (lotNo + '').trim()
+let batchId = locationId + '_' + sku + '_' + lotNo
 
 let existing = db.select("""
     select batch_id, epc from t_batch_epc where status = 1 and (batch_id = #{batchId} or epc = #{epc})
