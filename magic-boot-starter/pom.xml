@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.maousan</groupId>
     <artifactId>magic-boot-starter</artifactId>
-    <version>0.0.4</version>
+    <version>0.0.5</version>
     <packaging>jar</packaging>
     <name>magic-boot-starter</name>
     <description>Magic Boot 基座聚合依赖，一行引入全部框架能力</description>
@@ -45,61 +45,61 @@
         <dependency>
             <groupId>io.github.maousan</groupId>
             <artifactId>magic-api-plugin-redis</artifactId>
-            <version>0.0.4</version>
+            <version>0.0.5</version>
         </dependency>
         <dependency>
             <groupId>io.github.maousan</groupId>
             <artifactId>magic-api-plugin-job</artifactId>
-            <version>0.0.4</version>
+            <version>0.0.5</version>
         </dependency>
         <dependency>
             <groupId>io.github.maousan</groupId>
             <artifactId>magic-api-plugin-liteflow</artifactId>
-            <version>0.0.4</version>
+            <version>0.0.5</version>
         </dependency>
         <dependency>
             <groupId>io.github.maousan</groupId>
             <artifactId>magic-api-plugin-excel</artifactId>
-            <version>0.0.4</version>
+            <version>0.0.5</version>
         </dependency>
         <dependency>
             <groupId>io.github.maousan</groupId>
             <artifactId>magic-api-plugin-file</artifactId>
-            <version>0.0.4</version>
+            <version>0.0.5</version>
         </dependency>
         <dependency>
             <groupId>io.github.maousan</groupId>
             <artifactId>magic-api-plugin-springdoc</artifactId>
-            <version>0.0.4</version>
+            <version>0.0.5</version>
         </dependency>
         <dependency>
             <groupId>io.github.maousan</groupId>
             <artifactId>magic-api-plugin-mqtt</artifactId>
-            <version>0.0.4</version>
+            <version>0.0.5</version>
         </dependency>
 
         <!-- PF4J 插件系统 -->
         <dependency>
             <groupId>io.github.maousan</groupId>
             <artifactId>magic-plugin-api</artifactId>
-            <version>0.0.4</version>
+            <version>0.0.5</version>
         </dependency>
         <dependency>
             <groupId>io.github.maousan</groupId>
             <artifactId>magic-plugin</artifactId>
-            <version>0.0.4</version>
+            <version>0.0.5</version>
         </dependency>
 
         <!-- Tiga 引擎 -->
         <dependency>
             <groupId>io.github.maousan</groupId>
             <artifactId>tiga-engine</artifactId>
-            <version>0.0.4</version>
+            <version>0.0.5</version>
         </dependency>
         <dependency>
             <groupId>io.github.maousan</groupId>
             <artifactId>tiga-engine-spring</artifactId>
-            <version>0.0.4</version>
+            <version>0.0.5</version>
         </dependency>
     </dependencies>
 
