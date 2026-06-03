@@ -3,13 +3,11 @@ package org.ssssssss.magicapi.excel;
 import com.alibaba.excel.EasyExcel;
 import org.slf4j.Logger;
 import org.ssssssss.magicapi.core.annotation.MagicModule;
+import org.ssssssss.magicapi.core.context.RequestContext;
+import org.ssssssss.magicapi.core.servlet.MagicHttpServletResponse;
 import org.ssssssss.magicapi.excel.handler.CustomColumnWidthStyleStrategy;
 import org.ssssssss.magicapi.excel.model.ExcelExportConfig;
 import org.ssssssss.script.annotation.Comment;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
-
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -253,7 +251,7 @@ public class ExcelModule {
     @Comment("导出 Excel 并自动设置响应头下载（完整配置）")
     public void download(@Comment(name = "data", value = "数据列表") List<Map<String, Object>> data,
                          @Comment(name = "config", value = "导出配置对象") ExcelExportConfig config) {
-        HttpServletResponse response = getResponse();
+        MagicHttpServletResponse response = getResponse();
         if (response == null) {
             throw new RuntimeException("无法获取 HttpServletResponse，请确保在 Web 请求环境中调用");
         }
@@ -283,7 +281,7 @@ public class ExcelModule {
     public void downloadEntities(@Comment(name = "data", value = "实体对象列表") List<?> data,
                                  @Comment(name = "fileName", value = "文件名（不含扩展名）") String fileName,
                                  @Comment(name = "headers", value = "表头映射 Map：字段名->列名") Map<String, String> headers) {
-        HttpServletResponse response = getResponse();
+        MagicHttpServletResponse response = getResponse();
         if (response == null) {
             throw new RuntimeException("无法获取 HttpServletResponse，请确保在 Web 请求环境中调用");
         }
@@ -306,7 +304,7 @@ public class ExcelModule {
     public void downloadWithTemplate(@Comment(name = "templateName", value = "模板文件名（不含路径）") String templateName,
                                      @Comment(name = "data", value = "填充数据") Object data,
                                      @Comment(name = "fileName", value = "文件名（不含扩展名）") String fileName) {
-        HttpServletResponse response = getResponse();
+        MagicHttpServletResponse response = getResponse();
         if (response == null) {
             throw new RuntimeException("无法获取 HttpServletResponse，请确保在 Web 请求环境中调用");
         }
@@ -416,18 +414,14 @@ public class ExcelModule {
     /**
      * 获取 HttpServletResponse
      */
-    private HttpServletResponse getResponse() {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        if (attributes == null) {
-            return null;
-        }
-        return attributes.getResponse();
+    private MagicHttpServletResponse getResponse() {
+        return RequestContext.getHttpServletResponse();
     }
 
     /**
      * 设置下载响应头
      */
-    private void setDownloadHeaders(HttpServletResponse response, String fileName) {
+    private void setDownloadHeaders(MagicHttpServletResponse response, String fileName) {
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
 
