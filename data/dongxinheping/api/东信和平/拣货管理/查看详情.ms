@@ -5,7 +5,7 @@
   "groupId" : "pk202605220001mgmt1234567890abcdef",
   "name" : "查看详情",
   "createTime" : null,
-  "updateTime" : 1779426502024,
+  "updateTime" : 1780470588510,
   "lock" : null,
   "createBy" : null,
   "updateBy" : "admin",
@@ -67,7 +67,7 @@ let details = db.select("""
            status, create_time
     from t_picking_upload_detail
     where bill_id = #{id}
-    order by create_time
+    order by id
 """, { id: id })
 
 return { master: master, details: details }

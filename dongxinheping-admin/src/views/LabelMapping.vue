@@ -59,7 +59,15 @@
       <span>确定要解绑标签码 <b>{{ deleteTarget?.labelCode }}</b> 吗？</span>
       <template #action>
         <n-button @click="showDelete = false">取消</n-button>
-        <n-button type="error" :loading="deleting" @click="handleDelete">解绑</n-button>
+        <n-button type="error" :loading="unbinding" @click="handleUnbind">解绑</n-button>
+      </template>
+    </n-modal>
+
+    <n-modal v-model:show="showDbDelete" title="确认删除" preset="dialog">
+      <span>确定只删除标签码 <b>{{ dbDeleteTarget?.labelCode }}</b> 的本地绑定记录吗？不会调用 AIMS 解绑。</span>
+      <template #action>
+        <n-button @click="showDbDelete = false">取消</n-button>
+        <n-button type="error" :loading="deleting" @click="handleDbDelete">删除</n-button>
       </template>
     </n-modal>
 
@@ -87,18 +95,21 @@ import {
   NCard, NDataTable, NButton, NModal, NSpace, NFormItem, NInput, NFlex, NPagination, NSelect, useMessage,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
-import { getLabelMappingList, createLabelMapping, deleteLabelMapping, lightOnLabel, lightOffLabel } from '@/api/label-mapping'
+import { getLabelMappingList, createLabelMapping, unbindLabelMapping, deleteLabelMapping, lightOnLabel, lightOffLabel } from '@/api/label-mapping'
 import type { LocationLabelBinding } from '@/types'
 import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
 const loading = ref(false)
 const creating = ref(false)
 const deleting = ref(false)
+const unbinding = ref(false)
 const lighting = ref(false)
 const showCreate = ref(false)
 const showDelete = ref(false)
+const showDbDelete = ref(false)
 const showLightOn = ref(false)
 const deleteTarget = ref<{ id: string; labelCode: string } | null>(null)
+const dbDeleteTarget = ref<{ id: string; labelCode: string } | null>(null)
 const lightOnTarget = ref<{ labelCode: string } | null>(null)
 const lightOnForm = reactive({ color: 'GREEN', duration: 'inf' })
 const message = useMessage()
@@ -142,12 +153,13 @@ const columns: DataTableColumns<LocationLabelBinding> = [
   {
     title: '操作',
     key: 'actions',
-    width: 220,
+    width: 280,
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
         h(NButton, { size: 'small', type: 'warning', onClick: () => openLightOn(row) }, () => '亮灯'),
         h(NButton, { size: 'small', onClick: () => handleLightOff(row) }, () => '灭灯'),
         h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '解绑'),
+        h(NButton, { size: 'small', type: 'error', ghost: true, onClick: () => openDbDelete(row) }, () => '删除'),
       ]),
   },
 ]
@@ -232,13 +244,31 @@ function openDelete(row: LocationLabelBinding) {
   showDelete.value = true
 }
 
-async function handleDelete() {
+async function handleUnbind() {
   if (!deleteTarget.value) return
-  deleting.value = true
+  unbinding.value = true
   try {
-    await deleteLabelMapping(deleteTarget.value.id)
+    await unbindLabelMapping(deleteTarget.value.id)
     showDelete.value = false
     deleteTarget.value = null
+    await fetchData()
+  } finally {
+    unbinding.value = false
+  }
+}
+
+function openDbDelete(row: LocationLabelBinding) {
+  dbDeleteTarget.value = { id: row.id, labelCode: row.labelCode }
+  showDbDelete.value = true
+}
+
+async function handleDbDelete() {
+  if (!dbDeleteTarget.value) return
+  deleting.value = true
+  try {
+    await deleteLabelMapping(dbDeleteTarget.value.id)
+    showDbDelete.value = false
+    dbDeleteTarget.value = null
     await fetchData()
   } finally {
     deleting.value = false

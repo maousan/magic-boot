@@ -188,6 +188,8 @@ const showMockDialog = ref(false)
 const mockForm = reactive({ detailCount: 5, status: 0 })
 const uploadingMasterIds = ref<Set<string>>(new Set())
 const uploadingDetailIds = ref<Set<string>>(new Set())
+const completingDetailIds = ref<Set<string>>(new Set())
+const resettingDetailIds = ref<Set<string>>(new Set())
 
 // ---- Master columns ----
 const masterColumns: DataTableColumns<PickingUpload> = [
@@ -239,7 +241,7 @@ const detailColumns: DataTableColumns<PickingUploadDetail> = [
   {
     title: '操作',
     key: 'actions',
-    width: 240,
+    width: 360,
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
         h(NButton, {
@@ -248,6 +250,17 @@ const detailColumns: DataTableColumns<PickingUploadDetail> = [
           loading: uploadingDetailIds.value.has(row.id),
           onClick: () => handlePickingComplete(row),
         }, () => '上传'),
+        h(NButton, {
+          size: 'small',
+          type: 'primary',
+          loading: completingDetailIds.value.has(row.id),
+          onClick: () => handleDetailComplete(row),
+        }, () => '完成'),
+        h(NButton, {
+          size: 'small',
+          loading: resettingDetailIds.value.has(row.id),
+          onClick: () => handleDetailReset(row),
+        }, () => '重拣'),
         h(NButton, { size: 'small', onClick: () => openEditDetail(row) }, () => '编辑'),
         h(NButton, { size: 'small', type: 'error', onClick: () => openDeleteDetail(row) }, () => '删除'),
       ]),
@@ -438,6 +451,44 @@ async function handleDetailDelete() {
     }
   } catch {
     return false
+  }
+}
+
+async function handleDetailComplete(row: PickingUploadDetail) {
+  completingDetailIds.value.add(row.id)
+  try {
+    await updatePickingUploadDetail({
+      id: row.id,
+      actualQuantity: row.planQuantity,
+      status: 1,
+    })
+    message.success('明细已完成')
+    if (selectedMaster.value) {
+      selectMaster(selectedMaster.value)
+    }
+  } catch {
+    // handled by interceptor
+  } finally {
+    completingDetailIds.value.delete(row.id)
+  }
+}
+
+async function handleDetailReset(row: PickingUploadDetail) {
+  resettingDetailIds.value.add(row.id)
+  try {
+    await updatePickingUploadDetail({
+      id: row.id,
+      actualQuantity: 0,
+      status: 0,
+    })
+    message.success('明细已重置为未拣')
+    if (selectedMaster.value) {
+      selectMaster(selectedMaster.value)
+    }
+  } catch {
+    // handled by interceptor
+  } finally {
+    resettingDetailIds.value.delete(row.id)
   }
 }
 

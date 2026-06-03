@@ -5,7 +5,7 @@
   "groupId" : "l5kl0q2xiqa4ryz349c3fkzj3hzm07vw",
   "name" : "拣货完成",
   "createTime" : null,
-  "updateTime" : 1780033970670,
+  "updateTime" : 1780470429275,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -31,7 +31,7 @@
   "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"拣货完成同步成功\",\n    \"data\": null,\n    \"timestamp\": 1777018646441,\n    \"executeTime\": 157\n}",
   "description" : "当用户完成某一个物料拣选后，WMS 向亮灯系统同步完成信息。",
   "requestBodyDefinition" : {
-    "name" : "",
+    "name" : "root",
     "value" : "",
     "description" : "",
     "required" : false,
@@ -631,6 +631,9 @@ let resolveAisleLedTurnOffCandidates = (turnOffLocationCodes) => {
 
     let affectedLedIds = []
     let affectedLedIdSet = {}
+    let affectedLedColorKeys = []
+    let affectedLedColorKeySet = {}
+    let pairRepresentativeLocationMap = {}
     let chunks = splitLocationCodeChunks(turnOffLocationCodes, locationChunkSize)
     for(codeChunk in chunks){
         let inData = buildInSqlParams(codeChunk, 'aisleOffLocationCode')
@@ -643,7 +646,8 @@ let resolveAisleLedTurnOffCandidates = (turnOffLocationCodes) => {
         let rows = db.select("""
             select
                 location_code,
-                led_id
+                led_id,
+                color
             from t_location_led
             where location_code in (""" + inData.inSql + """)
         """, inData.params)
@@ -657,9 +661,22 @@ let resolveAisleLedTurnOffCandidates = (turnOffLocationCodes) => {
                 if(ledId == null || ledId == ''){
                     ledId = row.ledId
                 }
+                let color = row.color
+                if(color != null && color != ''){
+                    color = (color + '').trim().toUpperCase()
+                }
                 if(locationCode != null && locationCode != '' && ledId != null && ledId != ''){
                     result.locationLedMap[locationCode] = ledId
                     addUnique(affectedLedIds, affectedLedIdSet, ledId)
+                    if(color != null && color != ''){
+                        let pairKey = ledId + '|' + color
+                        if(pairRepresentativeLocationMap[pairKey] == null){
+                            pairRepresentativeLocationMap[pairKey] = locationCode
+                        }
+                        addUnique(affectedLedColorKeys, affectedLedColorKeySet, pairKey)
+                    } else {
+                        addUnique(result.candidateLocationCodes, result.candidateLocationCodeSet, locationCode)
+                    }
                 }
             }
         }
@@ -682,15 +699,28 @@ let resolveAisleLedTurnOffCandidates = (turnOffLocationCodes) => {
         let rows = db.select("""
             select
                 led_id,
+                upper(color) as color,
                 sum(case when ifnull(status, 0) = 1 then 1 else 0 end) as active_cnt,
                 min(location_code) as representative_location_code
             from t_location_led
             where led_id in (""" + inData.inSql + """)
-            group by led_id
+            group by led_id, upper(color)
         """, inData.params)
 
         if(rows != null){
             for(row in rows){
+                let ledId = row.led_id
+                if(ledId == null || ledId == ''){
+                    ledId = row.ledId
+                }
+                let color = row.color
+                if(color != null && color != ''){
+                    color = (color + '').trim().toUpperCase()
+                }
+                let pairKey = ledId + '|' + color
+                if(affectedLedColorKeySet[pairKey] == null){
+                    continue
+                }
                 let activeCnt = row.active_cnt
                 if(activeCnt == null){
                     activeCnt = row.activeCnt
@@ -701,9 +731,12 @@ let resolveAisleLedTurnOffCandidates = (turnOffLocationCodes) => {
                 if(activeCnt > 0){
                     continue
                 }
-                let representativeLocationCode = row.representative_location_code
+                let representativeLocationCode = pairRepresentativeLocationMap[pairKey]
                 if(representativeLocationCode == null || representativeLocationCode == ''){
                     representativeLocationCode = row.representativeLocationCode
+                }
+                if(representativeLocationCode == null || representativeLocationCode == ''){
+                    representativeLocationCode = row.representative_location_code
                 }
                 if(representativeLocationCode != null && representativeLocationCode != ''){
                     addUnique(result.candidateLocationCodes, result.candidateLocationCodeSet, representativeLocationCode)
@@ -1097,6 +1130,7 @@ try {
     for(locationCode in turnOffDispatchCodes){
         try {
             turnOffAisleLedByLotNo({
+                mode: 'client',
                 lotNo: locationCode
             })
         } catch (lightErr) {
@@ -1106,6 +1140,7 @@ try {
     for(locationCode in turnOnAisleDispatchCodes){
         try {
             turnOnAisleLedByLotNo({
+                mode: 'client',
                 lotNo: locationCode
             })
         } catch (lightErr) {

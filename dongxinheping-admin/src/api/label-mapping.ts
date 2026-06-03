@@ -14,8 +14,12 @@ export function createLabelMapping(data: { locationCode: string; labelCode: stri
   return client.post('/location/label-mapping', data).then(() => {})
 }
 
-export function deleteLabelMapping(id: string): Promise<void> {
+export function unbindLabelMapping(id: string): Promise<void> {
   return client.delete('/location/label-mapping', { params: { id } }).then(() => {})
+}
+
+export function deleteLabelMapping(id: string): Promise<void> {
+  return client.post('/location/label-mapping/delete', { id }).then(() => {})
 }
 
 export function lightOnLabel(data: { labelCode: string; color: string; duration: string }): Promise<{ success: boolean }> {
