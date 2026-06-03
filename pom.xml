@@ -38,7 +38,7 @@
 
     <properties>
         <!-- 版本号统一管理（CI-Friendly） -->
-        <revision>0.0.5</revision>
+        <revision>0.0.6</revision>
 
         <java.version>17</java.version>
         <maven.compiler.source>17</maven.compiler.source>
