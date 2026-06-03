@@ -91,12 +91,11 @@
             <id>release</id>
             <modules>
                 <module>magic-dependencies</module>
-                <module>magic-api-parent</module>
+                <!-- magic-api-parent 和 magic-script 版本未变化，已在 Central 上 -->
                 <module>magic-boot-plugins</module>
                 <module>magic-editor</module>
                 <module>magic-plugin</module>
                 <module>magic-plugin-api</module>
-                <module>magic-script</module>
                 <module>tiga-engine</module>
                 <module>tiga-engine-spring</module>
                 <module>magic-boot-starter</module>
