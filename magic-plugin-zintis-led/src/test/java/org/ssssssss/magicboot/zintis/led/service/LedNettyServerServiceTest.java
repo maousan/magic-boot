@@ -102,18 +102,16 @@ class LedNettyServerServiceTest {
     }
 
     @Test
-    void heartbeat_shouldSendFixedFrameToConnectedClient() throws Exception {
+    void heartbeat_shouldNotSendFixedFrameToConnectedClient() throws Exception {
         service.setHeartbeatEnabled(true);
         LedNettyServerStatusResponse start = service.start(0);
         assertTrue(start.isRunning());
 
         try (Socket socket = new Socket("127.0.0.1", start.getPort())) {
-            socket.setSoTimeout(5000);
+            socket.setSoTimeout(1500);
             waitUntilClientConnected();
 
-            byte[] heartbeat = socket.getInputStream().readNBytes(6);
-
-            assertArrayEquals(new byte[]{0x38, 0x46, 0x55, 0x64, 0x73, (byte) 0x82}, heartbeat);
+            assertThrows(SocketTimeoutException.class, () -> socket.getInputStream().read());
         }
     }
 
@@ -132,26 +130,19 @@ class LedNettyServerServiceTest {
     }
 
     @Test
-    void updateHeartbeat_shouldStartHeartbeatWhenServerIsRunning() throws Exception {
+    void updateHeartbeat_shouldNotStartActiveHeartbeatWhenServerIsRunning() throws Exception {
         LedNettyServerStatusResponse start = service.start(0);
         assertTrue(start.isRunning());
 
         try (Socket socket = new Socket("127.0.0.1", start.getPort())) {
-            socket.setSoTimeout(5000);
+            socket.setSoTimeout(1500);
             waitUntilClientConnected();
 
             LedNettyServerStatusResponse heartbeatStatus = service.updateHeartbeat(true);
-            byte[] heartbeat = socket.getInputStream().readNBytes(6);
 
             assertTrue(heartbeatStatus.isHeartbeatEnabled());
-            assertTrue(heartbeatStatus.isHeartbeatRunning());
-            assertArrayEquals(new byte[]{0x38, 0x46, 0x55, 0x64, 0x73, (byte) 0x82}, heartbeat);
-
-            LedNettyServerStatusResponse status = waitUntilHeartbeatRecorded();
-            assertNotNull(status.getLastHeartbeatAt());
-            assertEquals(1, status.getLastHeartbeatTargets());
-            assertEquals(1, status.getLastHeartbeatSuccessCount());
-            assertEquals(0, status.getLastHeartbeatFailedCount());
+            assertFalse(heartbeatStatus.isHeartbeatRunning());
+            assertThrows(SocketTimeoutException.class, () -> socket.getInputStream().read());
         }
     }
 
@@ -195,7 +186,7 @@ class LedNettyServerServiceTest {
     }
 
     @Test
-    void clientHeartbeat_shouldReceiveSameHeartbeatReply() throws Exception {
+    void clientHeartbeat_shouldNotReceiveReply() throws Exception {
         LedNettyServerStatusResponse start = service.start(0);
         assertTrue(start.isRunning());
 
@@ -206,9 +197,8 @@ class LedNettyServerServiceTest {
 
             socket.getOutputStream().write(heartbeat);
             socket.getOutputStream().flush();
-            byte[] reply = socket.getInputStream().readNBytes(6);
 
-            assertArrayEquals(heartbeat, reply);
+            assertThrows(SocketTimeoutException.class, () -> socket.getInputStream().read());
         }
     }
 
@@ -248,10 +238,10 @@ class LedNettyServerServiceTest {
             socket.getOutputStream().write(clientReportFrame());
             socket.getOutputStream().flush();
 
-            byte[] heartbeat = socket.getInputStream().readNBytes(6);
+            byte[] ack = socket.getInputStream().readNBytes(6);
             int retriedCommand = socket.getInputStream().read();
 
-            assertArrayEquals(new byte[]{0x38, 0x46, 0x55, 0x64, 0x73, (byte) 0x82}, heartbeat);
+            assertArrayEquals(new byte[]{0x38, 0x46, 0x55, 0x64, 0x73, (byte) 0x82}, ack);
             assertEquals(0x55, retriedCommand);
         }
     }
@@ -265,18 +255,6 @@ class LedNettyServerServiceTest {
             Thread.sleep(20);
         }
         throw new AssertionError("client was not registered as active");
-    }
-
-    private LedNettyServerStatusResponse waitUntilHeartbeatRecorded() throws InterruptedException {
-        long deadline = System.currentTimeMillis() + 1000;
-        while (System.currentTimeMillis() < deadline) {
-            LedNettyServerStatusResponse status = service.status();
-            if (status.getLastHeartbeatAt() != null) {
-                return status;
-            }
-            Thread.sleep(20);
-        }
-        return service.status();
     }
 
     private LedNettyBroadcastRequest broadcastBytes(int value) {

@@ -23,7 +23,7 @@ import java.util.Objects;
  */
 @Service
 @RequiredArgsConstructor
-public class SysFileServiceImpl implements SysFileService {
+public class MagicSysFileServiceImpl implements SysFileService {
 
     private final JdbcTemplate jdbcTemplate;
     private final FilePluginProperties props;

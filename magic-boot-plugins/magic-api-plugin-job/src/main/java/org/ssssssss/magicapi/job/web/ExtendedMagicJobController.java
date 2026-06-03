@@ -13,7 +13,7 @@ import org.ssssssss.magicapi.core.config.MagicConfiguration;
 import org.ssssssss.magicapi.core.model.JsonBean;
 import org.ssssssss.magicapi.job.entity.JobLog;
 import org.ssssssss.magicapi.job.model.JobInfo;
-import org.ssssssss.magicapi.job.service.JobLogService;
+import org.ssssssss.magicapi.job.service.MagicJobLogService;
 import org.ssssssss.magicapi.job.service.JobMagicDynamicRegistryForQuartz;
 
 import java.util.*;
@@ -28,10 +28,10 @@ public class ExtendedMagicJobController {
     private static final Logger logger = LoggerFactory.getLogger(ExtendedMagicJobController.class);
 
     private final JobMagicDynamicRegistryForQuartz registry;
-    private final JobLogService jobLogService;
+    private final MagicJobLogService jobLogService;
     private final Scheduler scheduler;
 
-    public ExtendedMagicJobController(JobMagicDynamicRegistryForQuartz registry, JobLogService jobLogService, Scheduler scheduler) {
+    public ExtendedMagicJobController(JobMagicDynamicRegistryForQuartz registry, MagicJobLogService jobLogService, Scheduler scheduler) {
         this.registry = registry;
         this.jobLogService = jobLogService;
         this.scheduler = scheduler;

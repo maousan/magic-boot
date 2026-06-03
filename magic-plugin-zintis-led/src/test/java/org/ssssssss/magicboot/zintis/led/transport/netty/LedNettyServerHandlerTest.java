@@ -131,7 +131,7 @@ class LedNettyServerHandlerTest {
     }
 
     @Test
-    void channelRead_shouldReplySameFrame_whenClientSendsHeartbeat() {
+    void channelRead_shouldNotReply_whenClientSendsHeartbeatFrameOnly() {
         LedNettyServerHandler handler = new LedNettyServerHandler();
         EmbeddedChannel channel = new EmbeddedChannel(handler);
         byte[] heartbeat = new byte[]{0x38, 0x46, 0x55, 0x64, 0x73, (byte) 0x82};
@@ -139,7 +139,7 @@ class LedNettyServerHandlerTest {
         channel.writeInbound(Unpooled.wrappedBuffer(heartbeat));
         Object outbound = channel.readOutbound();
 
-        assertEquals(Unpooled.wrappedBuffer(heartbeat), outbound);
+        assertNull(outbound);
         channel.finishAndReleaseAll();
     }
 

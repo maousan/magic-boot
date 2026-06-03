@@ -20,9 +20,9 @@ import java.util.Collections;
 import java.util.List;
 
 @Service
-public class JobLogService {
+public class MagicJobLogService {
 
-    private static final Logger logger = LoggerFactory.getLogger(JobLogService.class);
+    private static final Logger logger = LoggerFactory.getLogger(MagicJobLogService.class);
 
     private final JdbcTemplate jdbcTemplate;
     private final Scheduler scheduler;
@@ -47,7 +47,7 @@ public class JobLogService {
         return log;
     };
 
-    public JobLogService(JdbcTemplate jdbcTemplate, Scheduler scheduler, MagicJobConfig config) {
+    public MagicJobLogService(JdbcTemplate jdbcTemplate, Scheduler scheduler, MagicJobConfig config) {
         this.jdbcTemplate = jdbcTemplate;
         this.scheduler = scheduler;
         this.config = config;

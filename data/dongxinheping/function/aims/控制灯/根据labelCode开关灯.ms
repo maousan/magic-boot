@@ -124,7 +124,7 @@ let response = Forest.put(`http://${aimsHost}/labels/contents/led`)
     .contentTypeJson()
     // .contentType('application/json;charset=UTF-8')
     // .addHeader('Accept', 'application/json;charset=UTF-8')
-    .addBody(ledItems)
+    .addBody(JSONUtil.toJsonStr(ledItems).getBytes(StandardCharsets.UTF_8))
     .executeAsResponse()
 
 let statusCode = response.statusCode()

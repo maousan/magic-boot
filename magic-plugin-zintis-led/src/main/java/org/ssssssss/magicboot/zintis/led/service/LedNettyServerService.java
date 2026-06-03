@@ -39,9 +39,6 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Slf4j
@@ -53,10 +50,8 @@ public class LedNettyServerService {
     public static final int DEFAULT_TCP_KEEP_IDLE_SECONDS = 60;
     public static final int DEFAULT_TCP_KEEP_INTERVAL_SECONDS = 10;
     public static final int DEFAULT_TCP_KEEP_COUNT = 3;
-    public static final int DEFAULT_HEARTBEAT_INTERVAL_SECONDS = 3;
     public static final long DEFAULT_MIN_SEND_INTERVAL_MILLIS = 500;
     public static final int DEFAULT_PENDING_COMMAND_CACHE_LIMIT = 200;
-    private static final byte[] HEARTBEAT_FRAME = new byte[]{0x38, 0x46, 0x55, 0x64, 0x73, (byte) 0x82};
 
     private final ReentrantLock lock = new ReentrantLock();
     private final ReentrantLock outboundSendLock = new ReentrantLock();
@@ -72,16 +67,10 @@ public class LedNettyServerService {
     private EventLoopGroup workerGroup;
     private Channel serverChannel;
     private int boundPort = -1;
-    private ScheduledExecutorService heartbeatExecutor;
-    private ScheduledFuture<?> heartbeatTask;
     @Value("${zintis.led.netty.heartbeat.enabled:false}")
     private boolean heartbeatEnabled;
     @Value("${zintis.led.netty.client-report.registration.enabled:true}")
     private boolean clientReportRegistrationEnabled = true;
-    private volatile Long lastHeartbeatAt;
-    private volatile int lastHeartbeatTargets;
-    private volatile int lastHeartbeatSuccessCount;
-    private volatile int lastHeartbeatFailedCount;
     private volatile long lastOutboundSendAt;
 
     public LedNettyServerService() {
@@ -119,7 +108,7 @@ public class LedNettyServerService {
                         .port(boundPort)
                         .activeConnections(serverHandler.getActiveConnectionCount())
                         .heartbeatEnabled(heartbeatEnabled)
-                        .heartbeatRunning(isHeartbeatRunning())
+                        .heartbeatRunning(false)
                         .clientReportRegistrationEnabled(clientReportRegistrationEnabled)
                         .message("Netty server already running")
                         .build();
@@ -159,9 +148,6 @@ public class LedNettyServerService {
             ChannelFuture future = bootstrap.bind(port).syncUninterruptibly();
             serverChannel = future.channel();
             boundPort = ((InetSocketAddress) serverChannel.localAddress()).getPort();
-            if (heartbeatEnabled) {
-                startHeartbeat();
-            }
             log.info("LED netty server started on port {}", boundPort);
             return status("Netty server started");
         } catch (Exception ex) {
@@ -227,12 +213,7 @@ public class LedNettyServerService {
         lock.lock();
         try {
             heartbeatEnabled = enabled;
-            if (enabled && isRunning()) {
-                startHeartbeat();
-            } else {
-                stopHeartbeat();
-            }
-            return status(enabled ? "Netty heartbeat enabled" : "Netty heartbeat disabled");
+            return status(enabled ? "Netty client report ack enabled" : "Netty client report ack disabled");
         } finally {
             lock.unlock();
         }
@@ -475,18 +456,13 @@ public class LedNettyServerService {
                 .port(isRunning() ? boundPort : -1)
                 .activeConnections(serverHandler.getActiveConnectionCount())
                 .heartbeatEnabled(heartbeatEnabled)
-                .heartbeatRunning(isHeartbeatRunning())
+                .heartbeatRunning(false)
                 .clientReportRegistrationEnabled(clientReportRegistrationEnabled)
-                .lastHeartbeatAt(lastHeartbeatAt)
-                .lastHeartbeatTargets(lastHeartbeatTargets)
-                .lastHeartbeatSuccessCount(lastHeartbeatSuccessCount)
-                .lastHeartbeatFailedCount(lastHeartbeatFailedCount)
                 .message(message)
                 .build();
     }
 
     private void safeStopInternal() {
-        stopHeartbeat();
         serverHandler.resetActiveConnections();
         if (serverChannel != null) {
             try {
@@ -504,60 +480,6 @@ public class LedNettyServerService {
             bossGroup = null;
         }
         boundPort = -1;
-    }
-
-    private void startHeartbeat() {
-        stopHeartbeat();
-        heartbeatExecutor = Executors.newSingleThreadScheduledExecutor(runnable -> {
-            Thread thread = new Thread(runnable, "zintis-led-heartbeat");
-            thread.setDaemon(true);
-            return thread;
-        });
-        heartbeatTask = heartbeatExecutor.scheduleAtFixedRate(
-                this::sendHeartbeat,
-                DEFAULT_HEARTBEAT_INTERVAL_SECONDS,
-                DEFAULT_HEARTBEAT_INTERVAL_SECONDS,
-                TimeUnit.SECONDS);
-    }
-
-    private void stopHeartbeat() {
-        if (heartbeatTask != null) {
-            heartbeatTask.cancel(true);
-            heartbeatTask = null;
-        }
-        if (heartbeatExecutor != null) {
-            heartbeatExecutor.shutdownNow();
-            heartbeatExecutor = null;
-        }
-    }
-
-    private boolean isHeartbeatRunning() {
-        return heartbeatTask != null && !heartbeatTask.isCancelled() && !heartbeatTask.isDone();
-    }
-
-    private void sendHeartbeat() {
-        if (!isRunning()) {
-            return;
-        }
-        try {
-            LedNettyServerHandler.SendResult result = sendWithInterval(
-                    "heartbeat",
-                    () -> serverHandler.broadcast(HEARTBEAT_FRAME));
-            recordHeartbeat(result);
-            if (result.totalTargets() > 0) {
-                log.info("LED netty heartbeat sent: total={}, success={}, failed={}",
-                        result.totalTargets(), result.successCount(), result.totalTargets() - result.successCount());
-            } else {
-                log.debug("LED netty heartbeat skipped: no active clients");
-            }
-            if (result.totalTargets() > 0 && result.successCount() != result.totalTargets()) {
-                log.warn("LED netty heartbeat sent with failures: total={}, success={}, failed={}",
-                        result.totalTargets(), result.successCount(), result.failedTargets());
-            }
-        } catch (Exception exception) {
-            recordHeartbeatFailure();
-            log.warn("LED netty heartbeat send failed: {}", exception.getMessage(), exception);
-        }
     }
 
     private LedNettyServerHandler.SendResult sendWithInterval(
@@ -600,20 +522,6 @@ public class LedNettyServerService {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Interrupted while waiting for LED netty outbound send interval", exception);
         }
-    }
-
-    private void recordHeartbeat(LedNettyServerHandler.SendResult result) {
-        lastHeartbeatAt = System.currentTimeMillis();
-        lastHeartbeatTargets = result.totalTargets();
-        lastHeartbeatSuccessCount = result.successCount();
-        lastHeartbeatFailedCount = result.totalTargets() - result.successCount();
-    }
-
-    private void recordHeartbeatFailure() {
-        lastHeartbeatAt = System.currentTimeMillis();
-        lastHeartbeatTargets = 0;
-        lastHeartbeatSuccessCount = 0;
-        lastHeartbeatFailedCount = 1;
     }
 
     private String normalizeMac(String rawMac) {

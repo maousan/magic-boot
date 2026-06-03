@@ -73,4 +73,9 @@ public class PluginProperties {
      * Supports {pluginId} placeholder, e.g. /plugin/{pluginId}/api
      */
     private String apiPrefixTemplate = "/plugin/{pluginId}/api";
+
+    /**
+     * Plugin info table name.
+     */
+    private String tableName = "magic_plugin";
 }

@@ -15,7 +15,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -105,11 +104,12 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
                 }
             }
             String crc = extractCrcHex(data);
+            String rawHex = LedProtocolCodec.toHex(data);
             ClientResponse response = new ClientResponse(
                     normalizeRemoteAddress(String.valueOf(ctx.channel().remoteAddress())),
                     true,
                     false,
-                    LedProtocolCodec.toHex(data),
+                    rawHex,
                     payloadAscii,
                     mac,
                     ip,
@@ -118,22 +118,22 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
             completePendingResponse(ctx.channel().remoteAddress(), response);
             if (shouldReplyHeartbeat(data)) {
                 outboundSender.send(ctx.channel(), HEARTBEAT_FRAME);
-                log.info("LED netty server heartbeat reply sent to {}", ctx.channel().remoteAddress());
+                log.info("LED netty server client report ack sent to {}", ctx.channel().remoteAddress());
             }
             if (clientReportFrame && !mac.isBlank()) {
                 clientReportListener.onReport(mac, ip, normalizeRemoteAddress(String.valueOf(ctx.channel().remoteAddress())));
             }
-            if (clientReportFrame) {
-                log.info(
-                        "LED netty server recv client report from {}: hex={}, payloadAscii={}, mac={}, ip={}, crc={}",
-                        ctx.channel().remoteAddress(),
-                        LedProtocolCodec.toHex(data),
-                        payloadAscii,
-                        mac,
-                        ip,
-                        crc
-                );
-            }
+            // if (clientReportFrame) {
+            //     log.info(
+            //             "LED netty server recv client report from {}: hex={}, payloadAscii={}, mac={}, ip={}, crc={}",
+            //             ctx.channel().remoteAddress(),
+            //             LedProtocolCodec.toHex(data),
+            //             payloadAscii,
+            //             mac,
+            //             ip,
+            //             crc
+            //     );
+            // }
             return;
         }
         ctx.fireChannelRead(msg);
@@ -298,7 +298,7 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     private boolean shouldReplyHeartbeat(byte[] data) {
-        return Arrays.equals(data, HEARTBEAT_FRAME) || isClientReportFrame(data);
+        return isClientReportFrame(data);
     }
 
     private boolean isClientReportFrame(byte[] data) {

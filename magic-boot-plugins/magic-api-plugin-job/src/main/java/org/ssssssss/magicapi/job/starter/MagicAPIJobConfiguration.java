@@ -63,14 +63,14 @@ public class MagicAPIJobConfiguration implements MagicPluginConfiguration {
 	@Bean
     public ExtendedMagicJobController extendedMagicJobController(
             JobMagicDynamicRegistryForQuartz registry,
-            JobLogService jobLogService,
+            MagicJobLogService jobLogService,
             Scheduler scheduler) {
         return new ExtendedMagicJobController(registry, jobLogService, scheduler);
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public JobLogService jobLogService(JdbcTemplate jdbcTemplate, Scheduler scheduler) {
-        return new JobLogService(jdbcTemplate, scheduler, config);
+    public MagicJobLogService jobLogService(JdbcTemplate jdbcTemplate, Scheduler scheduler) {
+        return new MagicJobLogService(jdbcTemplate, scheduler, config);
     }
 }

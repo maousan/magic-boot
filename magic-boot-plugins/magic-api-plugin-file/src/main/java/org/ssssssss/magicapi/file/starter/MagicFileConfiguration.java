@@ -18,7 +18,7 @@ import org.ssssssss.magicapi.file.service.FileMagicDynamicRegistry;
 import org.ssssssss.magicapi.file.service.FileMagicResourceStorage;
 import org.ssssssss.magicapi.file.service.MagicDynamicFileClient;
 import org.ssssssss.magicapi.file.service.SysFileService;
-import org.ssssssss.magicapi.file.service.impl.SysFileServiceImpl;
+import org.ssssssss.magicapi.file.service.impl.MagicSysFileServiceImpl;
 import org.ssssssss.magicapi.file.web.MagicFileController;
 
 /**
@@ -75,7 +75,7 @@ public class MagicFileConfiguration implements MagicPluginConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public SysFileService sysFileService(JdbcTemplate jdbcTemplate, FilePluginProperties properties) {
-       return new SysFileServiceImpl(jdbcTemplate, properties);
+       return new MagicSysFileServiceImpl(jdbcTemplate, properties);
     }
 
     @Bean

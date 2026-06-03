@@ -1,18 +1,18 @@
 package org.ssssssss.magicboot.pf4j.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.PluginDescriptor;
 import org.pf4j.PluginManager;
 import org.pf4j.PluginState;
 import org.pf4j.PluginWrapper;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.ssssssss.magicboot.pf4j.configuration.PluginProperties;
 import org.ssssssss.magicboot.pf4j.entity.PluginInfo;
-import org.ssssssss.magicboot.pf4j.mapper.PluginInfoMapper;
 import org.ssssssss.magicboot.pf4j.model.PluginInstallErrorCode;
 import org.ssssssss.magicboot.pf4j.model.PluginInstallException;
 import org.ssssssss.magicboot.pf4j.model.PluginStatus;
@@ -29,6 +29,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -37,7 +38,6 @@ import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 
 /**
-
  */
 @Slf4j
 @Service
@@ -45,17 +45,47 @@ import java.util.stream.Collectors;
 public class PluginManagerService {
 
     private final PluginManager pluginManager;
-    private final PluginInfoMapper pluginInfoMapper;
+    private final JdbcTemplate jdbcTemplate;
     private final PluginProperties pluginProperties;
     private final ZipPluginInstaller zipPluginInstaller;
 
+    private final RowMapper<PluginInfo> rowMapper = (rs, rowNum) -> {
+        PluginInfo info = new PluginInfo();
+        info.setId(rs.getString("id"));
+        info.setPluginId(rs.getString("plugin_id"));
+        info.setPluginName(rs.getString("plugin_name"));
+        info.setVersion(rs.getString("version"));
+        info.setDescription(rs.getString("description"));
+        info.setAuthor(rs.getString("author"));
+        info.setPluginClass(rs.getString("plugin_class"));
+        info.setStatus(rs.getString("status"));
+        info.setJarPath(rs.getString("jar_path"));
+        info.setCreateTime(rs.getTimestamp("create_time") != null ? rs.getTimestamp("create_time").toLocalDateTime() : null);
+        info.setUpdateTime(rs.getTimestamp("update_time") != null ? rs.getTimestamp("update_time").toLocalDateTime() : null);
+        info.setDependencies(rs.getString("dependencies"));
+        info.setProvider(rs.getString("provider"));
+        info.setPackageType(rs.getString("package_type"));
+        info.setPackageChecksum(rs.getString("package_checksum"));
+        info.setManifestVersion(rs.getString("manifest_version"));
+        info.setManifestJson(rs.getString("manifest_json"));
+        info.setRequiresMagicBoot(rs.getString("requires_magic_boot"));
+        info.setPermissions(rs.getString("permissions"));
+        info.setInstallSource(rs.getString("install_source"));
+        info.setInstallTime(rs.getTimestamp("install_time") != null ? rs.getTimestamp("install_time").toLocalDateTime() : null);
+        return info;
+    };
+
     public PluginManagerService(PluginManager pluginManager,
-                                PluginInfoMapper pluginInfoMapper,
+                                JdbcTemplate jdbcTemplate,
                                 PluginProperties pluginProperties) {
         this.pluginManager = pluginManager;
-        this.pluginInfoMapper = pluginInfoMapper;
+        this.jdbcTemplate = jdbcTemplate;
         this.pluginProperties = pluginProperties;
         this.zipPluginInstaller = new ZipPluginInstaller(pluginProperties);
+    }
+
+    private String table() {
+        return pluginProperties.getTableName();
     }
 
     // ====================
@@ -65,7 +95,7 @@ public class PluginManagerService {
 
      */
     public List<Map<String, Object>> listAllPlugins() {
-        List<PluginInfo> dbPlugins = pluginInfoMapper.selectList(new LambdaQueryWrapper<>());
+        List<PluginInfo> dbPlugins = jdbcTemplate.query("SELECT * FROM " + table(), rowMapper);
         Map<String, Map<String, Object>> mergedPlugins = new LinkedHashMap<>();
 
 
@@ -137,7 +167,7 @@ public class PluginManagerService {
      */
     public List<String> scanNewPlugins() {
         List<String> newPlugins = new ArrayList<>();
-        Set<String> dbPluginIds = pluginInfoMapper.selectList(new LambdaQueryWrapper<>())
+        Set<String> dbPluginIds = jdbcTemplate.query("SELECT * FROM " + table(), rowMapper)
                 .stream()
                 .map(PluginInfo::getPluginId)
                 .collect(Collectors.toSet());
@@ -173,7 +203,6 @@ public class PluginManagerService {
     }
 
     /**
-
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> installPluginBySource(String source, String jarPath, String url) {
@@ -200,7 +229,6 @@ public class PluginManagerService {
     }
 
     /**
-
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> installFromRemoteUrl(String url) {
@@ -244,7 +272,7 @@ public class PluginManagerService {
      */
     public List<Map<String, Object>> syncPlugins() {
         List<Map<String, Object>> newPlugins = new ArrayList<>();
-        Set<String> dbPluginIds = pluginInfoMapper.selectList(new LambdaQueryWrapper<>())
+        Set<String> dbPluginIds = jdbcTemplate.query("SELECT * FROM " + table(), rowMapper)
                 .stream()
                 .map(PluginInfo::getPluginId)
                 .collect(Collectors.toSet());
@@ -271,7 +299,7 @@ public class PluginManagerService {
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> initMissingPluginsFromRuntime() {
-        List<PluginInfo> dbPlugins = pluginInfoMapper.selectList(new LambdaQueryWrapper<>());
+        List<PluginInfo> dbPlugins = jdbcTemplate.query("SELECT * FROM " + table(), rowMapper);
         Set<String> dbPluginIds = dbPlugins.stream()
                 .map(PluginInfo::getPluginId)
                 .collect(Collectors.toSet());
@@ -286,7 +314,7 @@ public class PluginManagerService {
                 continue;
             }
             PluginInfo info = buildPluginInfoFromRuntime(wrapper);
-            pluginInfoMapper.insert(info);
+            insertPluginInfo(info);
             dbPluginIds.add(pluginId);
             inserted++;
             log.info("Startup sync inserted plugin record: {} -> {}", pluginId, info.getJarPath());
@@ -301,7 +329,7 @@ public class PluginManagerService {
 
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> reconcilePlugins(boolean dryRun) {
-        List<PluginInfo> dbPlugins = pluginInfoMapper.selectList(new LambdaQueryWrapper<>());
+        List<PluginInfo> dbPlugins = jdbcTemplate.query("SELECT * FROM " + table(), rowMapper);
         Map<String, PluginInfo> dbByPluginId = dbPlugins.stream()
                 .collect(Collectors.toMap(PluginInfo::getPluginId, p -> p, (a, b) -> a, LinkedHashMap::new));
 
@@ -331,7 +359,7 @@ public class PluginManagerService {
             for (String pluginId : missingInDb) {
                 try {
                     PluginInfo info = buildPluginInfoFromRuntime(runtimeByPluginId.get(pluginId));
-                    pluginInfoMapper.insert(info);
+                    insertPluginInfo(info);
                     fixedCount++;
                     fixedActions.add("insert-db:" + pluginId);
                 } catch (Exception ex) {
@@ -368,7 +396,7 @@ public class PluginManagerService {
                     if (info != null && !PluginStatus.ERROR.name().equals(info.getStatus())) {
                         info.setStatus(PluginStatus.ERROR.name());
                         info.setUpdateTime(LocalDateTime.now());
-                        pluginInfoMapper.updateById(info);
+                        updatePluginInfoById(info);
                         fixedCount++;
                         fixedActions.add("mark-error:" + pluginId);
                     }
@@ -390,11 +418,9 @@ public class PluginManagerService {
     }
 
     /**
-
      */
     public Map<String, Object> getPluginInfo(String pluginId) {
-        PluginInfo info = pluginInfoMapper.selectOne(new LambdaQueryWrapper<PluginInfo>()
-                .eq(PluginInfo::getPluginId, pluginId));
+        PluginInfo info = getPluginInfoByPluginId(pluginId);
         if (info == null) {
             throw new RuntimeException("Plugin not found: " + pluginId);
         }
@@ -404,7 +430,6 @@ public class PluginManagerService {
     // ====================
 
     /**
-
      */
     @Transactional(rollbackFor = Exception.class)
     public PluginInfo installPlugin(MultipartFile file) throws IOException {
@@ -463,14 +488,13 @@ public class PluginManagerService {
         }
 
 
-        pluginInfoMapper.deleteById(info.getId());
+        jdbcTemplate.update("DELETE FROM " + table() + " WHERE id = ?", info.getId());
         log.info("Plugin uninstalled successfully: {}", pluginId);
     }
 
     // ====================
 
     /**
-
      */
     public void startPlugin(String pluginId) {
         PluginInfo info = getPluginInfoByPluginId(pluginId);
@@ -491,12 +515,11 @@ public class PluginManagerService {
 
         info.setStatus(PluginStatus.STARTED.name());
         info.setUpdateTime(LocalDateTime.now());
-        pluginInfoMapper.updateById(info);
+        updatePluginInfoById(info);
         log.info("Plugin started successfully: {}", pluginId);
     }
 
     /**
-
      */
     public void stopPlugin(String pluginId) {
         PluginInfo info = getPluginInfoByPluginId(pluginId);
@@ -514,12 +537,11 @@ public class PluginManagerService {
 
         info.setStatus(PluginStatus.STOPPED.name());
         info.setUpdateTime(LocalDateTime.now());
-        pluginInfoMapper.updateById(info);
+        updatePluginInfoById(info);
         log.info("Plugin stopped successfully: {}", pluginId);
     }
 
     /**
-
      */
     @Transactional(rollbackFor = Exception.class)
     public void reloadPlugin(String pluginId) {
@@ -547,12 +569,11 @@ public class PluginManagerService {
 
         info.setStatus(PluginStatus.STARTED.name());
         info.setUpdateTime(LocalDateTime.now());
-        pluginInfoMapper.updateById(info);
+        updatePluginInfoById(info);
         log.info("Plugin reloaded successfully: {}", pluginId);
     }
 
     /**
-
      */
     public Map<String, Object> enablePlugin(String pluginId) {
         PluginWrapper wrapper = pluginManager.getPlugin(pluginId);
@@ -607,7 +628,6 @@ public class PluginManagerService {
     // ====================
 
     /**
-
      */
     public Map<String, Object> getPluginHealth(String pluginId) {
         PluginInfo dbInfo = getPluginInfoByPluginId(pluginId);
@@ -678,6 +698,49 @@ public class PluginManagerService {
         return new ArrayList<>(deque);
     }
 
+    // ==================== JdbcTemplate helpers ====================
+
+    private PluginInfo getPluginInfoByPluginId(String pluginId) {
+        List<PluginInfo> list = jdbcTemplate.query(
+                "SELECT * FROM " + table() + " WHERE plugin_id = ?",
+                rowMapper, pluginId);
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    private void insertPluginInfo(PluginInfo info) {
+        String sql = "INSERT INTO " + table() +
+                " (id, plugin_id, plugin_name, version, description, author, plugin_class, status, jar_path," +
+                " create_time, update_time, dependencies, provider, package_type, package_checksum," +
+                " manifest_version, manifest_json, requires_magic_boot, permissions, install_source, install_time)" +
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        jdbcTemplate.update(sql,
+                info.getId(), info.getPluginId(), info.getPluginName(), info.getVersion(),
+                info.getDescription(), info.getAuthor(), info.getPluginClass(), info.getStatus(),
+                info.getJarPath(), info.getCreateTime(), info.getUpdateTime(), info.getDependencies(),
+                info.getProvider(), info.getPackageType(), info.getPackageChecksum(),
+                info.getManifestVersion(), info.getManifestJson(), info.getRequiresMagicBoot(),
+                info.getPermissions(), info.getInstallSource(), info.getInstallTime());
+    }
+
+    private void updatePluginInfoById(PluginInfo info) {
+        String sql = "UPDATE " + table() +
+                " SET plugin_id=?, plugin_name=?, version=?, description=?, author=?, plugin_class=?," +
+                " status=?, jar_path=?, update_time=?, dependencies=?, provider=?," +
+                " package_type=?, package_checksum=?, manifest_version=?, manifest_json=?," +
+                " requires_magic_boot=?, permissions=?, install_source=?, install_time=?" +
+                " WHERE id=?";
+        jdbcTemplate.update(sql,
+                info.getPluginId(), info.getPluginName(), info.getVersion(),
+                info.getDescription(), info.getAuthor(), info.getPluginClass(),
+                info.getStatus(), info.getJarPath(), info.getUpdateTime(), info.getDependencies(),
+                info.getProvider(), info.getPackageType(), info.getPackageChecksum(),
+                info.getManifestVersion(), info.getManifestJson(), info.getRequiresMagicBoot(),
+                info.getPermissions(), info.getInstallSource(), info.getInstallTime(),
+                info.getId());
+    }
+
+    // ====================
+
     private PluginInfo savePluginToDatabase(String pluginId, Path jarPath) {
         return savePluginToDatabase(pluginId, jarPath, InstallGovernanceMeta.none());
     }
@@ -688,6 +751,7 @@ public class PluginManagerService {
         PluginMetadata metadata = resolvePluginMetadata(descriptor, jarPath);
 
         PluginInfo info = new PluginInfo();
+        info.setId(UUID.randomUUID().toString().replace("-", ""));
         info.setPluginId(descriptor.getPluginId());
         info.setPluginName(metadata.pluginName());
         info.setVersion(descriptor.getVersion());
@@ -709,7 +773,7 @@ public class PluginManagerService {
         info.setInstallSource(governance.installSource);
         info.setInstallTime(governance.installTime);
 
-        pluginInfoMapper.insert(info);
+        insertPluginInfo(info);
         return info;
     }
 
@@ -720,6 +784,7 @@ public class PluginManagerService {
         PluginMetadata metadata = resolvePluginMetadata(descriptor, pluginPath);
 
         PluginInfo info = new PluginInfo();
+        info.setId(UUID.randomUUID().toString().replace("-", ""));
         info.setPluginId(descriptor.getPluginId());
         info.setPluginName(metadata.pluginName());
         info.setVersion(descriptor.getVersion());
@@ -735,17 +800,6 @@ public class PluginManagerService {
         return info;
     }
 
-    /**
-
-     */
-    private PluginInfo getPluginInfoByPluginId(String pluginId) {
-        return pluginInfoMapper.selectOne(new LambdaQueryWrapper<PluginInfo>()
-                .eq(PluginInfo::getPluginId, pluginId));
-    }
-
-    /**
-
-     */
     private List<Path> getPluginJars() {
         List<Path> result = new ArrayList<>();
         Path pluginPath = Paths.get(pluginProperties.getDir()).toAbsolutePath();
@@ -888,7 +942,6 @@ public class PluginManagerService {
     }
 
     /**
-
      */
     private Map<String, Object> toPluginMap(PluginInfo info) {
         Map<String, Object> map = new LinkedHashMap<>();
@@ -927,7 +980,6 @@ public class PluginManagerService {
     }
 
     /**
-
      */
     private Map<String, Object> toRuntimePluginMap(PluginWrapper wrapper) {
         PluginDescriptor descriptor = wrapper.getDescriptor();

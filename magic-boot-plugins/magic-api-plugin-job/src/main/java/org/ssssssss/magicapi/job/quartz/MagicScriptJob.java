@@ -8,7 +8,7 @@ import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.ssssssss.magicapi.job.service.JobLogService;
+import org.ssssssss.magicapi.job.service.MagicJobLogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 
@@ -30,7 +30,7 @@ public class MagicScriptJob implements Job {
 
     private static final Logger logger = LoggerFactory.getLogger(MagicScriptJob.class);
     @Autowired
-    private JobLogService jobLogService;
+    private MagicJobLogService jobLogService;
     @Autowired
     private ApplicationContext applicationContext;
     @Override
