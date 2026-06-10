@@ -60,29 +60,60 @@
               />
             </n-form-item>
             <n-form-item label="指令" :show-feedback="false">
-              <n-input v-model:value="commandForm.command" placeholder="输入指令名称" size="small" />
+              <n-space vertical :size="8" style="width: 100%">
+                <n-radio-group v-model:value="commandForm.commandMode" size="small">
+                  <n-radio-button value="predefined">预定义指令</n-radio-button>
+                  <n-radio-button value="custom">自定义指令</n-radio-button>
+                </n-radio-group>
+                <n-select
+                  v-if="commandForm.commandMode === 'predefined'"
+                  v-model:value="commandForm.command"
+                  :options="predefinedCommands"
+                  placeholder="选择指令"
+                  size="small"
+                />
+                <n-input v-else v-model:value="commandForm.customCommand" placeholder="输入指令名称" size="small" />
+              </n-space>
             </n-form-item>
-            <n-form-item label="参数 JSON" :show-feedback="false">
-              <n-input
-                v-model:value="commandForm.params"
-                type="textarea"
-                placeholder='例如: {"key": "value"}'
-                :rows="3"
-                size="small"
-              />
+            <n-form-item label="参数" :show-feedback="false">
+              <n-space vertical :size="8" style="width: 100%">
+                <n-radio-group v-model:value="commandForm.paramsMode" size="small">
+                  <n-radio-button value="predefined">指定EPC</n-radio-button>
+                  <n-radio-button value="custom">自定义参数</n-radio-button>
+                </n-radio-group>
+                <n-select
+                  v-if="commandForm.paramsMode === 'predefined'"
+                  v-model:value="commandForm.paramsEpc"
+                  filterable
+                  virtual-scroll
+                  :loading="epcLoading"
+                  :options="epcOptions"
+                  placeholder="搜索 EPC"
+                  @update:show="handleEpcDropdownOpen"
+                  clearable
+                  size="small"
+                />
+                <n-input
+                  v-else
+                  v-model:value="commandForm.customParams"
+                  type="textarea"
+                  placeholder='例如: {"key": "value"}'
+                  :rows="3"
+                  size="small"
+                />
+              </n-space>
             </n-form-item>
             <n-space>
               <n-button
                 type="primary"
                 size="small"
                 :loading="sending"
-                :disabled="!commandForm.deviceId || !commandForm.command"
+                :disabled="!commandForm.deviceId || !(commandForm.commandMode === 'predefined' ? commandForm.command : commandForm.customCommand)"
                 @click="handleSendCommand"
               >
                 发送
               </n-button>
               <n-button size="small" secondary @click="resetCommand">清空</n-button>
-              <n-button size="small" secondary @click="generateRandomParams">随机参数</n-button>
             </n-space>
           </n-space>
 
@@ -151,7 +182,6 @@
             :loading="loading"
             :bordered="false"
             size="small"
-            flex-height
             style="height: 100%"
             :row-key="(row: RfidDeviceInfo) => row.deviceId"
           />
@@ -165,7 +195,7 @@
 import { ref, reactive, computed, watch, onMounted, onUnmounted, h } from 'vue'
 import {
   NCard, NDataTable, NButton, NSpace, NFlex, NFormItem, NInput, NTag,
-  NText, NSpin, NSwitch, NSelect, NDivider, NPagination, useMessage,
+  NText, NSpin, NSwitch, NSelect, NDivider, NPagination, NRadioGroup, NRadioButton, useMessage,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import {
@@ -173,6 +203,7 @@ import {
   startRfidServer, stopRfidServer, getRfidRecords,
 } from '@/api/rfid-server'
 import type { RfidServerStatus, RfidDeviceInfo, RfidCommandResult, RfidRecord } from '@/api/rfid-server'
+import { getBatchEpcList } from '@/api/batch-epc'
 
 const message = useMessage()
 const loading = ref(false)
@@ -190,15 +221,37 @@ const recordsPage = ref(1)
 const recordsPageSize = ref(20)
 const recordsTotal = ref(0)
 
-const commandForm = reactive<{
-  deviceId: string | undefined
-  command: string
-  params: string
-}>({
-  deviceId: undefined,
-  command: '',
-  params: '',
+const commandForm = reactive({
+  deviceId: undefined as string | undefined,
+  commandMode: 'predefined' as 'predefined' | 'custom',
+  command: undefined as string | undefined,
+  customCommand: '',
+  paramsMode: 'predefined' as 'predefined' | 'custom',
+  paramsEpc: undefined as string | undefined,
+  customParams: '',
 })
+
+const predefinedCommands = [
+  { label: '开灯-on', value: 'on' },
+  { label: '灭灯-off', value: 'off' },
+]
+
+const epcOptions = ref<{ label: string; value: string }[]>([])
+const epcLoading = ref(false)
+
+async function handleEpcDropdownOpen(show: boolean) {
+  if (!show || epcOptions.value.length > 0) return
+  epcLoading.value = true
+  try {
+    const res = await getBatchEpcList({ page: 1, pageSize: 100 })
+    epcOptions.value = (res.list || []).map(item => ({
+      label: `${item.epc} (${item.batchId})`,
+      value: item.epc,
+    }))
+  } finally {
+    epcLoading.value = false
+  }
+}
 
 const statusClass = computed(() => {
   if (!status.value) return 'loading'
@@ -244,7 +297,7 @@ async function fetchStatus() {
 
 async function fetchDevices() {
   const res = await getRfidDevices()
-  devices.value = res.devices || []
+  devices.value = res?.devices || []
 }
 
 async function fetchRecords() {
@@ -292,37 +345,30 @@ function selectDevice(row: RfidDeviceInfo) {
 }
 
 function resetCommand() {
-  commandForm.command = ''
-  commandForm.params = ''
+  commandForm.commandMode = 'predefined'
+  commandForm.command = undefined
+  commandForm.customCommand = ''
+  commandForm.paramsMode = 'predefined'
+  commandForm.paramsEpc = undefined
+  commandForm.customParams = ''
   commandResult.value = null
 }
 
-function generateRandomParams() {
-  const keys = ['action', 'mode', 'type', 'channel', 'interval', 'threshold', 'power', 'freq']
-  const count = 2 + Math.floor(Math.random() * 3)
-  const obj: Record<string, unknown> = {}
-  const used = new Set<string>()
-  for (let i = 0; i < count; i++) {
-    let key = keys[Math.floor(Math.random() * keys.length)]!
-    while (used.has(key)) key = keys[Math.floor(Math.random() * keys.length)]!
-    used.add(key)
-    const val = Math.random() > 0.5
-      ? Math.floor(Math.random() * 100)
-      : `val_${Math.random().toString(36).slice(2, 6)}`
-    obj[key] = val
-  }
-  commandForm.params = JSON.stringify(obj, null, 2)
-}
 
 async function handleSendCommand() {
-  if (!commandForm.deviceId || !commandForm.command) return
+  const command = commandForm.commandMode === 'predefined' ? commandForm.command : commandForm.customCommand
+  if (!commandForm.deviceId || !command) return
   sending.value = true
   commandResult.value = null
   try {
     let params: Record<string, unknown> | undefined
-    if (commandForm.params.trim()) {
+    if (commandForm.paramsMode === 'predefined') {
+      if (commandForm.paramsEpc) {
+        params = { epc: commandForm.paramsEpc }
+      }
+    } else if (commandForm.customParams.trim()) {
       try {
-        params = JSON.parse(commandForm.params)
+        params = JSON.parse(commandForm.customParams)
       } catch {
         message.error('参数 JSON 格式错误')
         return
@@ -330,7 +376,7 @@ async function handleSendCommand() {
     }
     commandResult.value = await sendRfidCommand({
       deviceId: commandForm.deviceId,
-      command: commandForm.command,
+      command,
       params,
     })
     if (commandResult.value.success) {

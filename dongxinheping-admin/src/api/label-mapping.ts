@@ -26,6 +26,19 @@ export function lightOnLabel(data: { labelCode: string; color: string; duration:
   return client.post<ApiResponse<{ success: boolean }>>('/location/label/light-on', data).then((r) => r.data.data)
 }
 
+export interface LabelLedStatus {
+  code: string
+  pickingLinkStatus: string
+  ledColor: string
+  requestPickingDate: string
+  pickingDate: string
+  articles: Array<{ productName: string; productCode: string }>
+}
+
+export function getLabelLedStatus(labelCode: string): Promise<LabelLedStatus> {
+  return client.get<ApiResponse<LabelLedStatus>>('/location/label/led-status', { params: { labelCode } }).then((r) => r.data.data)
+}
+
 export function lightOffLabel(data: { labelCode: string }): Promise<{ success: boolean }> {
   return client.post<ApiResponse<{ success: boolean }>>('/location/label/light-off', data).then((r) => r.data.data)
 }

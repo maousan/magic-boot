@@ -135,7 +135,7 @@ import {
   getPickingUploadList, getPickingUploadDetail,
   addPickingUpload, updatePickingUpload, deletePickingUpload,
   addPickingUploadDetail, updatePickingUploadDetail, deletePickingUploadDetail,
-  pickingDataUpload, pickingComplete,
+  pickingDataUpload, pickingComplete, lightControl,
 } from '@/api/picking-upload'
 import { getWarehouseLocations } from '@/api/warehouse'
 import type { PickingUpload, PickingUploadDetail } from '@/types'
@@ -190,6 +190,7 @@ const uploadingMasterIds = ref<Set<string>>(new Set())
 const uploadingDetailIds = ref<Set<string>>(new Set())
 const completingDetailIds = ref<Set<string>>(new Set())
 const resettingDetailIds = ref<Set<string>>(new Set())
+const lightControlIds = ref<Set<string>>(new Set())
 
 // ---- Master columns ----
 const masterColumns: DataTableColumns<PickingUpload> = [
@@ -206,7 +207,7 @@ const masterColumns: DataTableColumns<PickingUpload> = [
   {
     title: '操作',
     key: 'actions',
-    width: 300,
+    width: 420,
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
         h(NButton, { size: 'small', onClick: () => openDetailDrawer(row) }, () => '明细'),
@@ -216,6 +217,18 @@ const masterColumns: DataTableColumns<PickingUpload> = [
           loading: uploadingMasterIds.value.has(row.id),
           onClick: () => handlePickingUpload(row),
         }, () => '上传'),
+        h(NButton, {
+          size: 'small',
+          type: 'success',
+          loading: lightControlIds.value.has(row.id + '_on'),
+          onClick: () => handleLightOn(row),
+        }, () => '开灯'),
+        h(NButton, {
+          size: 'small',
+          type: 'error',
+          loading: lightControlIds.value.has(row.id + '_off'),
+          onClick: () => handleLightOff(row),
+        }, () => '关灯'),
         h(NButton, { size: 'small', onClick: () => openEditMaster(row) }, () => '编辑'),
         h(NButton, { size: 'small', type: 'error', onClick: () => openDeleteMaster(row) }, () => '删除'),
       ]),
@@ -546,6 +559,32 @@ async function handlePickingComplete(row: PickingUploadDetail) {
     // handled by interceptor
   } finally {
     uploadingDetailIds.value.delete(row.id)
+  }
+}
+
+async function handleLightOn(row: PickingUpload) {
+  const key = row.id + '_on'
+  lightControlIds.value.add(key)
+  try {
+    await lightControl({ waveNo: row.waveNo, userId: row.userId, mode: 2 })
+    message.success('开灯指令已发送')
+  } catch {
+    // handled by interceptor
+  } finally {
+    lightControlIds.value.delete(key)
+  }
+}
+
+async function handleLightOff(row: PickingUpload) {
+  const key = row.id + '_off'
+  lightControlIds.value.add(key)
+  try {
+    await lightControl({ waveNo: row.waveNo, userId: row.userId, mode: 4 })
+    message.success('关灯指令已发送')
+  } catch {
+    // handled by interceptor
+  } finally {
+    lightControlIds.value.delete(key)
   }
 }
 

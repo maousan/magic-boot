@@ -5,7 +5,7 @@
   "groupId" : "d7de530ea18542f2827146962f10bdb4",
   "name" : "根据labelCode开关灯",
   "createTime" : 1775209721631,
-  "updateTime" : 1779930933582,
+  "updateTime" : 1780580237016,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -14,7 +14,7 @@
   "returnType" : null,
   "mappingPath" : null,
   "parameters" : [ {
-    "name" : "source",
+    "name" : "data",
     "value" : null,
     "description" : null,
     "required" : false,
@@ -28,112 +28,43 @@
   } ]
 }
 ================================
+import com.dtflys.forest.Forest
 import log
-import cn.hutool.extra.spring.SpringUtil
-import java.util.ArrayList
-import java.util.HashMap
-import java.util.List
-import java.nio.charset.StandardCharsets
+import cn.hutool.http.HttpRequest
 import cn.hutool.json.JSONUtil
-import com.dtflys.forest.Forest;
+import java.util.List
 
 const aimsHost = Forest.config().getVariableValue("aimsHost")
 
-if(source == null){
+if(data == null || !(data instanceof List)){
     return {
         success: false,
         status: 400,
-        message: 'data不能为空，且必须为数组类型',
-        request: []
+        message: 'data不能为空，且必须为数组类型'
     }
 }
 
-let ledItems = new ArrayList()
-
-if(!(source instanceof List)){
-    return {
-        success: false,
-        status: 400,
-        message: 'data必须为数组类型',
-        request: []
+for(item in data){
+    let duration = item.duration
+    if(duration == 'inf') {
+        duration = '60m'
     }
+    if(duration == '0s') {
+        duration = '0'
+    }
+    item.duration = duration
 }
 
-let idx = 0
-for(item in source){
-    idx = idx + 1
-    if(item == null){
-        return {
-            success: false,
-            status: 400,
-            message: 'data[' + idx + ']不能为空',
-            request: []
-        }
-    }
-    if(item.labelCode == null || item.labelCode == ''){
-        return {
-            success: false,
-            status: 400,
-            message: 'labelCode不能为空',
-            request: []
-        }
-    }
-    let row = new HashMap()
-    row.put('labelCode', item.labelCode)
-    let itemColor = item.color
-    if(itemColor == null || itemColor == ''){
-        return {
-            success: false,
-            status: 400,
-            message: 'color不能为空',
-            request: []
-        }
-    }
-    row.put('color', itemColor)
+let jsonBody = JSONUtil.toJsonStr(data)
+log.info("标签灯请求数据: {}", jsonBody)
+let response = HttpRequest.put(`http://${aimsHost}/labels/contents/led`)
+    .header('Content-Type', 'application/json;charset=UTF-8')
+    .body(jsonBody)
+    .execute()
 
-    let itemDuration = item.duration
-    if(itemDuration == null || itemDuration == ''){
-        return {
-            success: false,
-            status: 400,
-            message: 'duration不能为空',
-            request: []
-        }
-    }
-    if(itemDuration == 'inf'){
-        itemDuration = '60m'
-    }
-    row.put('duration', itemDuration)
-
-    if(item.patternId != null){
-        row.put('patternId', item.patternId)
-    }
-    ledItems.add(row)
-}
-
-if(ledItems.size() == 0){
-    return {
-        success: false,
-        status: 400,
-        message: 'labelCode不能为空',
-        request: []
-    }
-}
-
-let response = Forest.put(`http://${aimsHost}/labels/contents/led`)
-    .contentTypeJson()
-    // .contentType('application/json;charset=UTF-8')
-    // .addHeader('Accept', 'application/json;charset=UTF-8')
-    .addBody(JSONUtil.toJsonStr(ledItems).getBytes(StandardCharsets.UTF_8))
-    .executeAsResponse()
-
-let statusCode = response.statusCode()
-let responseText = response.readAsString()
+let statusCode = response.getStatus()
+let responseText = response.body()
 let success = statusCode == 202
-let msg = '调用失败'
-if(success){
-    msg = '调用成功'
-}
 
 if(!success){
     log.warn('AIMS亮灯调用失败, status=' + statusCode + ', response=' + responseText)
@@ -141,4 +72,9 @@ if(!success){
     log.info("AIMS亮灯调用成功")
 }
 
-return {success}
+return {
+    success: success,
+    status: statusCode,
+    message: success ? '调用成功' : '调用失败',
+    responseText: responseText
+}

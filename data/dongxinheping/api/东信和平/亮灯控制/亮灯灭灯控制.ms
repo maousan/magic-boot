@@ -5,7 +5,7 @@
   "groupId" : "qou8in0pu4dvva7g20trefax4lo26ye8",
   "name" : "亮灯灭灯控制",
   "createTime" : null,
-  "updateTime" : 1780050350477,
+  "updateTime" : 1780578804116,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -25,11 +25,11 @@
     "expression" : null,
     "children" : null
   } ],
-  "requestBody" : "{\n  \"waveNo\": \"1W2604180001\", \n  \"userId\": \"WZK\", \n  \"mode\": \"1\", \n  \"color\": \"GREEN\", \n  \"duration\": \"inf\"\n}",
+  "requestBody" : "{\"waveNo\":\"1W2605210002\",\"userId\":\"DZJH\",\"mode\":2}",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"指令发送成功\",\n    \"data\": null,\n    \"timestamp\": 1780037904541,\n    \"executeTime\": 154\n}",
-  "description" : "亮灯/灭灯控制接口，当前仅记录日志，三方对接逻辑预留。",
+  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"指令发送成功\",\n    \"data\": null,\n    \"timestamp\": 1780578231894,\n    \"executeTime\": 84862\n}",
+  "description" : "亮灯/灭灯控制接口。mode=1/2启用主单并重算灯态，mode=3/4禁用主单并重算灯态。",
   "requestBodyDefinition" : {
     "name" : "root",
     "value" : "",
@@ -160,6 +160,7 @@ import java.util.UUID
 import com.dtflys.forest.Forest
 import '@/aims/led/turnOffLedByArticleId' as turnOffLedByArticleId
 import '@/aims/led/turnOnLedByArticleId' as turnOnLedByArticleId
+import '@/utils/getUserLightColor' as getUserLightColor
 import '@/led/turnOnAisleLedByLotNo' as turnOnAisleLedByLotNo
 import '@/led/turnOffAisleLedByLotNo' as turnOffAisleLedByLotNo
 
@@ -170,10 +171,9 @@ if (body == null) {
 }
 
 const mixColor = Forest.config().getVariableValue("mixColor")
-const lightOnDuration = Forest.config().getVariableValue("lightOnDuration")
 const stationCode = Forest.config().getVariableValue("stationCode")
 
-const globalLockKey = 'light:picking:upload:global'
+const globalLockKey = `light:picking:upload:global_${body.waveNo}`
 const lockTimeoutSeconds = 10
 const locationChunkSize = 200
 
@@ -192,26 +192,6 @@ let addUnique = (list, setMap, value) => {
         setMap[value] = 1
         list.add(value)
     }
-}
-
-let formatLocationLog = (locationCodes, limit) => {
-    if(locationCodes == null){
-        return 'size=0,sample=[]'
-    }
-    let max = limit
-    if(max == null || max <= 0){
-        max = 10
-    }
-    let sample = []
-    let i = 0
-    for(code in locationCodes){
-        if(i >= max){
-            break
-        }
-        sample.add(code)
-        i = i + 1
-    }
-    return 'size=' + locationCodes.size() + ',sample=' + sample
 }
 
 let splitLocationCodeChunks = (locationCodes, chunkSize) => {
@@ -357,7 +337,27 @@ let queryWaveLocationCodes = (waveNo, targetLocationCodes) => {
     return result
 }
 
-let queryLocationStatusBatch = (locationCodes) => {
+let buildInSqlParams = (values, paramPrefix) => {
+    let inSql = ""
+    let params = {}
+    let idx = 0
+    for(value in values){
+        let key = paramPrefix + idx
+        params[key] = value
+        if(idx > 0){
+            inSql = inSql + ','
+        }
+        inSql = inSql + '#{' + key + '}'
+        idx = idx + 1
+    }
+    return {
+        inSql: inSql,
+        params: params
+    }
+}
+
+// 重算库位状态并写入 t_location_status，只统计启用主单(status=1)下的明细
+let recalcLocationStatusBatch = (locationCodes) => {
     let statusSnapshotMap = {}
     if(locationCodes == null || locationCodes.size() == 0){
         return statusSnapshotMap
@@ -373,7 +373,7 @@ let queryLocationStatusBatch = (locationCodes) => {
     let chunks = splitLocationCodeChunks(locationCodes, locationChunkSize)
     for(codeChunk in chunks){
         let params = {}
-        let inSql = ''
+        let inSql = ""
         let idx = 0
         for(locationCode in codeChunk){
             let key = 'statusLocationCode' + idx
@@ -396,9 +396,11 @@ let queryLocationStatusBatch = (locationCodes) => {
                     d.bill_id,
                     sum(case when ifnull(d.status, 0) <> 1 then 1 else 0 end) as unpicked_cnt
                 from t_picking_upload_detail d
+                inner join t_picking_upload m on m.id = d.bill_id
                 where d.location_code in (""" + inSql + """)
                   and ifnull(d.location_code, '') <> ''
                   and ifnull(d.bill_id, '') <> ''
+                  and ifnull(m.status, 1) = 1
                 group by d.location_code, d.bill_id
             ) t
             group by t.location_code
@@ -435,42 +437,107 @@ let queryLocationStatusBatch = (locationCodes) => {
         }
     }
 
+    let updatedTime = new Date()
+    for(codeChunk in chunks){
+        let upsertSql = """
+            insert into t_location_status (
+                location_code,
+                status0_user_count,
+                status1_user_count,
+                updated_time,
+                version
+            ) values
+        """
+        let upsertValuesSql = ""
+        let upsertParams = {}
+        let rowIndex = 0
+        for(locationCode in codeChunk){
+            let snapshot = statusSnapshotMap[locationCode]
+            let status0UserCount = 0
+            let status1UserCount = 0
+            if(snapshot != null){
+                if(snapshot.status0UserCount != null){
+                    status0UserCount = snapshot.status0UserCount
+                }
+                if(snapshot.status1UserCount != null){
+                    status1UserCount = snapshot.status1UserCount
+                }
+            }
+            if(rowIndex > 0){
+                upsertValuesSql = upsertValuesSql + ","
+            }
+            let suffix = "_" + rowIndex
+            upsertValuesSql = upsertValuesSql + "("
+                + "#{locationCode" + suffix + "},"
+                + "#{status0UserCount" + suffix + "},"
+                + "#{status1UserCount" + suffix + "},"
+                + "#{updatedTime" + suffix + "},"
+                + "1)"
+            upsertParams["locationCode" + suffix] = locationCode
+            upsertParams["status0UserCount" + suffix] = status0UserCount
+            upsertParams["status1UserCount" + suffix] = status1UserCount
+            upsertParams["updatedTime" + suffix] = updatedTime
+            rowIndex = rowIndex + 1
+        }
+        db.update(upsertSql + upsertValuesSql + """
+            on duplicate key update
+                status0_user_count = values(status0_user_count),
+                status1_user_count = values(status1_user_count),
+                updated_time = values(updated_time),
+                version = version + 1
+        """, upsertParams)
+    }
+
     return statusSnapshotMap
 }
 
-let assertLightControlSuccess = (action, result) => {
-    // if(result == null){
-    //     throw new RuntimeException('灯控调用失败(' + action + '): result is null')
-    // }
-    if(result && result.success == false){
-        let failMessage = result.message
-        if(failMessage == null || failMessage == ''){
-            failMessage = result.msg
-        }
-        if(failMessage == null || failMessage == ''){
-            failMessage = 'unknown'
-        }
-        // throw new RuntimeException('灯控调用失败(' + action + '): ' + failMessage)
+// 查询单用户库位的归属用户（只查启用主单）
+let querySingleUnpickedUserMap = (locationCodes) => {
+    let result = {}
+    if(locationCodes == null || locationCodes.size() == 0){
+        return result
     }
-}
 
-let buildInSqlParams = (values, paramPrefix) => {
-    let inSql = ""
     let params = {}
+    let inSql = ""
     let idx = 0
-    for(value in values){
-        let key = paramPrefix + idx
-        params[key] = value
+    for(locationCode in locationCodes){
+        let key = 'locationCode' + idx
+        params[key] = locationCode
         if(idx > 0){
             inSql = inSql + ','
         }
         inSql = inSql + '#{' + key + '}'
         idx = idx + 1
     }
-    return {
-        inSql: inSql,
-        params: params
+
+    let rows = db.select("""
+        select distinct
+            d.location_code as location_code,
+            m.user_id as user_id
+        from t_picking_upload_detail d
+        straight_join t_picking_upload m on m.id = d.bill_id
+        where d.location_code in (""" + inSql + """)
+          and ifnull(d.status, 0) <> 1
+          and ifnull(m.status, 1) = 1
+    """, params)
+
+    if(rows != null){
+        for(row in rows){
+            let locationCode = row.location_code
+            if(locationCode == null || locationCode == ''){
+                locationCode = row.locationCode
+            }
+            let userId = row.user_id
+            if(userId == null || userId == ''){
+                userId = row.userId
+            }
+            if(locationCode != null && locationCode != '' && userId != null && userId != ''){
+                result[locationCode] = userId
+            }
+        }
     }
+    return result
 }
 
 let resolveAisleLedTurnOnCandidates = (turnOnLocationCodes) => {
@@ -652,6 +719,84 @@ let resolveAisleLedTurnOffCandidates = (turnOffLocationCodes) => {
     return result
 }
 
+// 根据重算后的 t_location_status 决定过道 LED 开关（按库位独立判断，不同颜色互不影响）
+let resolveAisleDispatchPlan = (affectedLocationCodes) => {
+    let result = {
+        turnOnLocationCodes: [],
+        turnOffLocationCodes: [],
+        turnOnLocationCodeSet: {},
+        turnOffLocationCodeSet: {}
+    }
+    if(affectedLocationCodes == null || affectedLocationCodes.size() == 0){
+        return result
+    }
+
+    // 每个库位的巷道灯颜色独立，按库位自身的 status0_user_count 决定亮灭
+    let chunks = splitLocationCodeChunks(affectedLocationCodes, locationChunkSize)
+    for(codeChunk in chunks){
+        let params = {}
+        let inSql = ""
+        let idx = 0
+        for(locationCode in codeChunk){
+            let key = 'locationCode' + idx
+            params[key] = locationCode
+            if(idx > 0){
+                inSql = inSql + ','
+            }
+            inSql = inSql + '#{' + key + '}'
+            idx = idx + 1
+        }
+
+        let rows = db.select("""
+            select location_code,
+                   status0_user_count
+            from t_location_status
+            where location_code in (""" + inSql + """)
+        """, params)
+
+        let activeSet = {}
+        if(rows != null){
+            for(row in rows){
+                let locationCode = row.locationCode
+                if(locationCode == null || locationCode == ''){ locationCode = row.locationCode }
+                let status0 = row.status0_user_count
+                if(status0 == null){ status0 = row.status0UserCount }
+                if(status0 == null){ status0 = 0 }
+                if(locationCode != null && locationCode != '' && status0 > 0){
+                    activeSet[locationCode] = 1
+                }
+            }
+        }
+
+        for(locationCode in codeChunk){
+            if(activeSet[locationCode] != null){
+                addUnique(result.turnOnLocationCodes, result.turnOnLocationCodeSet, locationCode)
+            } else {
+                addUnique(result.turnOffLocationCodes, result.turnOffLocationCodeSet, locationCode)
+            }
+        }
+    }
+    return result
+}
+
+let recordLightControlResult = (action, result) => {
+    if(result == null){
+        log.warn(logPrefix + ', stage=light_control_failed, action=' + action + ', reason=返回为空')
+        return false
+    }
+    if(result.success == false){
+        let message = '灯控调用失败(' + action + ')'
+        if(result.message != null && result.message != ''){
+            message = message + ': ' + result.message
+        }
+        log.warn(logPrefix + ', stage=light_control_failed, action=' + action + ', status=' + result.status + ', message=' + message + ', responseText=' + result.responseText)
+        return false
+    }
+    return true
+}
+
+// ────────── 参数校验 ──────────
+
 let payload = body
 let traceId = ensureTraceId(payload.traceId)
 payload.traceId = traceId
@@ -676,7 +821,7 @@ if (colorVal == null || colorVal == '') {
     colorVal = 'GREEN'
 }
 let durationVal = payload.duration
-if(modeVal == 3 || modeVal == 4){
+if (modeVal == 3 || modeVal == 4) {
     durationVal = '0'
 } else if (durationVal == null || durationVal == '') {
     durationVal = '60m'
@@ -698,6 +843,7 @@ try {
     let logPrefix = 'api=control, waveNo=' + payload.waveNo + ', userId=' + payload.userId + ', mode=' + modeVal + ', traceId=' + traceId
     log.info(logPrefix + ', stage=receive, color=' + colorVal + ', duration=' + durationVal)
 
+    // 获取受影响库位
     let affectedLocationCodes = resolveAffectedLocationCodes(payload)
     let allLocationCodes = queryWaveLocationCodes(payload.waveNo, affectedLocationCodes)
     if(allLocationCodes.size() == 0){
@@ -713,71 +859,95 @@ try {
         exit 503, '系统繁忙，请稍后重试'
     }
 
-    // 控制接口仅负责灯控，不负责维护 t_location_status
-    let statusSnapshotMap = queryLocationStatusBatch(allLocationCodes)
+    // 更新主单状态：亮灯启用，灭灯禁用
+    let newMasterStatus = 1
+    if(modeVal == 3 || modeVal == 4){
+        newMasterStatus = 0
+    }
+    db.update("""
+        update t_picking_upload
+           set status = #{status}
+         where wave_no = #{waveNo}
+           and user_id = #{userId}
+    """, {
+        status: newMasterStatus,
+        waveNo: payload.waveNo,
+        userId: payload.userId
+    })
+    log.info(logPrefix + ', stage=master_status_updated, newStatus=' + newMasterStatus)
 
+    // 锁内事务：重算 t_location_status（只统计启用主单的明细）
+    let transState = anyline.beginTrans()
+    let statusSnapshotMap = recalcLocationStatusBatch(allLocationCodes)
+    anyline.commitTrans(transState)
+    transState = null
+
+    // 亮灯时长：mode=3/4 重算后仍可能有亮灯库位（其他用户），使用默认时长
+    let turnOnDuration = durationVal
+    if(modeVal == 3 || modeVal == 4){
+        turnOnDuration = '60m'
+    }
+
+    // 按重算结果分类库位
     let turnOffLocationCodes = []
-    let turnOnSingleLocationCodes = []
-    let turnOnMultiLocationCodes = []
-
-    // mode=4 手动灭灯：强制按波次库位关灯，不再依赖状态判定
-    if(modeVal == 4){
-        for(locationCode in allLocationCodes){
-            turnOffLocationCodes.add(locationCode)
-        }
-    // mode=2 手动亮灯：强制按波次库位亮灯，不再依赖状态判定
-    } else if(modeVal == 2){
-        for(locationCode in allLocationCodes){
-            turnOnSingleLocationCodes.add(locationCode)
-        }
-    } else {
+    let multiUserLocationCodes = []
+    let singleUserCandidateCodes = []
     for(locationCode in allLocationCodes){
         let snapshot = statusSnapshotMap[locationCode]
         let status0UserCount = 0
-            if(snapshot != null && snapshot.status0UserCount != null){
-                status0UserCount = snapshot.status0UserCount
-            }
-            if(status0UserCount <= 0){
-                turnOffLocationCodes.add(locationCode)
-            } else if(status0UserCount > 1){
-                turnOnMultiLocationCodes.add(locationCode)
-            } else {
-                turnOnSingleLocationCodes.add(locationCode)
-            }
+        if(snapshot != null && snapshot.status0UserCount != null){
+            status0UserCount = snapshot.status0UserCount
+        }
+        if(status0UserCount <= 0){
+            turnOffLocationCodes.add(locationCode)
+        } else if(status0UserCount > 1){
+            multiUserLocationCodes.add(locationCode)
+        } else {
+            singleUserCandidateCodes.add(locationCode)
         }
     }
 
-    let multiUserColor = mixColor
-    if(multiUserColor == null || multiUserColor == ''){
-        multiUserColor = 'CYAN'
-    }
-
-    let singleColor = colorVal
-    if(modeVal == 3 || modeVal == 4){
-        singleColor = 'GREEN'
-    }
-
+    // 查询单用户库位归属，确定亮灯颜色
+    let singleUserLocationOwnerMap = querySingleUnpickedUserMap(singleUserCandidateCodes)
     let singleColorLocationMap = {}
     let singleColorKeys = []
     let singleColorKeySet = {}
+    for(locationCode in singleUserCandidateCodes){
+        let ownerUserId = singleUserLocationOwnerMap[locationCode]
+        let singleColor = 'GREEN'
+        if(ownerUserId != null && ownerUserId != ''){
+            let mappedColor = getUserLightColor(ownerUserId)
+            if(mappedColor != null && mappedColor != ''){
+                singleColor = mappedColor
+            }
+        }
+        if(singleColorLocationMap[singleColor] == null){
+            singleColorLocationMap[singleColor] = []
+            addUnique(singleColorKeys, singleColorKeySet, singleColor)
+        }
+        singleColorLocationMap[singleColor].add(locationCode)
+    }
+
+    // 汇总所有需要亮灯的库位
     let turnOnLocationCodes = []
     let turnOnLocationCodeSet = {}
-    for(locationCode in turnOnMultiLocationCodes){
+    for(locationCode in multiUserLocationCodes){
         addUnique(turnOnLocationCodes, turnOnLocationCodeSet, locationCode)
     }
-    for(locationCode in turnOnSingleLocationCodes){
+    for(locationCode in singleUserCandidateCodes){
         addUnique(turnOnLocationCodes, turnOnLocationCodeSet, locationCode)
     }
 
     let turnOnAisleResult = resolveAisleLedTurnOnCandidates(turnOnLocationCodes)
     let turnOffAisleResult = resolveAisleLedTurnOffCandidates(turnOffLocationCodes)
 
+    // 多用户分派（按 LED 去重）
     let turnOnMultiDispatchCodes = []
     let turnOnMultiDispatchCodeSet = {}
     let ledMultiSet = {}
     let turnOnLocationLedMap = turnOnAisleResult.locationLedMap
     let representativeByLed = turnOnAisleResult.representativeByLed
-    for(locationCode in turnOnMultiLocationCodes){
+    for(locationCode in multiUserLocationCodes){
         let ledId = turnOnLocationLedMap[locationCode]
         if(ledId != null && ledId != ''){
             if(ledMultiSet[ledId] == null){
@@ -793,35 +963,31 @@ try {
         }
     }
 
-    let singleLedSet = {}
+    // 单用户分派（标签灯按 articleId 独立分派，不需要按 LED 去重）
     let singleLocationCodeSet = {}
-    for(locationCode in turnOnSingleLocationCodes){
-        let ledId = turnOnLocationLedMap[locationCode]
-        let dispatchLocationCode = locationCode
-        if(ledId != null && ledId != ''){
-            if(ledMultiSet[ledId] != null){
-                continue
+    let singleColorDispatchMap = {}
+    let singleColorDispatchKeys = []
+    let singleColorDispatchKeySet = {}
+    for(locationCode in singleUserCandidateCodes){
+        let ownerUserId = singleUserLocationOwnerMap[locationCode]
+        let singleColor = 'GREEN'
+        if(ownerUserId != null && ownerUserId != ''){
+            let mappedColor = getUserLightColor(ownerUserId)
+            if(mappedColor != null && mappedColor != ''){
+                singleColor = mappedColor
             }
-            if(singleLedSet[ledId] != null){
-                continue
-            }
-            singleLedSet[ledId] = 1
-            let representativeLocationCode = representativeByLed[ledId]
-            if(representativeLocationCode != null && representativeLocationCode != ''){
-                dispatchLocationCode = representativeLocationCode
-            }
-        } else {
-            if(singleLocationCodeSet[locationCode] != null){
-                continue
-            }
-            singleLocationCodeSet[locationCode] = 1
         }
-        if(singleColorLocationMap[singleColor] == null){
-            singleColorLocationMap[singleColor] = []
-            addUnique(singleColorKeys, singleColorKeySet, singleColor)
+        if(singleLocationCodeSet[locationCode] != null){
+            continue
         }
-        singleColorLocationMap[singleColor].add(dispatchLocationCode)
+        singleLocationCodeSet[locationCode] = 1
+        if(singleColorDispatchMap[singleColor] == null){
+            singleColorDispatchMap[singleColor] = []
+            addUnique(singleColorDispatchKeys, singleColorDispatchKeySet, singleColor)
+        }
+        singleColorDispatchMap[singleColor].add(locationCode)
     }
+
     let turnOffDispatchCodes = turnOffAisleResult.candidateLocationCodes
 
     // 锁外执行灯控，缩短全局锁占用时间
@@ -830,83 +996,91 @@ try {
         lockAcquired = false
     }
 
-    if(turnOffDispatchCodes.size() > 0){
-        let turnOffResult = turnOffLedByArticleId({
-            stationCode: stationCode,
-            articleIds: turnOffDispatchCodes,
-            traceId: traceId,
-            waveNo: payload.waveNo,
-            userId: payload.userId
-        })
-        assertLightControlSuccess('TURN_OFF', turnOffResult)
-    }
-
-    if(turnOnMultiDispatchCodes.size() > 0){
-        let turnOnMultiResult = turnOnLedByArticleId({
-            stationCode: stationCode,
-            color: multiUserColor,
-            duration: durationVal,
-            articleIds: turnOnMultiDispatchCodes,
-            traceId: traceId,
-            waveNo: payload.waveNo,
-            userId: payload.userId
-        })
-        assertLightControlSuccess('TURN_ON_MULTI', turnOnMultiResult)
-    }
-
-    for(colorKey in singleColorKeys){
-        let locationList = singleColorLocationMap[colorKey]
-        if(locationList != null && locationList.size() > 0){
-            let turnOnSingleResult = turnOnLedByArticleId({
+    // 执行灭灯
+    if(turnOffLocationCodes.size() > 0){
+        try {
+            let turnOffResult = turnOffLedByArticleId({
                 stationCode: stationCode,
-                color: colorKey,
-                duration: durationVal,
-                articleIds: locationList,
+                articleIds: turnOffLocationCodes,
                 traceId: traceId,
                 waveNo: payload.waveNo,
                 userId: payload.userId
             })
-            assertLightControlSuccess('TURN_ON_SINGLE', turnOnSingleResult)
+            recordLightControlResult('TURN_OFF', turnOffResult)
+        } catch (lightErr) {
+            log.warn(logPrefix + ', stage=dispatch_turn_off_failed, message=' + lightErr.message)
         }
     }
 
-    let turnOnAisleDispatchCodes = []
-    let turnOnAisleDispatchCodeSet = {}
-    for(locationCode in turnOnMultiDispatchCodes){
-        addUnique(turnOnAisleDispatchCodes, turnOnAisleDispatchCodeSet, locationCode)
+    // 执行多用户亮灯
+    if(turnOnMultiDispatchCodes.size() > 0){
+        try {
+            let multiColor = mixColor
+            if(multiColor == null || multiColor == ''){
+                multiColor = 'CYAN'
+            }
+            let turnOnMultiResult = turnOnLedByArticleId({
+                stationCode: stationCode,
+                color: multiColor,
+                duration: turnOnDuration,
+                articleIds: turnOnMultiDispatchCodes,
+                traceId: traceId,
+                waveNo: payload.waveNo,
+                userId: payload.userId
+            })
+            recordLightControlResult('TURN_ON_MULTI', turnOnMultiResult)
+        } catch (lightErr) {
+            log.warn(logPrefix + ', stage=dispatch_turn_on_multi_failed, message=' + lightErr.message)
+        }
     }
-    for(colorKey in singleColorKeys){
-        let locationList = singleColorLocationMap[colorKey]
-        if(locationList != null){
-            for(locationCode in locationList){
-                addUnique(turnOnAisleDispatchCodes, turnOnAisleDispatchCodeSet, locationCode)
+
+    // 执行单用户亮灯（按颜色分组）
+    for(colorKey in singleColorDispatchKeys){
+        let locationList = singleColorDispatchMap[colorKey]
+        if(locationList != null && locationList.size() > 0){
+            try {
+                let turnOnSingleResult = turnOnLedByArticleId({
+                    stationCode: stationCode,
+                    color: colorKey,
+                    duration: turnOnDuration,
+                    articleIds: locationList,
+                    traceId: traceId,
+                    waveNo: payload.waveNo,
+                    userId: payload.userId
+                })
+                recordLightControlResult('TURN_ON_SINGLE', turnOnSingleResult)
+            } catch (lightErr) {
+                log.warn(logPrefix + ', stage=dispatch_turn_on_single_failed, color=' + colorKey + ', message=' + lightErr.message)
             }
         }
     }
 
-    for(locationCode in turnOffDispatchCodes){
+    // 过道灯调度（基于重算后的 t_location_status）
+    let aisleDispatchPlan = resolveAisleDispatchPlan(allLocationCodes)
+    for(locationCode in aisleDispatchPlan.turnOffLocationCodes){
         try {
             turnOffAisleLedByLotNo({
-                lotNo: locationCode,
-                mode: 'client'
+                mode: 'client',
+                lotNo: locationCode
             })
-        } catch {
-
+        } catch (lightErr) {
+            log.warn(logPrefix + ', stage=dispatch_aisle_turn_off_failed, locationCode=' + locationCode + ', message=' + lightErr.message)
         }
+        try { Thread.sleep(500) } catch (ignore) {}
     }
-    for(locationCode in turnOnAisleDispatchCodes){
+    for(locationCode in aisleDispatchPlan.turnOnLocationCodes){
         try {
             turnOnAisleLedByLotNo({
-                lotNo: locationCode,
-                mode: 'client'
+                mode: 'client',
+                lotNo: locationCode
             })
-        } catch {
-
+        } catch (lightErr) {
+            log.warn(logPrefix + ', stage=dispatch_aisle_turn_on_failed, locationCode=' + locationCode + ', message=' + lightErr.message)
         }
+        try { Thread.sleep(500) } catch (ignore) {}
     }
 
-    log.info(logPrefix + ', stage=dispatch_done, aisleTurnOff=' + turnOffDispatchCodes.size() + ', aisleTurnOn=' + turnOnAisleDispatchCodes.size())
-
+    log.info(logPrefix + ', stage=dispatch_done, turnOff=' + turnOffLocationCodes.size() + ', turnOnMulti=' + turnOnMultiDispatchCodes.size() + ', singleColors=' + singleColorDispatchKeys.size())
     exit 200, '指令发送成功'
 } catch (e) {
     log.error('api=control, waveNo=' + payload.waveNo + ', userId=' + payload.userId + ', mode=' + modeVal + ', traceId=' + traceId + ', stage=error, message=' + e.message)
@@ -916,4 +1090,3 @@ try {
         releaseGlobalLock(globalLockKey)
     }
 }
-

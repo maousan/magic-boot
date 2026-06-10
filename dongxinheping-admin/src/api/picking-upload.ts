@@ -116,6 +116,18 @@ export function pickingComplete(data: {
     .then((r) => r.data.message)
 }
 
+export function lightControl(data: {
+  waveNo: string
+  userId: string
+  mode: number
+  color?: string
+  duration?: string
+}): Promise<string> {
+  return client
+    .post<ApiResponse<string>>('/light/control', data)
+    .then((r) => r.data.message)
+}
+
 export function deletePickingUploadDetail(id: string): Promise<string> {
   return client
     .post<ApiResponse<string>>('/picking-upload/detail/delete', { id })

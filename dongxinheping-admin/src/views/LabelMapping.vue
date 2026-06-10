@@ -71,6 +71,42 @@
       </template>
     </n-modal>
 
+    <n-modal v-model:show="showLedStatus" title="标签灯状态" preset="dialog" style="width: 480px">
+      <n-spin :show="fetchingLedStatus">
+        <template v-if="ledStatusData">
+          <n-descriptions bordered :column="1" label-placement="left" size="small">
+            <n-descriptions-item label="标签码">{{ ledStatusLabel }}</n-descriptions-item>
+            <n-descriptions-item label="灯色">
+              <n-tag :type="ledColorType(ledStatusData.ledColor)" size="small">{{ ledStatusData.ledColor || '无' }}</n-tag>
+            </n-descriptions-item>
+            <n-descriptions-item label="拣货状态">{{ ledStatusData.pickingLinkStatus || '无' }}</n-descriptions-item>
+            <n-descriptions-item label="请求拣货时间">{{ ledStatusData.requestPickingDate || '无' }}</n-descriptions-item>
+            <n-descriptions-item label="拣货完成时间">{{ ledStatusData.pickingDate || '无' }}</n-descriptions-item>
+          </n-descriptions>
+          <div v-if="ledStatusData.articles && ledStatusData.articles.length > 0" style="margin-top: 12px">
+            <div style="margin-bottom: 4px; font-weight: 500">关联商品</div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px">
+              <thead>
+                <tr style="background: var(--n-border-color, #efeff5)">
+                  <th style="padding: 6px 8px; text-align: left; border: 1px solid #e0e0e6">商品编码</th>
+                  <th style="padding: 6px 8px; text-align: left; border: 1px solid #e0e0e6">商品名称</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="art in ledStatusData.articles" :key="art.productCode">
+                  <td style="padding: 6px 8px; border: 1px solid #e0e0e6">{{ art.productCode }}</td>
+                  <td style="padding: 6px 8px; border: 1px solid #e0e0e6">{{ art.productName }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+      </n-spin>
+      <template #action>
+        <n-button @click="showLedStatus = false">关闭</n-button>
+      </template>
+    </n-modal>
+
     <n-modal v-model:show="showLightOn" title="标签亮灯" preset="dialog">
       <n-space vertical>
         <span>标签码：<b>{{ lightOnTarget?.labelCode }}</b></span>
@@ -92,10 +128,11 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, h } from 'vue'
 import {
-  NCard, NDataTable, NButton, NModal, NSpace, NFormItem, NInput, NFlex, NPagination, NSelect, useMessage,
+  NCard, NDataTable, NButton, NModal, NSpace, NFormItem, NInput, NFlex, NPagination, NSelect, NTag,
+  NDescriptions, NDescriptionsItem, NSpin, useMessage,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
-import { getLabelMappingList, createLabelMapping, unbindLabelMapping, deleteLabelMapping, lightOnLabel, lightOffLabel } from '@/api/label-mapping'
+import { getLabelMappingList, createLabelMapping, unbindLabelMapping, deleteLabelMapping, lightOnLabel, lightOffLabel, getLabelLedStatus, type LabelLedStatus } from '@/api/label-mapping'
 import type { LocationLabelBinding } from '@/types'
 import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
@@ -108,6 +145,10 @@ const showCreate = ref(false)
 const showDelete = ref(false)
 const showDbDelete = ref(false)
 const showLightOn = ref(false)
+const showLedStatus = ref(false)
+const fetchingLedStatus = ref(false)
+const ledStatusData = ref<LabelLedStatus | null>(null)
+const ledStatusLabel = ref('')
 const deleteTarget = ref<{ id: string; labelCode: string } | null>(null)
 const dbDeleteTarget = ref<{ id: string; labelCode: string } | null>(null)
 const lightOnTarget = ref<{ labelCode: string } | null>(null)
@@ -131,6 +172,11 @@ const lightColorOptions = [
   { label: '黄色', value: 'YELLOW' },
   { label: '绿色', value: 'GREEN' },
 ]
+
+function ledColorType(color: string): 'error' | 'warning' | 'success' | 'info' | 'default' {
+  const map = { RED: 'error', YELLOW: 'warning', GREEN: 'success', CYAN: 'info' } as const
+  return (map as Record<string, 'error' | 'warning' | 'success' | 'info'>)[color] || 'default'
+}
 
 const lightDurationOptions = [
   { label: '10秒', value: '10s' },
@@ -156,6 +202,7 @@ const columns: DataTableColumns<LocationLabelBinding> = [
     width: 280,
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
+        h(NButton, { size: 'small', type: 'info', ghost: true, onClick: () => handleLedStatus(row) }, () => '灯状态'),
         h(NButton, { size: 'small', type: 'warning', onClick: () => openLightOn(row) }, () => '亮灯'),
         h(NButton, { size: 'small', onClick: () => handleLightOff(row) }, () => '灭灯'),
         h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '解绑'),
@@ -196,6 +243,22 @@ async function handleCreate() {
     await fetchData()
   } finally {
     creating.value = false
+  }
+}
+
+async function handleLedStatus(row: LocationLabelBinding) {
+  ledStatusLabel.value = row.labelCode
+  fetchingLedStatus.value = true
+  showLedStatus.value = true
+  ledStatusData.value = null
+  try {
+    const res = await getLabelLedStatus(row.labelCode)
+    ledStatusData.value = res
+  } catch {
+    message.error(`查询标签 ${row.labelCode} 灯状态失败`)
+    showLedStatus.value = false
+  } finally {
+    fetchingLedStatus.value = false
   }
 }
 

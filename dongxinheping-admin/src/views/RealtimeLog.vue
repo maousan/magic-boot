@@ -95,6 +95,7 @@ interface LogEntry {
 
 const MAX_LOGS = 5000
 const RECONNECT_DELAY = 3000
+const RECENT_LOG_CACHE_SIZE = 1000
 
 const logs = ref<LogEntry[]>([])
 const wsStatus = ref<'disconnected' | 'connecting' | 'connected'>('disconnected')
@@ -132,7 +133,8 @@ function onForestToggle(key: keyof ForestLogConfig, value: boolean) {
 
 let ws: WebSocket | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
-let isManualClose = false
+let activeConnectionId = 0
+const recentLogTexts = new Set<string>()
 
 const levelOptions = [
   { label: 'DEBUG', value: 'DEBUG' },
@@ -183,11 +185,22 @@ function addLog(text: string) {
     }
   }
 
+  if (recentLogTexts.has(text)) {
+    return
+  }
+
   const level = parseLogLevel(text)
   logs.value.push({ text, level })
+  recentLogTexts.add(text)
 
   if (logs.value.length > MAX_LOGS) {
-    logs.value.splice(0, logs.value.length - MAX_LOGS)
+    const removed = logs.value.splice(0, logs.value.length - MAX_LOGS)
+    removed.forEach(log => recentLogTexts.delete(log.text))
+  }
+
+  if (recentLogTexts.size > RECENT_LOG_CACHE_SIZE) {
+    recentLogTexts.clear()
+    logs.value.slice(-RECENT_LOG_CACHE_SIZE).forEach(log => recentLogTexts.add(log.text))
   }
 
   if (autoScroll.value) {
@@ -220,6 +233,7 @@ function toggleAutoScroll() {
 
 function clearLogs() {
   logs.value = []
+  recentLogTexts.clear()
 }
 
 function sendFilterUpdate() {
@@ -254,23 +268,36 @@ function connect() {
     reconnectTimer = null
   }
 
+  if (ws) {
+    ws.onopen = null
+    ws.onmessage = null
+    ws.onclose = null
+    ws.onerror = null
+    ws.close()
+    ws = null
+  }
+
   wsStatus.value = 'connecting'
-  isManualClose = false
+  const connectionId = ++activeConnectionId
 
   try {
     ws = new WebSocket(buildWsUrl())
   } catch {
     wsStatus.value = 'disconnected'
-    scheduleReconnect()
+    scheduleReconnect(connectionId)
     return
   }
 
+  const currentWs = ws
+
   ws.onopen = () => {
+    if (connectionId !== activeConnectionId) return
     wsStatus.value = 'connected'
     logs.value.push({ text: '--- connected to log stream ---', level: 'INFO' })
   }
 
   ws.onmessage = (event) => {
+    if (connectionId !== activeConnectionId) return
     const data = event.data
     if (typeof data === 'string') {
       addLog(data)
@@ -278,11 +305,12 @@ function connect() {
   }
 
   ws.onclose = () => {
+    if (connectionId !== activeConnectionId) return
     wsStatus.value = 'disconnected'
-    ws = null
-    if (!isManualClose) {
-      scheduleReconnect()
+    if (ws === currentWs) {
+      ws = null
     }
+    scheduleReconnect(connectionId)
   }
 
   ws.onerror = () => {
@@ -290,20 +318,16 @@ function connect() {
   }
 }
 
-function scheduleReconnect() {
+function scheduleReconnect(connectionId: number) {
   if (reconnectTimer) return
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null
+    if (connectionId !== activeConnectionId) return
     connect()
   }, RECONNECT_DELAY)
 }
 
 function reconnect() {
-  isManualClose = true
-  if (ws) {
-    ws.close()
-    ws = null
-  }
   if (reconnectTimer) {
     clearTimeout(reconnectTimer)
     reconnectTimer = null
@@ -317,7 +341,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  isManualClose = true
+  activeConnectionId++
   if (reconnectTimer) {
     clearTimeout(reconnectTimer)
     reconnectTimer = null

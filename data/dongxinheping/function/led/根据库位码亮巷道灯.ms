@@ -5,7 +5,7 @@
   "groupId" : "628f77553ba14e47ae84391269b008bb",
   "name" : "根据库位码亮巷道灯",
   "createTime" : 1777000000000,
-  "updateTime" : 1779257692878,
+  "updateTime" : 1780578652621,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -30,6 +30,8 @@
 ================================
 import '@/utils/parseLot' as parseLot
 import '@/led/controlAisleLedDevice' as controlAisleLedDevice
+import log
+
 
 if (data == null) {
     return { code: 400, message: 'data不能为空' }
@@ -67,6 +69,8 @@ if (color == null || color == '') {
     return { code: 500, message: '绑定关系缺少color' }
 }
 color = (color + '').trim().toUpperCase()
+
+log.info("data: {}", ledId)
 
 const controlResult = controlAisleLedDevice({
     mode: mode,

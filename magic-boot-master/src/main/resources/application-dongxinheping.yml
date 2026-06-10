@@ -21,6 +21,13 @@ forest:
     lightOnDuration: 60m
     completeTurnOffMode: status # status(默认): 根据库位上剩余未完成用户数决定——无人则灭灯、多人则亮蓝灯、单人则亮该用户颜色灯; direct: 拣货完成后直接灭灯，不管库位上是否还有其他用户在拣
   log-response-content: false
+  converters:
+    json:
+      type: com.dtflys.forest.converter.json.ForestJacksonConverter
+      # 转换器的参数设置
+      parameters:
+        # JSON数据转换器的全局日期格式化配置
+        dateFormat: yyyy/MM/dd HH:mm:ss
 
 # 插件路径
 plugin:

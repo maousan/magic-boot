@@ -36,7 +36,7 @@
           :data="tableData.list"
           :loading="loading"
           :bordered="true"
-          :row-key="(row: InventoryItem) => row.warehouseId + '-' + row.locationId + '-' + row.lotAtt09"
+          :row-key="(row: InventoryItem) => row.warehouseId + '-' + row.locationId + '-' + row.sku + '-' + row.lotAtt09 + '-' + row.editTime"
           :scroll-x="1240"
           flex-height
           style="height: 100%"

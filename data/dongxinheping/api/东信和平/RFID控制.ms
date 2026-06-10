@@ -5,7 +5,7 @@
   "groupId" : "2ud9c5419ag5484mbxxsafin0b0myji0",
   "name" : "RFID控制",
   "createTime" : 1778052000000,
-  "updateTime" : 1780482578128,
+  "updateTime" : 1780564514509,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -209,9 +209,9 @@ if(mode == 'on'){
     if(sku == ''){
         exit 400, 'mode为on时data.sku不能为空'
     }
-    if(lotNo == ''){
-        exit 400, 'mode为on时data.lotNo不能为空'
-    }
+    // if(lotNo == ''){
+    //     exit 400, 'mode为on时data.lotNo不能为空'
+    // }
     requestData.locationId = locationId
     requestData.sku = sku
     requestData.lotNo = lotNo
