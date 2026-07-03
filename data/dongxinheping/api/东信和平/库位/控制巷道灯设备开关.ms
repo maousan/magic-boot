@@ -5,7 +5,7 @@
   "groupId" : "6ce8544b21954e189dc7aeb484aeddfc",
   "name" : "控制巷道灯设备开关",
   "createTime" : null,
-  "updateTime" : 1783041402713,
+  "updateTime" : 1783050609238,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -28,7 +28,7 @@
   "requestBody" : "{\"mode\":\"client\",\"ledId\":\"3A:69:7A:08:D0:A5\",\"command\":\"ON\",\"port\":\"GREEN\"}",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": {\n        \"mode\": \"client\",\n        \"ledId\": \"3A:69:7A:08:D0:A5\",\n        \"deviceIp\": \"192.168.2.102\",\n        \"remoteAddress\": \"192.168.2.102:52026\",\n        \"command\": \"ON\",\n        \"port\": \"GREEN\",\n        \"timeoutMs\": 10000,\n        \"executedCount\": 1,\n        \"executed\": [\n            {\n                \"color\": \"GREEN\",\n                \"dataCommand\": 186,\n                \"remoteAddress\": \"192.168.2.102:52026\",\n                \"macAddress\": \"3A:69:7A:08:D0:A5\",\n                \"frame\": [\n                    102,\n                    53,\n                    186,\n                    60,\n                    7\n                ],\n                \"sendResult\": {\n                    \"code\": 200,\n                    \"message\": \"success\",\n                    \"status\": 200,\n                    \"responseText\": \"{\\\"success\\\":true,\\\"message\\\":\\\"Send completed\\\",\\\"totalTargets\\\":1,\\\"successCount\\\":1,\\\"failedCount\\\":0,\\\"failedTargets\\\":[],\\\"waitResponse\\\":false,\\\"responseCount\\\":0,\\\"responses\\\":[]}\"\n                }\n            }\n        ],\n        \"failed\": []\n    },\n    \"timestamp\": 1783041387910,\n    \"executeTime\": 7239\n}",
+  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": {\n        \"mode\": \"client\",\n        \"ledId\": \"3A:69:7A:08:D0:A5\",\n        \"deviceIp\": \"192.168.2.102\",\n        \"remoteAddress\": \"192.168.2.102:52026\",\n        \"command\": \"ON\",\n        \"port\": \"GREEN\",\n        \"timeoutMs\": 10000,\n        \"executedCount\": 1,\n        \"executed\": [\n            {\n                \"color\": \"GREEN\",\n                \"dataCommand\": 186,\n                \"remoteAddress\": \"192.168.2.102:52026\",\n                \"macAddress\": \"3A:69:7A:08:D0:A5\",\n                \"frame\": [\n                    102,\n                    53,\n                    186,\n                    60,\n                    7\n                ],\n                \"sendResult\": {\n                    \"code\": 200,\n                    \"message\": \"success\",\n                    \"status\": 200,\n                    \"responseText\": \"{\\\"success\\\":true,\\\"message\\\":\\\"Send completed with response\\\",\\\"totalTargets\\\":1,\\\"successCount\\\":1,\\\"failedCount\\\":0,\\\"failedTargets\\\":[],\\\"waitResponse\\\":true,\\\"responseCount\\\":1,\\\"responses\\\":[{\\\"remoteAddress\\\":\\\"192.168.2.102:52026\\\",\\\"received\\\":true,\\\"timeout\\\":false,\\\"rawResponseHex\\\":\\\"6635BA3C07\\\",\\\"payloadAscii\\\":\\\"\\\",\\\"macAddress\\\":\\\"\\\",\\\"ipAddress\\\":\\\"\\\",\\\"crc\\\":\\\"3C07\\\"}]}\"\n                }\n            }\n        ],\n        \"failed\": []\n    },\n    \"timestamp\": 1783041428114,\n    \"executeTime\": 382\n}",
   "description" : "按设备 + 指令 + 端口直接控制巷道灯。",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
@@ -329,7 +329,7 @@ let parseSendResponse = (sendResult) => {
 
 let waitResponse = body.waitResponse
 if (waitResponse == null) {
-    waitResponse = true
+    waitResponse = false
 }
 
 if (!lightCommand) {

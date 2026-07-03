@@ -252,15 +252,28 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     public SendResult sendTo(String remoteAddress, byte[] data) {
-        return sendTo(remoteAddress, data, false);
+        return sendTo(remoteAddress, data, false, false);
     }
 
     public SendResult sendTo(String remoteAddress, byte[] data, boolean waitResponse) {
+        return sendTo(remoteAddress, data, waitResponse, false);
+    }
+
+    /**
+     * 向指定远端地址发送数据。
+     *
+     * @param waitResponse 是否同步等待设备回显（阻塞当前线程）
+     * @param registerOnly 注册回显 waiter 但不同步等待（用于异步确认场景）。
+     *                     registerOnly=true 时 waiter 的 future 会放入 responses 返回，由调用方异步等待。
+     *                     waitResponse=true 时 registerOnly 被忽略（同步等待优先）。
+     */
+    public SendResult sendTo(String remoteAddress, byte[] data, boolean waitResponse, boolean registerOnly) {
         if (remoteAddress == null || remoteAddress.isBlank() || data == null || data.length == 0) {
             return new SendResult(0, 0, new CopyOnWriteArrayList<>(), new CopyOnWriteArrayList<>());
         }
         CopyOnWriteArrayList<String> failed = new CopyOnWriteArrayList<>();
         CopyOnWriteArrayList<ClientResponse> responses = new CopyOnWriteArrayList<>();
+        CopyOnWriteArrayList<CompletableFuture<ClientResponse>> pendingFutures = new CopyOnWriteArrayList<>();
         int total = 0;
         int success = 0;
         String normalizedTarget = normalizeRemoteAddress(remoteAddress);
@@ -272,10 +285,11 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
             total++;
             Channel channel = entry.getValue();
             if (channel != null && channel.isActive()) {
-                CompletableFuture<ClientResponse> responseFuture = waitResponse ? registerResponseWaiter(entry.getKey()) : null;
+                boolean needWaiter = waitResponse || registerOnly;
+                CompletableFuture<ClientResponse> responseFuture = needWaiter ? registerResponseWaiter(entry.getKey()) : null;
                 if (traceEnabled) {
-                    log.info("[LED-SEND] write to channel start: remoteAddress={}, waitResponse={}, payloadHex={}",
-                            normalizedTarget, waitResponse, LedProtocolCodec.toHex(data));
+                    log.info("[LED-SEND] write to channel start: remoteAddress={}, waitResponse={}, registerOnly={}, payloadHex={}",
+                            normalizedTarget, waitResponse, registerOnly, LedProtocolCodec.toHex(data));
                 }
                 ChannelFuture writeFuture = channel.writeAndFlush(Unpooled.wrappedBuffer(data));
                 boolean done;
@@ -303,13 +317,18 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
                     log.info("[LED-SEND] write to channel ok: remoteAddress={}, isActive={}", normalizedTarget, channel.isActive());
                 }
                 if (responseFuture != null) {
-                    ClientResponse response = awaitResponse(entry.getKey(), normalizedTarget, responseFuture);
-                    if (traceEnabled) {
-                        log.info("[LED-SEND] await response done: remoteAddress={}, received={}, timeout={}, rawResponseHex={}, payloadAscii={}, crc={}",
-                                normalizedTarget, response.received(), response.timeout(),
-                                response.rawResponseHex(), response.payloadAscii(), response.crc());
+                    if (waitResponse) {
+                        ClientResponse response = awaitResponse(entry.getKey(), normalizedTarget, responseFuture);
+                        if (traceEnabled) {
+                            log.info("[LED-SEND] await response done: remoteAddress={}, received={}, timeout={}, rawResponseHex={}, payloadAscii={}, crc={}",
+                                    normalizedTarget, response.received(), response.timeout(),
+                                    response.rawResponseHex(), response.payloadAscii(), response.crc());
+                        }
+                        responses.add(response);
+                    } else {
+                        // registerOnly 模式：返回 future 给调用方异步等待
+                        pendingFutures.add(responseFuture);
                     }
-                    responses.add(response);
                 }
             } else {
                 if (traceEnabled) {
@@ -319,9 +338,8 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
                 failed.add(String.valueOf(entry.getKey()));
             }
         }
-        return new SendResult(total, success, failed, responses);
+        return new SendResult(total, success, failed, responses, pendingFutures);
     }
-
     public SendResult broadcast(byte[] data) {
         if (data == null || data.length == 0) {
             return new SendResult(0, 0, new CopyOnWriteArrayList<>(), new CopyOnWriteArrayList<>());
@@ -418,8 +436,14 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
             int totalTargets,
             int successCount,
             CopyOnWriteArrayList<String> failedTargets,
-            CopyOnWriteArrayList<ClientResponse> responses
+            CopyOnWriteArrayList<ClientResponse> responses,
+            CopyOnWriteArrayList<CompletableFuture<ClientResponse>> pendingFutures
     ) {
+        public SendResult(int totalTargets, int successCount,
+                          CopyOnWriteArrayList<String> failedTargets,
+                          CopyOnWriteArrayList<ClientResponse> responses) {
+            this(totalTargets, successCount, failedTargets, responses, new CopyOnWriteArrayList<>());
+        }
     }
 
     public record ActiveClient(String remoteAddress, String macAddress) {

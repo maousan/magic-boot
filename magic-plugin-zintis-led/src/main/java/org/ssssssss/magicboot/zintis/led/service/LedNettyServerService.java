@@ -89,6 +89,8 @@ public class LedNettyServerService {
     private long retryScanInitialDelaySeconds;
     @Value("${zintis.led.netty.retry.scan.period-seconds:10}")
     private long retryScanPeriodSeconds;
+    @Value("${zintis.led.netty.ack-timeout-ms:3000}")
+    private long ackTimeoutMs;
     private volatile long lastOutboundSendAt;
 
     public LedNettyServerService() {
@@ -369,22 +371,29 @@ public class LedNettyServerService {
         String macAddress = resolveSendMacAddress(request);
         String color = request.getColor();
         String command = request.getCommand();
+        // waitResponse=false 时一律走异步等回显（color 为空时按 ALL 处理）
+        boolean asyncAck = !waitResponse;
         if (traceEnabled) {
-            log.info("[LED-CMD] sendToClient start: remoteAddress={}, mac={}, waitResponse={}, payloadHex={}, payloadFormat={}, color={}",
-                    request.getRemoteAddress(), macAddress, waitResponse,
+            log.info("[LED-CMD] sendToClient start: remoteAddress={}, mac={}, waitResponse={}, asyncAck={}, payloadHex={}, payloadFormat={}, color={}",
+                    request.getRemoteAddress(), macAddress, waitResponse, asyncAck,
                     LedProtocolCodec.toHex(data), request.getPayloadFormat(), color);
         }
         LedNettyServerHandler.SendResult result = sendWithInterval(
                 "client-command",
-                () -> serverHandler.sendTo(request.getRemoteAddress(), data, waitResponse));
+                () -> serverHandler.sendTo(request.getRemoteAddress(), data, waitResponse, asyncAck));
         int failedCount = result.totalTargets() - result.successCount();
         boolean responseTimeout = waitResponse && result.responses().stream().anyMatch(LedNettyServerHandler.ClientResponse::timeout);
         if (traceEnabled) {
-            log.info("[LED-CMD] sendToClient result: total={}, success={}, failed={}, responseCount={}, responseTimeout={}",
+            log.info("[LED-CMD] sendToClient result: total={}, success={}, failed={}, responseCount={}, responseTimeout={}, pendingFutures={}",
                     result.totalTargets(), result.successCount(), failedCount,
-                    result.responses().size(), responseTimeout);
+                    result.responses().size(), responseTimeout, result.pendingFutures().size());
         }
-        handleSendOutcome(macAddress, color, command, data, request.getRemoteAddress(), result, failedCount, responseTimeout);
+        if (asyncAck && failedCount == 0 && !result.pendingFutures().isEmpty()) {
+            // 异步确认：立即返回写入成功，后台等回显
+            ackAsynchronously(macAddress, color, command, data, request.getRemoteAddress(), result.pendingFutures());
+        } else {
+            handleSendOutcome(macAddress, color, command, data, request.getRemoteAddress(), result, failedCount, responseTimeout);
+        }
         List<LedNettySendResponse.ClientResponse> responses = result.responses().stream()
                 .map(response -> LedNettySendResponse.ClientResponse.builder()
                         .remoteAddress(response.remoteAddress())
@@ -437,6 +446,50 @@ public class LedNettyServerService {
                 .responseCount(0)
                 .responses(List.of())
                 .build();
+    }
+
+    /**
+     * 异步等待设备回显确认。waitResponse=false 且有 color 时走此路径。
+     * 调用方已立即返回，后台等 waiter future（最多 ackTimeoutMs）：
+     * - 收到回显 → 判定成功，删除 DB 待重试指令
+     * - 超时 → 判定失败，写入 DB 走重试
+     */
+    private void ackAsynchronously(
+            String macAddress,
+            String color,
+            String command,
+            byte[] data,
+            String remoteAddress,
+            List<java.util.concurrent.CompletableFuture<LedNettyServerHandler.ClientResponse>> futures) {
+        if (pendingCommandRepository == null || macAddress == null || macAddress.isBlank() || futures.isEmpty()) {
+            return;
+        }
+        if (futures.size() > 1) {
+            log.warn("LED async ack expected 1 future but got {}, using first: mac={}", futures.size(), macAddress);
+        }
+        java.util.concurrent.CompletableFuture<LedNettyServerHandler.ClientResponse> future = futures.get(0);
+        commandRetryExecutor.execute(() -> {
+            try {
+                LedNettyServerHandler.ClientResponse response = future.get(ackTimeoutMs, TimeUnit.MILLISECONDS);
+                pendingCommandRepository.deleteByMacAndColor(macAddress, color);
+                if (traceEnabled) {
+                    log.info("[LED-ASYNC-ACK] received: mac={}, color={}, command={}, rawResponseHex={}",
+                            macAddress, color, command, response.rawResponseHex());
+                }
+            } catch (java.util.concurrent.TimeoutException timeout) {
+                String frameHex = LedProtocolCodec.toHex(data);
+                String commandText = (command == null || command.isBlank()) ? "UNKNOWN" : command.trim().toUpperCase();
+                pendingCommandRepository.upsert(macAddress, color, commandText, frameHex, remoteAddress);
+                if (traceEnabled) {
+                    log.warn("[LED-ASYNC-ACK] timeout, cached for retry: mac={}, color={}, command={}, ackTimeoutMs={}",
+                            macAddress, color, commandText, ackTimeoutMs);
+                }
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+            } catch (Exception exception) {
+                log.warn("LED async ack error: mac={}, color={}, error={}", macAddress, color, exception.getMessage());
+            }
+        });
     }
 
     private String buildSendMessage(LedNettyServerHandler.SendResult result, int failedCount, boolean waitResponse) {
