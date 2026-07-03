@@ -85,6 +85,30 @@
     "error" : null,
     "expression" : null,
     "children" : null
+  }, {
+    "name" : "color",
+    "value" : null,
+    "description" : "颜色通道 ALL/RED/YELLOW/GREEN，用于失败重试时的 per-(mac,color) 覆盖语义",
+    "required" : false,
+    "dataType" : "String",
+    "type" : "java.lang.String",
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  }, {
+    "name" : "command",
+    "value" : null,
+    "description" : "目标状态 ON/OFF，记录本次指令意图，用于失败重试",
+    "required" : false,
+    "dataType" : "String",
+    "type" : "java.lang.String",
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
   } ]
 }
 ================================
@@ -156,6 +180,12 @@ let requestBody = {
     payloadArray: sendPayloadArray,
     payloadFormat: sendPayloadFormat,
     waitResponse: waitResponse == true
+}
+if (color != null && color != '') {
+    requestBody.color = (color + '').trim().toUpperCase()
+}
+if (command != null && command != '') {
+    requestBody.command = (command + '').trim().toUpperCase()
 }
 
 let response = Forest.post(pluginUrl)

@@ -480,7 +480,7 @@ for (color in ports) {
     } else {
         let controlCommand = command == 'ON' ? 0x35 : 0xFA
         let frame = buildControlFrame(hostAddress, controlCommand, dataCommand)
-        let sendResult = sendToClient(activeClient.remoteAddress, null, null, frame, 'json', waitResponse)
+        let sendResult = sendToClient(activeClient.remoteAddress, null, null, frame, 'json', waitResponse, color, command)
         row.remoteAddress = activeClient.remoteAddress
         row.macAddress = activeClient.macAddress
         row.frame = frame

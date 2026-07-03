@@ -38,8 +38,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Slf4j
@@ -53,16 +56,22 @@ public class LedNettyServerService {
     public static final int DEFAULT_TCP_KEEP_COUNT = 3;
     public static final long DEFAULT_MIN_SEND_INTERVAL_MILLIS = 500;
     public static final int DEFAULT_PENDING_COMMAND_CACHE_LIMIT = 200;
+    public static final long DEFAULT_RETRY_SCAN_INITIAL_DELAY_SECONDS = 30;
+    public static final long DEFAULT_RETRY_SCAN_PERIOD_SECONDS = 10;
+    public static final long SERVER_LOCK_TIMEOUT_SECONDS = 10;
+    public static final long GROUP_SHUTDOWN_QUIET_PERIOD_SECONDS = 2;
+    public static final long GROUP_SHUTDOWN_TIMEOUT_SECONDS = 10;
 
     private final ReentrantLock lock = new ReentrantLock();
     private final ReentrantLock outboundSendLock = new ReentrantLock();
-    private final Map<String, PendingClientCommand> pendingClientCommands = new ConcurrentHashMap<>();
     private final ExecutorService commandRetryExecutor = Executors.newSingleThreadExecutor(runnable -> {
         Thread thread = new Thread(runnable, "zintis-led-command-retry");
         thread.setDaemon(true);
         return thread;
     });
+    private ScheduledExecutorService retryScanExecutor;
     private final LedNettyServerHandler serverHandler;
+    private final LedPendingCommandRepository pendingCommandRepository;
 
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
@@ -74,19 +83,26 @@ public class LedNettyServerService {
     private boolean clientReportRegistrationEnabled = true;
     @Value("${zintis.led.netty.trace.enabled:false}")
     private boolean traceEnabled;
+    @Value("${zintis.led.netty.retry.scan.enabled:true}")
+    private boolean retryScanEnabled;
+    @Value("${zintis.led.netty.retry.scan.initial-delay-seconds:30}")
+    private long retryScanInitialDelaySeconds;
+    @Value("${zintis.led.netty.retry.scan.period-seconds:10}")
+    private long retryScanPeriodSeconds;
     private volatile long lastOutboundSendAt;
 
     public LedNettyServerService() {
-        this(new LedNettyServerHandler());
+        this(new LedNettyServerHandler(), null);
     }
 
     @Autowired
-    public LedNettyServerService(LedDeviceRegistryService deviceRegistryService) {
-        this(new LedNettyServerHandler(deviceRegistryService::saveClientDevice));
+    public LedNettyServerService(LedDeviceRegistryService deviceRegistryService, LedPendingCommandRepository pendingCommandRepository) {
+        this(new LedNettyServerHandler(deviceRegistryService::saveClientDevice), pendingCommandRepository);
     }
 
-    LedNettyServerService(LedNettyServerHandler serverHandler) {
+    LedNettyServerService(LedNettyServerHandler serverHandler, LedPendingCommandRepository pendingCommandRepository) {
         this.serverHandler = serverHandler;
+        this.pendingCommandRepository = pendingCommandRepository;
         this.serverHandler.setOutboundSender(this::sendToChannelWithInterval);
         this.serverHandler.setClientReportListener(this::retryPendingCommand);
     }
@@ -97,15 +113,48 @@ public class LedNettyServerService {
         serverHandler.setTraceEnabled(traceEnabled);
         log.info("LED netty server trace log enabled={}", traceEnabled);
         start(DEFAULT_NETTY_SERVER_PORT);
+        startRetryScan();
     }
 
     @PreDestroy
     public void shutdown() {
+        stopRetryScan();
         stop();
     }
 
+    private void startRetryScan() {
+        if (!retryScanEnabled || pendingCommandRepository == null) {
+            log.info("LED pending command retry scan disabled (enabled={}, hasRepository={})",
+                    retryScanEnabled, pendingCommandRepository != null);
+            return;
+        }
+        long initialDelay = retryScanInitialDelaySeconds > 0 ? retryScanInitialDelaySeconds : DEFAULT_RETRY_SCAN_INITIAL_DELAY_SECONDS;
+        long period = retryScanPeriodSeconds > 0 ? retryScanPeriodSeconds : DEFAULT_RETRY_SCAN_PERIOD_SECONDS;
+        retryScanExecutor = Executors.newSingleThreadScheduledExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "zintis-led-retry-scan");
+            thread.setDaemon(true);
+            return thread;
+        });
+        retryScanExecutor.scheduleAtFixedRate(this::scanAndRetryPending, initialDelay, period, TimeUnit.SECONDS);
+        log.info("LED pending command retry scan started: initialDelay={}s, period={}s", initialDelay, period);
+    }
+
+    private void stopRetryScan() {
+        if (retryScanExecutor != null) {
+            retryScanExecutor.shutdownNow();
+            retryScanExecutor = null;
+        }
+    }
+
     public LedNettyServerStatusResponse start(Integer requestedPort) {
-        lock.lock();
+        try {
+            if (!lock.tryLock(SERVER_LOCK_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                return status("Start failed: server is busy, try again later");
+            }
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            return status("Start failed: interrupted");
+        }
         try {
             if (isRunning()) {
                 return LedNettyServerStatusResponse.builder()
@@ -131,6 +180,7 @@ public class LedNettyServerService {
                         .message("Start failed: invalid port " + port)
                         .build();
             }
+            safeStopInternal();
             bossGroup = new NioEventLoopGroup(1);
             workerGroup = new NioEventLoopGroup();
             ServerBootstrap bootstrap = new ServerBootstrap();
@@ -173,7 +223,14 @@ public class LedNettyServerService {
     }
 
     public LedNettyServerStatusResponse stop() {
-        lock.lock();
+        try {
+            if (!lock.tryLock(SERVER_LOCK_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                return status("Stop failed: server is busy, try again later");
+            }
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            return status("Stop failed: interrupted");
+        }
         try {
             if (!isRunning()) {
                 return LedNettyServerStatusResponse.builder()
@@ -202,7 +259,14 @@ public class LedNettyServerService {
     }
 
     public LedNettyServerStatusResponse status() {
-        lock.lock();
+        try {
+            if (!lock.tryLock(SERVER_LOCK_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                return status("Status query timeout: server is busy");
+            }
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            return status("Status query interrupted");
+        }
         try {
             return status("Netty server status");
         } finally {
@@ -303,21 +367,24 @@ public class LedNettyServerService {
         byte[] data = parsePayload(request.getPayload(), request.getPayloadArray(), request.getPayloadFormat());
         boolean waitResponse = Boolean.TRUE.equals(request.getWaitResponse());
         String macAddress = resolveSendMacAddress(request);
+        String color = request.getColor();
+        String command = request.getCommand();
         if (traceEnabled) {
-            log.info("[LED-CMD] sendToClient start: remoteAddress={}, mac={}, waitResponse={}, payloadHex={}, payloadFormat={}",
+            log.info("[LED-CMD] sendToClient start: remoteAddress={}, mac={}, waitResponse={}, payloadHex={}, payloadFormat={}, color={}",
                     request.getRemoteAddress(), macAddress, waitResponse,
-                    LedProtocolCodec.toHex(data), request.getPayloadFormat());
+                    LedProtocolCodec.toHex(data), request.getPayloadFormat(), color);
         }
         LedNettyServerHandler.SendResult result = sendWithInterval(
                 "client-command",
                 () -> serverHandler.sendTo(request.getRemoteAddress(), data, waitResponse));
         int failedCount = result.totalTargets() - result.successCount();
+        boolean responseTimeout = waitResponse && result.responses().stream().anyMatch(LedNettyServerHandler.ClientResponse::timeout);
         if (traceEnabled) {
-            log.info("[LED-CMD] sendToClient result: total={}, success={}, failed={}, responseCount={}, willCache={}",
+            log.info("[LED-CMD] sendToClient result: total={}, success={}, failed={}, responseCount={}, responseTimeout={}",
                     result.totalTargets(), result.successCount(), failedCount,
-                    result.responses().size(), !(result.totalTargets() > 0 && failedCount == 0));
+                    result.responses().size(), responseTimeout);
         }
-        cacheCommandIfNeeded(macAddress, request.getRemoteAddress(), data, waitResponse, result, failedCount);
+        handleSendOutcome(macAddress, color, command, data, request.getRemoteAddress(), result, failedCount, responseTimeout);
         List<LedNettySendResponse.ClientResponse> responses = result.responses().stream()
                 .map(response -> LedNettySendResponse.ClientResponse.builder()
                         .remoteAddress(response.remoteAddress())
@@ -393,75 +460,167 @@ public class LedNettyServerService {
         return normalizeMac(serverHandler.findActiveMacByRemoteAddress(request.getRemoteAddress()));
     }
 
-    private void cacheCommandIfNeeded(
+    /**
+     * 处理发送结果：成功则清除待重试指令，失败则写入/覆盖 DB（per-(mac,color) 覆盖语义）。
+     * 失败 = 写失败 OR (开启了等待回显但响应超时)。
+     * 仅当调用方明确传入 color 时才纳入持久化重试（color 为 null 表示非灯开关类指令，不重试）。
+     */
+    private void handleSendOutcome(
             String macAddress,
-            String remoteAddress,
+            String color,
+            String command,
             byte[] data,
-            boolean waitResponse,
+            String remoteAddress,
             LedNettyServerHandler.SendResult result,
-            int failedCount) {
-        if (result.totalTargets() > 0 && failedCount == 0) {
-            removePendingCommand(macAddress);
+            int failedCount,
+            boolean responseTimeout) {
+        if (pendingCommandRepository == null || macAddress == null || macAddress.isBlank()) {
             return;
         }
-        if (macAddress.isBlank()) {
-            log.warn("LED netty command send failed but cannot cache: missing mac, remoteAddress={}", remoteAddress);
+        if (color == null || color.isBlank()) {
             return;
         }
-        if (pendingClientCommands.size() >= DEFAULT_PENDING_COMMAND_CACHE_LIMIT
-                && !pendingClientCommands.containsKey(macAddress)) {
-            log.warn("LED netty pending command cache is full, skip cache: mac={}, remoteAddress={}", macAddress, remoteAddress);
+        boolean writeSuccess = result.totalTargets() > 0 && failedCount == 0;
+        boolean success = writeSuccess && !responseTimeout;
+        if (success) {
+            pendingCommandRepository.deleteByMacAndColor(macAddress, color);
             return;
         }
-        pendingClientCommands.put(macAddress, new PendingClientCommand(
-                macAddress,
-                remoteAddress,
-                Arrays.copyOf(data, data.length),
-                waitResponse,
-                System.currentTimeMillis(),
-                0
-        ));
-        log.info("LED netty command cached for retry: mac={}, remoteAddress={}, bytes={}",
-                macAddress, remoteAddress, data.length);
+        String frameHex = LedProtocolCodec.toHex(data);
+        String commandText = (command == null || command.isBlank()) ? "UNKNOWN" : command.trim().toUpperCase();
+        pendingCommandRepository.upsert(macAddress, color, commandText, frameHex, remoteAddress);
     }
 
     private void removePendingCommand(String macAddress) {
-        if (!macAddress.isBlank()) {
-            pendingClientCommands.remove(macAddress);
+        if (pendingCommandRepository != null && macAddress != null && !macAddress.isBlank()) {
+            pendingCommandRepository.deleteByMac(macAddress);
         }
     }
 
+    /**
+     * 心跳即时触发：设备上报 MAC 时，查 DB 该 mac 的待重试指令并逐条重发。
+     * 走异步线程避免阻塞 Netty IO 线程。
+     * 注意：不直接使用回调传入的 remoteAddress（断网重连后会变化），
+     * 而是按 MAC 查当前活跃连接，保证用最新地址。
+     */
     private void retryPendingCommand(String macAddress, String ipAddress, String remoteAddress) {
-        String normalizedMac = normalizeMac(macAddress);
-        PendingClientCommand pendingCommand = pendingClientCommands.get(normalizedMac);
-        if (pendingCommand == null || remoteAddress == null || remoteAddress.isBlank()) {
+        if (pendingCommandRepository == null) {
             return;
         }
-        commandRetryExecutor.execute(() -> retryPendingCommand(pendingCommand, remoteAddress));
+        String normalizedMac = normalizeMac(macAddress);
+        if (normalizedMac.isBlank()) {
+            return;
+        }
+        commandRetryExecutor.execute(() -> retryPendingByMac(normalizedMac));
     }
 
-    private void retryPendingCommand(PendingClientCommand pendingCommand, String remoteAddress) {
+    /**
+     * 定时扫描兜底：扫描 DB 全部待重试指令，对当前在线的 mac 逐条重发。
+     * 不依赖设备主动上报心跳，保证服务重启/设备恢复后能主动清空积压。
+     */
+    private void scanAndRetryPending() {
+        if (!isRunning() || pendingCommandRepository == null) {
+            return;
+        }
+        try {
+            List<LedPendingCommandRepository.LedPendingCommand> pendingList = pendingCommandRepository.findAllPending();
+            if (pendingList.isEmpty()) {
+                return;
+            }
+            if (traceEnabled) {
+                log.info("[LED-RETRY] scan found {} pending commands", pendingList.size());
+            }
+            for (LedPendingCommandRepository.LedPendingCommand pending : pendingList) {
+                String remoteAddress = serverHandler.findActiveRemoteAddressByMac(pending.macAddress());
+                if (remoteAddress == null || remoteAddress.isBlank()) {
+                    continue;
+                }
+                retryOnePending(pending, remoteAddress);
+            }
+        } catch (Exception exception) {
+            log.warn("LED pending command scan error: {}", exception.getMessage());
+        }
+    }
+
+    /**
+     * 按 mac 查待重试指令并逐条重发（心跳触发路径）。
+     * 按 MAC 查当前活跃连接地址，避免使用回调传入的旧 remoteAddress。
+     */
+    private void retryPendingByMac(String normalizedMac) {
         if (!isRunning()) {
             return;
         }
         try {
-            LedNettyServerHandler.SendResult result = sendWithInterval(
-                    "cached-client-command",
-                    () -> serverHandler.sendTo(remoteAddress, pendingCommand.data(), pendingCommand.waitResponse()));
-            int failedCount = result.totalTargets() - result.successCount();
-            if (result.totalTargets() > 0 && failedCount == 0) {
-                pendingClientCommands.remove(pendingCommand.macAddress());
-                log.info("LED netty cached command retry succeeded: mac={}, remoteAddress={}, attempts={}",
-                        pendingCommand.macAddress(), remoteAddress, pendingCommand.retryCount() + 1);
+            List<LedPendingCommandRepository.LedPendingCommand> pendingList =
+                    pendingCommandRepository.findPendingByMac(normalizedMac);
+            if (pendingList.isEmpty()) {
                 return;
             }
-            pendingClientCommands.put(pendingCommand.macAddress(), pendingCommand.nextRetry(remoteAddress));
-            log.warn("LED netty cached command retry failed: mac={}, remoteAddress={}, total={}, success={}, failed={}",
-                    pendingCommand.macAddress(), remoteAddress, result.totalTargets(), result.successCount(), failedCount);
+            String remoteAddress = serverHandler.findActiveRemoteAddressByMac(normalizedMac);
+            if (remoteAddress == null || remoteAddress.isBlank()) {
+                if (traceEnabled) {
+                    log.warn("[LED-RETRY] heartbeat triggered but mac not online, skip: mac={}", normalizedMac);
+                }
+                return;
+            }
+            if (traceEnabled) {
+                log.info("[LED-RETRY] heartbeat triggered, mac={} has {} pending commands, remoteAddress={}",
+                        normalizedMac, pendingList.size(), remoteAddress);
+            }
+            for (LedPendingCommandRepository.LedPendingCommand pending : pendingList) {
+                retryOnePending(pending, remoteAddress);
+            }
         } catch (Exception exception) {
-            pendingClientCommands.put(pendingCommand.macAddress(), pendingCommand.nextRetry(remoteAddress));
-            log.warn("LED netty cached command retry error: mac={}, remoteAddress={}, error={}",
-                    pendingCommand.macAddress(), remoteAddress, exception.getMessage(), exception);
+            log.warn("LED pending command retry-by-mac error: mac={}, error={}", normalizedMac, exception.getMessage());
+        }
+    }
+
+    /**
+     * 重发单条待重试指令。强制 waitResponse=true 以确认设备收到。
+     * 成功则从 DB 删除；失败则递增 retry_count 留待下一轮。
+     */
+    private void retryOnePending(LedPendingCommandRepository.LedPendingCommand pending, String remoteAddress) {
+        if (!isRunning()) {
+            return;
+        }
+        byte[] data;
+        try {
+            data = parsePayload(pending.frameHex(), null, "hex");
+        } catch (Exception exception) {
+            log.warn("LED pending command frame parse failed, delete it: mac={}, color={}, frameHex={}, error={}",
+                    pending.macAddress(), pending.color(), pending.frameHex(), exception.getMessage());
+            pendingCommandRepository.deleteByMacAndColor(pending.macAddress(), pending.color());
+            return;
+        }
+        try {
+            if (traceEnabled) {
+                log.info("[LED-RETRY] resend: mac={}, color={}, command={}, remoteAddress={}, frameHex={}, retryCount={}",
+                        pending.macAddress(), pending.color(), pending.command(), remoteAddress,
+                        pending.frameHex(), pending.retryCount());
+            }
+            LedNettyServerHandler.SendResult result = sendWithInterval(
+                    "retry-pending-command",
+                    () -> serverHandler.sendTo(remoteAddress, data, true));
+            int failedCount = result.totalTargets() - result.successCount();
+            boolean responseTimeout = result.responses().stream().anyMatch(LedNettyServerHandler.ClientResponse::timeout);
+            boolean success = result.totalTargets() > 0 && failedCount == 0 && !responseTimeout;
+            if (success) {
+                pendingCommandRepository.deleteByMacAndColor(pending.macAddress(), pending.color());
+                log.info("LED pending command retry succeeded: mac={}, color={}, attempts={}",
+                        pending.macAddress(), pending.color(), pending.retryCount() + 1);
+            } else {
+                pendingCommandRepository.incrementRetry(pending.macAddress(), pending.color(), remoteAddress);
+                if (traceEnabled) {
+                    log.warn("[LED-RETRY] retry failed: mac={}, color={}, total={}, success={}, timeout={}, remoteAddress={}, activeClients={}",
+                            pending.macAddress(), pending.color(),
+                            result.totalTargets(), result.successCount(), responseTimeout,
+                            remoteAddress, serverHandler.listActiveRemoteAddresses());
+                }
+            }
+        } catch (Exception exception) {
+            pendingCommandRepository.incrementRetry(pending.macAddress(), pending.color(), remoteAddress);
+            log.warn("LED pending command retry error: mac={}, color={}, error={}",
+                    pending.macAddress(), pending.color(), exception.getMessage());
         }
     }
 
@@ -481,17 +640,25 @@ public class LedNettyServerService {
         serverHandler.resetActiveConnections();
         if (serverChannel != null) {
             try {
-                serverChannel.close().syncUninterruptibly();
+                serverChannel.close().await(GROUP_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             } catch (Exception ignored) {
             }
             serverChannel = null;
         }
         if (workerGroup != null) {
-            workerGroup.shutdownGracefully().syncUninterruptibly();
+            try {
+                workerGroup.shutdownGracefully(GROUP_SHUTDOWN_QUIET_PERIOD_SECONDS, GROUP_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                        .await(GROUP_SHUTDOWN_TIMEOUT_SECONDS + 1, TimeUnit.SECONDS);
+            } catch (Exception ignored) {
+            }
             workerGroup = null;
         }
         if (bossGroup != null) {
-            bossGroup.shutdownGracefully().syncUninterruptibly();
+            try {
+                bossGroup.shutdownGracefully(GROUP_SHUTDOWN_QUIET_PERIOD_SECONDS, GROUP_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                        .await(GROUP_SHUTDOWN_TIMEOUT_SECONDS + 1, TimeUnit.SECONDS);
+            } catch (Exception ignored) {
+            }
             bossGroup = null;
         }
         boundPort = -1;
@@ -500,7 +667,15 @@ public class LedNettyServerService {
     private LedNettyServerHandler.SendResult sendWithInterval(
             String sendType,
             java.util.function.Supplier<LedNettyServerHandler.SendResult> sender) {
-        outboundSendLock.lock();
+        try {
+            if (!outboundSendLock.tryLock(SERVER_LOCK_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                log.warn("LED netty outbound send skipped (lock busy): type={}", sendType);
+                return new LedNettyServerHandler.SendResult(0, 0, new CopyOnWriteArrayList<>(), new CopyOnWriteArrayList<>());
+            }
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            return new LedNettyServerHandler.SendResult(0, 0, new CopyOnWriteArrayList<>(), new CopyOnWriteArrayList<>());
+        }
         try {
             waitForSendInterval(sendType);
             LedNettyServerHandler.SendResult result = sender.get();
@@ -514,11 +689,24 @@ public class LedNettyServerService {
     }
 
     private void sendToChannelWithInterval(Channel channel, byte[] data) {
-        outboundSendLock.lock();
+        try {
+            if (!outboundSendLock.tryLock(SERVER_LOCK_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                log.warn("LED netty heartbeat reply skipped (lock busy): channel={}", channel.remoteAddress());
+                return;
+            }
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            return;
+        }
         try {
             waitForSendInterval("client-heartbeat-reply");
-            channel.writeAndFlush(Unpooled.wrappedBuffer(data)).syncUninterruptibly();
+            ChannelFuture future = channel.writeAndFlush(Unpooled.wrappedBuffer(data));
+            if (!future.await(SERVER_LOCK_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                log.warn("LED netty heartbeat reply write timeout: channel={}", channel.remoteAddress());
+            }
             lastOutboundSendAt = System.currentTimeMillis();
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
         } finally {
             outboundSendLock.unlock();
         }
@@ -549,19 +737,6 @@ public class LedNettyServerService {
         }
         return compact.substring(0, 2) + ":" + compact.substring(2, 4) + ":" + compact.substring(4, 6)
                 + ":" + compact.substring(6, 8) + ":" + compact.substring(8, 10) + ":" + compact.substring(10, 12);
-    }
-
-    private record PendingClientCommand(
-            String macAddress,
-            String originalRemoteAddress,
-            byte[] data,
-            boolean waitResponse,
-            long cachedAt,
-            int retryCount
-    ) {
-        PendingClientCommand nextRetry(String remoteAddress) {
-            return new PendingClientCommand(macAddress, remoteAddress, data, waitResponse, cachedAt, retryCount + 1);
-        }
     }
 
     void setHeartbeatEnabled(boolean heartbeatEnabled) {

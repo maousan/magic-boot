@@ -40,3 +40,5 @@ zintis:
     netty:
       trace:
         enabled: true   # 默认关闭，调试时改 true 重启
+        initial-delay-seconds: 30        # 启动后 30s 开始扫描
+        period-seconds: 10               # 每 10s 扫描一次

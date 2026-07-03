@@ -35,4 +35,10 @@ public class LedNettySendRequest {
 
     @Schema(description = "是否等待客户端回包；默认false，不等待", example = "false", defaultValue = "false")
     private Boolean waitResponse = false;
+
+    @Schema(description = "颜色通道 ALL/RED/YELLOW/GREEN，用于失败重试时的 per-(mac,color) 覆盖语义", example = "ALL")
+    private String color;
+
+    @Schema(description = "目标状态 ON/OFF，记录本次指令意图，用于失败重试", example = "ON")
+    private String command;
 }

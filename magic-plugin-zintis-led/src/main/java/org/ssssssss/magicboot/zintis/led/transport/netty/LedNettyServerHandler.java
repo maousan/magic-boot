@@ -3,6 +3,7 @@ package org.ssssssss.magicboot.zintis.led.transport.netty;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -21,6 +22,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -41,6 +43,7 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
             Pattern.CASE_INSENSITIVE
     );
     private static final byte[] HEARTBEAT_FRAME = new byte[]{0x38, 0x46, 0x55, 0x64, 0x73, (byte) 0x82};
+    private static final long WRITE_TIMEOUT_MILLIS = 3000;
 
     private final Set<SocketAddress> activeConnections = ConcurrentHashMap.newKeySet();
     private final Map<SocketAddress, Channel> activeChannels = new ConcurrentHashMap<>();
@@ -274,7 +277,27 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
                     log.info("[LED-SEND] write to channel start: remoteAddress={}, waitResponse={}, payloadHex={}",
                             normalizedTarget, waitResponse, LedProtocolCodec.toHex(data));
                 }
-                channel.writeAndFlush(Unpooled.wrappedBuffer(data)).syncUninterruptibly();
+                ChannelFuture writeFuture = channel.writeAndFlush(Unpooled.wrappedBuffer(data));
+                boolean done;
+                try {
+                    done = writeFuture.await(WRITE_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    failed.add(String.valueOf(entry.getKey()));
+                    continue;
+                }
+                if (!done) {
+                    log.warn("LED netty write timeout: remoteAddress={}, payloadHex={}",
+                            normalizedTarget, LedProtocolCodec.toHex(data));
+                    failed.add(String.valueOf(entry.getKey()));
+                    continue;
+                }
+                if (!writeFuture.isSuccess()) {
+                    log.warn("LED netty write failed: remoteAddress={}, cause={}",
+                            normalizedTarget, writeFuture.cause() == null ? "unknown" : writeFuture.cause().getMessage());
+                    failed.add(String.valueOf(entry.getKey()));
+                    continue;
+                }
                 success++;
                 if (traceEnabled) {
                     log.info("[LED-SEND] write to channel ok: remoteAddress={}, isActive={}", normalizedTarget, channel.isActive());
@@ -335,8 +358,10 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
         if (data == null || data.length < 8) {
             return false;
         }
-        // 兼容两种上报帧头：本地固件 0x66，部分生产固件以 STX(0x02) 起始
-        if ((data[0] != 0x66 && data[0] != 0x02) || data[1] != (byte) 0xAB || data[2] != (byte) 0x97) {
+        // 帧结构：[帧头字节][0xAB][0x97][macLen][ipLen][mac...][ip...][CRC2字节]
+        // 第1字节实测有 0x66/0x02/0x03 等多种值（疑似帧序号），不作为判定条件。
+        // 用第2、3字节 0xAB 0x97 + 长度前缀结构自洽来识别上报帧。
+        if (data.length < 2 || data[1] != (byte) 0xAB || data[2] != (byte) 0x97) {
             return false;
         }
         byte[] payload = extractPayload(data);
