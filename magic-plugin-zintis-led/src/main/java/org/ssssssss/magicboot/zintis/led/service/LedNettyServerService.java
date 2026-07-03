@@ -20,6 +20,7 @@ import org.ssssssss.magicboot.zintis.led.dto.LedNettyClientListResponse;
 import org.ssssssss.magicboot.zintis.led.dto.LedNettySendRequest;
 import org.ssssssss.magicboot.zintis.led.dto.LedNettySendResponse;
 import org.ssssssss.magicboot.zintis.led.dto.LedNettyServerStatusResponse;
+import org.ssssssss.magicboot.zintis.led.protocol.LedProtocolCodec;
 import org.ssssssss.magicboot.zintis.led.transport.netty.LedNettyFrameDecoder;
 import org.ssssssss.magicboot.zintis.led.transport.netty.LedNettyServerHandler;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,6 +72,8 @@ public class LedNettyServerService {
     private boolean heartbeatEnabled;
     @Value("${zintis.led.netty.client-report.registration.enabled:true}")
     private boolean clientReportRegistrationEnabled = true;
+    @Value("${zintis.led.netty.trace.enabled:false}")
+    private boolean traceEnabled;
     private volatile long lastOutboundSendAt;
 
     public LedNettyServerService() {
@@ -91,6 +94,8 @@ public class LedNettyServerService {
     @PostConstruct
     public void autoStart() {
         serverHandler.setClientReportRegistrationEnabled(clientReportRegistrationEnabled);
+        serverHandler.setTraceEnabled(traceEnabled);
+        log.info("LED netty server trace log enabled={}", traceEnabled);
         start(DEFAULT_NETTY_SERVER_PORT);
     }
 
@@ -143,7 +148,7 @@ public class LedNettyServerService {
                     .option(ChannelOption.SO_BACKLOG, 128)
                     .childOption(ChannelOption.SO_KEEPALIVE, true)
                     .childOption(ChannelOption.TCP_NODELAY, true);
-            configureTcpKeepAliveOptions(bootstrap);
+//            configureTcpKeepAliveOptions(bootstrap);
 
             ChannelFuture future = bootstrap.bind(port).syncUninterruptibly();
             serverChannel = future.channel();
@@ -298,10 +303,20 @@ public class LedNettyServerService {
         byte[] data = parsePayload(request.getPayload(), request.getPayloadArray(), request.getPayloadFormat());
         boolean waitResponse = Boolean.TRUE.equals(request.getWaitResponse());
         String macAddress = resolveSendMacAddress(request);
+        if (traceEnabled) {
+            log.info("[LED-CMD] sendToClient start: remoteAddress={}, mac={}, waitResponse={}, payloadHex={}, payloadFormat={}",
+                    request.getRemoteAddress(), macAddress, waitResponse,
+                    LedProtocolCodec.toHex(data), request.getPayloadFormat());
+        }
         LedNettyServerHandler.SendResult result = sendWithInterval(
                 "client-command",
                 () -> serverHandler.sendTo(request.getRemoteAddress(), data, waitResponse));
         int failedCount = result.totalTargets() - result.successCount();
+        if (traceEnabled) {
+            log.info("[LED-CMD] sendToClient result: total={}, success={}, failed={}, responseCount={}, willCache={}",
+                    result.totalTargets(), result.successCount(), failedCount,
+                    result.responses().size(), !(result.totalTargets() > 0 && failedCount == 0));
+        }
         cacheCommandIfNeeded(macAddress, request.getRemoteAddress(), data, waitResponse, result, failedCount);
         List<LedNettySendResponse.ClientResponse> responses = result.responses().stream()
                 .map(response -> LedNettySendResponse.ClientResponse.builder()

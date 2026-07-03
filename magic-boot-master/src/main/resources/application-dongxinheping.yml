@@ -34,3 +34,9 @@ plugin:
   auto-load: true
   auto-start: true
   signature-force-verify: false
+
+zintis:
+  led:
+    netty:
+      trace:
+        enabled: true   # 默认关闭，调试时改 true 重启

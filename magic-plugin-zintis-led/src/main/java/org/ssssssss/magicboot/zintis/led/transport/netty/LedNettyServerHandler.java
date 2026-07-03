@@ -48,6 +48,7 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
     private final Map<SocketAddress, ConcurrentLinkedQueue<CompletableFuture<ClientResponse>>> pendingResponses = new ConcurrentHashMap<>();
     private final DeviceReporter deviceReporter;
     private volatile boolean clientReportRegistrationEnabled = true;
+    private volatile boolean traceEnabled = false;
     private volatile ClientReportListener clientReportListener = (macAddress, ipAddress, remoteAddress) -> {
     };
     private volatile OutboundSender outboundSender = (channel, data) ->
@@ -87,6 +88,10 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
             byte[] data = new byte[byteBuf.readableBytes()];
             byteBuf.readBytes(data);
             byteBuf.release();
+            if (traceEnabled) {
+                log.info("[LED-RECV] inbound frame: remoteAddress={}, len={}, rawHex={}, clientReportFrame={}",
+                        ctx.channel().remoteAddress(), data.length, LedProtocolCodec.toHex(data), isClientReportFrame(data));
+            }
             boolean clientReportFrame = isClientReportFrame(data);
             byte[] payload = extractPayload(data);
             String payloadAscii = clientReportFrame ? toAsciiText(payload) : "";
@@ -173,6 +178,14 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
         this.clientReportRegistrationEnabled = clientReportRegistrationEnabled;
     }
 
+    public void setTraceEnabled(boolean traceEnabled) {
+        this.traceEnabled = traceEnabled;
+    }
+
+    public boolean isTraceEnabled() {
+        return traceEnabled;
+    }
+
     public void setClientReportListener(ClientReportListener clientReportListener) {
         this.clientReportListener = clientReportListener == null ? (macAddress, ipAddress, remoteAddress) -> {
         } : clientReportListener;
@@ -257,12 +270,29 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
             Channel channel = entry.getValue();
             if (channel != null && channel.isActive()) {
                 CompletableFuture<ClientResponse> responseFuture = waitResponse ? registerResponseWaiter(entry.getKey()) : null;
+                if (traceEnabled) {
+                    log.info("[LED-SEND] write to channel start: remoteAddress={}, waitResponse={}, payloadHex={}",
+                            normalizedTarget, waitResponse, LedProtocolCodec.toHex(data));
+                }
                 channel.writeAndFlush(Unpooled.wrappedBuffer(data)).syncUninterruptibly();
                 success++;
+                if (traceEnabled) {
+                    log.info("[LED-SEND] write to channel ok: remoteAddress={}, isActive={}", normalizedTarget, channel.isActive());
+                }
                 if (responseFuture != null) {
-                    responses.add(awaitResponse(entry.getKey(), normalizedTarget, responseFuture));
+                    ClientResponse response = awaitResponse(entry.getKey(), normalizedTarget, responseFuture);
+                    if (traceEnabled) {
+                        log.info("[LED-SEND] await response done: remoteAddress={}, received={}, timeout={}, rawResponseHex={}, payloadAscii={}, crc={}",
+                                normalizedTarget, response.received(), response.timeout(),
+                                response.rawResponseHex(), response.payloadAscii(), response.crc());
+                    }
+                    responses.add(response);
                 }
             } else {
+                if (traceEnabled) {
+                    log.warn("[LED-SEND] channel not active, skip write: remoteAddress={}, isActive={}",
+                            normalizedTarget, channel == null ? "null" : channel.isActive());
+                }
                 failed.add(String.valueOf(entry.getKey()));
             }
         }
@@ -305,7 +335,8 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
         if (data == null || data.length < 8) {
             return false;
         }
-        if (data[0] != 0x66 || data[1] != (byte) 0xAB || data[2] != (byte) 0x97) {
+        // 兼容两种上报帧头：本地固件 0x66，部分生产固件以 STX(0x02) 起始
+        if ((data[0] != 0x66 && data[0] != 0x02) || data[1] != (byte) 0xAB || data[2] != (byte) 0x97) {
             return false;
         }
         byte[] payload = extractPayload(data);

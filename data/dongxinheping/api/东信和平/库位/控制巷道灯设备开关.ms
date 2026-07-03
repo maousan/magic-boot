@@ -5,7 +5,7 @@
   "groupId" : "6ce8544b21954e189dc7aeb484aeddfc",
   "name" : "控制巷道灯设备开关",
   "createTime" : null,
-  "updateTime" : 1779425652109,
+  "updateTime" : 1783041402713,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -25,10 +25,10 @@
     "expression" : null,
     "children" : null
   } ],
-  "requestBody" : "{\n  \"mode\": \"client\",\n  \"ledId\": \"3A:69:7A:08:D0:A5\",\n  \"command\": \"OFF\",\n  \"port\": \"ALL\",\n  \"timeoutMs\": 10000,\n  \"waitResponse\": false\n}",
+  "requestBody" : "{\"mode\":\"client\",\"ledId\":\"3A:69:7A:08:D0:A5\",\"command\":\"ON\",\"port\":\"GREEN\"}",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": {\n        \"mode\": \"client\",\n        \"ledId\": \"3A:69:7A:08:D0:A5\",\n        \"deviceIp\": \"192.168.2.102\",\n        \"remoteAddress\": \"192.168.2.102:53373\",\n        \"command\": \"ON\",\n        \"port\": \"ALL\",\n        \"timeoutMs\": 10000,\n        \"executedCount\": 1,\n        \"executed\": [\n            {\n                \"color\": \"ALL\",\n                \"dataCommand\": 156,\n                \"remoteAddress\": \"192.168.2.102:53373\",\n                \"macAddress\": \"3A:69:7A:08:D0:A5\",\n                \"frame\": [\n                    102,\n                    53,\n                    156,\n                    230,\n                    134\n                ],\n                \"sendResult\": {\n                    \"code\": 200,\n                    \"message\": \"success\",\n                    \"status\": 200,\n                    \"responseText\": \"{\\\"success\\\":true,\\\"message\\\":\\\"Send completed\\\",\\\"totalTargets\\\":1,\\\"successCount\\\":1,\\\"failedCount\\\":0,\\\"failedTargets\\\":[],\\\"waitResponse\\\":false,\\\"responseCount\\\":0,\\\"responses\\\":[]}\"\n                }\n            }\n        ],\n        \"failed\": []\n    },\n    \"timestamp\": 1779425646193,\n    \"executeTime\": 154\n}",
+  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": {\n        \"mode\": \"client\",\n        \"ledId\": \"3A:69:7A:08:D0:A5\",\n        \"deviceIp\": \"192.168.2.102\",\n        \"remoteAddress\": \"192.168.2.102:52026\",\n        \"command\": \"ON\",\n        \"port\": \"GREEN\",\n        \"timeoutMs\": 10000,\n        \"executedCount\": 1,\n        \"executed\": [\n            {\n                \"color\": \"GREEN\",\n                \"dataCommand\": 186,\n                \"remoteAddress\": \"192.168.2.102:52026\",\n                \"macAddress\": \"3A:69:7A:08:D0:A5\",\n                \"frame\": [\n                    102,\n                    53,\n                    186,\n                    60,\n                    7\n                ],\n                \"sendResult\": {\n                    \"code\": 200,\n                    \"message\": \"success\",\n                    \"status\": 200,\n                    \"responseText\": \"{\\\"success\\\":true,\\\"message\\\":\\\"Send completed\\\",\\\"totalTargets\\\":1,\\\"successCount\\\":1,\\\"failedCount\\\":0,\\\"failedTargets\\\":[],\\\"waitResponse\\\":false,\\\"responseCount\\\":0,\\\"responses\\\":[]}\"\n                }\n            }\n        ],\n        \"failed\": []\n    },\n    \"timestamp\": 1783041387910,\n    \"executeTime\": 7239\n}",
   "description" : "按设备 + 指令 + 端口直接控制巷道灯。",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
@@ -327,22 +327,20 @@ let parseSendResponse = (sendResult) => {
     return payload
 }
 
+let waitResponse = body.waitResponse
+if (waitResponse == null) {
+    waitResponse = true
+}
+
 if (!lightCommand) {
     let frame = null
-    let waitResponse = body.waitResponse
-    if (waitResponse == null) {
-        waitResponse = true
-    }
 
     if (advancedCommand == 'CONTROL_ON') {
         frame = buildControlFrame(hostAddress, 0x35, body.dataCommand == null ? 1 : body.dataCommand)
-        waitResponse = body.waitResponse == true
     } else if (advancedCommand == 'CONTROL_OFF') {
         frame = buildControlFrame(hostAddress, 0xFA, body.dataCommand == null ? 1 : body.dataCommand)
-        waitResponse = body.waitResponse == true
     } else if (advancedCommand == 'CONTROL_PULSE') {
         frame = buildControlFrame(hostAddress, 0x36, body.dataCommand == null ? 1 : body.dataCommand)
-        waitResponse = body.waitResponse == true
     } else if (advancedCommand == 'QUERY') {
         frame = buildControlFrame(hostAddress, 0xAB, body.dataCommand == null ? 1 : body.dataCommand)
     } else if (advancedCommand == 'SYSTEM_INFO') {
@@ -353,10 +351,8 @@ if (!lightCommand) {
         frame = buildControlFrame(hostAddress, 0xAB, 0x97)
     } else if (advancedCommand == 'TCP_SERVER_OPEN') {
         frame = buildControlFrame(hostAddress, 0xBF, 0x23)
-        waitResponse = body.waitResponse == true
     } else if (advancedCommand == 'TCP_SERVER_CLOSE') {
         frame = buildControlFrame(hostAddress, 0xBF, 0x2E)
-        waitResponse = body.waitResponse == true
     } else if (advancedCommand == 'TCP_CLIENT_OPEN') {
         let targetIp = body.targetIp
         let targetPort = body.targetPort
@@ -364,10 +360,8 @@ if (!lightCommand) {
             exit 400, '开启TCP客户端需要targetIp和targetPort'
         }
         frame = buildFrame(hostAddress, 0xBF, 0x33, asciiBytes((targetIp + '').trim() + ':' + targetPort))
-        waitResponse = body.waitResponse == true
     } else if (advancedCommand == 'TCP_CLIENT_CLOSE') {
         frame = buildControlFrame(hostAddress, 0xBF, 0x3E)
-        waitResponse = body.waitResponse == true
     } else if (advancedCommand == 'OTA_UPDATE') {
         let version = body.version
         if (version == null || version == '') {
@@ -386,12 +380,11 @@ if (!lightCommand) {
             }
         }
         frame = buildFrame(hostAddress, 0x9F, versionBytes[0], payload)
-        waitResponse = body.waitResponse == true
     } else {
         exit 400, '不支持的指令: ' + advancedCommand
     }
 
-    let sendResult = sendToClient(activeClient.remoteAddress, null, null, frame, 'json', waitResponse == true)
+    let sendResult = sendToClient(activeClient.remoteAddress, null, null, frame, 'json', !!waitResponse)
     let parsed = parseSendResponse(sendResult)
     if (parsed.success != true) {
         failed.add({ command: advancedCommand, remoteAddress: activeClient.remoteAddress, frame: frame, sendResult: sendResult })
@@ -487,7 +480,7 @@ for (color in ports) {
     } else {
         let controlCommand = command == 'ON' ? 0x35 : 0xFA
         let frame = buildControlFrame(hostAddress, controlCommand, dataCommand)
-        let sendResult = sendToClient(activeClient.remoteAddress, null, null, frame, 'json', body.waitResponse)
+        let sendResult = sendToClient(activeClient.remoteAddress, null, null, frame, 'json', waitResponse)
         row.remoteAddress = activeClient.remoteAddress
         row.macAddress = activeClient.macAddress
         row.frame = frame
