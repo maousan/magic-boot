@@ -161,7 +161,8 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof IdleStateEvent idleStateEvent
                 && idleStateEvent.state() == IdleState.READER_IDLE) {
-            log.debug("LED netty server client read idle, keep channel open: {}", ctx.channel().remoteAddress());
+            log.info("LED netty client read idle, closing half-open connection: {}", ctx.channel().remoteAddress());
+            ctx.close();
             return;
         }
         ctx.fireUserEventTriggered(evt);

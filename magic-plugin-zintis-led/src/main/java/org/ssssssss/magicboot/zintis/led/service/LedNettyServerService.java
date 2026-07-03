@@ -83,6 +83,8 @@ public class LedNettyServerService {
     private boolean clientReportRegistrationEnabled = true;
     @Value("${zintis.led.netty.trace.enabled:false}")
     private boolean traceEnabled;
+    @Value("${zintis.led.netty.client-read-idle-seconds:120}")
+    private int clientReadIdleSeconds;
     @Value("${zintis.led.netty.retry.scan.enabled:true}")
     private boolean retryScanEnabled;
     @Value("${zintis.led.netty.retry.scan.initial-delay-seconds:30}")
@@ -191,8 +193,9 @@ public class LedNettyServerService {
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) {
+                            // clientReadIdleSeconds=0 传给 IdleStateHandler 表示不检测读空闲（不主动关闭半开连接）
                             ch.pipeline()
-                                    .addLast(new IdleStateHandler(DEFAULT_CLIENT_READ_IDLE_SECONDS, 0, 0))
+                                    .addLast(new IdleStateHandler(clientReadIdleSeconds, 0, 0))
                                     .addLast(new LedNettyFrameDecoder())
                                     .addLast(serverHandler);
                         }
