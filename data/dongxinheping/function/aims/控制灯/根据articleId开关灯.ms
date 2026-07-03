@@ -5,7 +5,7 @@
   "groupId" : "d7de530ea18542f2827146962f10bdb4",
   "name" : "根据articleId开关灯",
   "createTime" : 1775235016864,
-  "updateTime" : 1780579969771,
+  "updateTime" : 1783062247718,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -49,6 +49,7 @@ import java.util.HashMap
 import java.util.List
 
 const aimsHost = Forest.config().getVariableValue("aimsHost")
+const stationCode = Forest.config().getVariableValue("stationCode")
 
 if(data == null || !(data instanceof List)){
     return {
@@ -67,6 +68,9 @@ for(item in data){
         duration = '0'
     }
     item.duration = duration
+    if (!item.stationCode) {
+        item.stationCode = stationCode
+    }
 }
 
 let jsonBody = JSONUtil.toJsonStr(data)

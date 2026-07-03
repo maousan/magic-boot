@@ -51,6 +51,7 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
     private final Map<SocketAddress, ConcurrentLinkedQueue<CompletableFuture<ClientResponse>>> pendingResponses = new ConcurrentHashMap<>();
     private final DeviceReporter deviceReporter;
     private volatile boolean clientReportRegistrationEnabled = true;
+    private volatile boolean clientReportReplyAckEnabled = true;
     private volatile boolean traceEnabled = false;
     private volatile ClientReportListener clientReportListener = (macAddress, ipAddress, remoteAddress) -> {
     };
@@ -102,6 +103,8 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
             String ip = clientReportFrame ? extractIp(payload) : "";
             if (clientReportFrame) {
                 if (!mac.isBlank()) {
+                    // 保证一个 MAC 只有一个有效连接：关闭并移除该 MAC 的旧连接（如有）
+                    closeStaleConnectionsByMac(ctx.channel().remoteAddress(), mac);
                     activeClientMacAddresses.put(ctx.channel().remoteAddress(), mac);
                 }
                 if (ip.isBlank()) {
@@ -124,7 +127,7 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
                     crc
             );
             completePendingResponse(ctx.channel().remoteAddress(), response);
-            if (shouldReplyHeartbeat(data)) {
+            if (clientReportReplyAckEnabled && shouldReplyHeartbeat(data)) {
                 outboundSender.send(ctx.channel(), HEARTBEAT_FRAME);
                 log.info("LED netty server client report ack sent to {}", ctx.channel().remoteAddress());
             }
@@ -182,6 +185,10 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
         this.clientReportRegistrationEnabled = clientReportRegistrationEnabled;
     }
 
+    public void setClientReportReplyAckEnabled(boolean clientReportReplyAckEnabled) {
+        this.clientReportReplyAckEnabled = clientReportReplyAckEnabled;
+    }
+
     public void setTraceEnabled(boolean traceEnabled) {
         this.traceEnabled = traceEnabled;
     }
@@ -221,6 +228,36 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
         }
         result.sort((left, right) -> left.remoteAddress().compareTo(right.remoteAddress()));
         return result;
+    }
+
+    /**
+     * 关闭并移除同一 MAC 的旧连接（半开残留），保证一个 MAC 只有一个有效连接。
+     * 在收到上报帧、确认新连接的 MAC 后调用。currentAddress 是新连接，不会被关。
+     */
+    private void closeStaleConnectionsByMac(SocketAddress currentAddress, String mac) {
+        String normalizedMac = normalizeMac(mac);
+        if (normalizedMac.isBlank()) {
+            return;
+        }
+        for (Map.Entry<SocketAddress, String> entry : activeClientMacAddresses.entrySet()) {
+            if (entry.getKey().equals(currentAddress)) {
+                continue;
+            }
+            if (!normalizedMac.equalsIgnoreCase(entry.getValue())) {
+                continue;
+            }
+            SocketAddress staleAddress = entry.getKey();
+            Channel staleChannel = activeChannels.get(staleAddress);
+            log.info("LED netty closing stale connection for mac={}: old={}, new={}",
+                    normalizedMac, staleAddress, currentAddress);
+            if (staleChannel != null) {
+                staleChannel.close();
+            }
+            activeConnections.remove(staleAddress);
+            activeChannels.remove(staleAddress);
+            activeClientMacAddresses.remove(staleAddress);
+            pendingResponses.remove(staleAddress);
+        }
     }
 
     public String findActiveRemoteAddressByMac(String macAddress) {

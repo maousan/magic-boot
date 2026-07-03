@@ -81,6 +81,8 @@ public class LedNettyServerService {
     private boolean heartbeatEnabled;
     @Value("${zintis.led.netty.client-report.registration.enabled:true}")
     private boolean clientReportRegistrationEnabled = true;
+    @Value("${zintis.led.netty.client-report.reply-ack.enabled:true}")
+    private boolean clientReportReplyAckEnabled;
     @Value("${zintis.led.netty.trace.enabled:false}")
     private boolean traceEnabled;
     @Value("${zintis.led.netty.client-read-idle-seconds:120}")
@@ -114,8 +116,9 @@ public class LedNettyServerService {
     @PostConstruct
     public void autoStart() {
         serverHandler.setClientReportRegistrationEnabled(clientReportRegistrationEnabled);
+        serverHandler.setClientReportReplyAckEnabled(clientReportReplyAckEnabled);
         serverHandler.setTraceEnabled(traceEnabled);
-        log.info("LED netty server trace log enabled={}", traceEnabled);
+        log.info("LED netty server trace log enabled={}, client-report reply ack enabled={}", traceEnabled, clientReportReplyAckEnabled);
         start(DEFAULT_NETTY_SERVER_PORT);
         startRetryScan();
     }

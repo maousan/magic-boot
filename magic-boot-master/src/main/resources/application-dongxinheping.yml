@@ -43,3 +43,4 @@ zintis:
         initial-delay-seconds: 30        # 启动后 30s 开始扫描
         period-seconds: 10               # 每 10s 扫描一次
         ack-timeout-ms: 3000   # 后台等回显超时，默认 3s
+        client-read-idle-seconds: 120   # 读空闲阈值，默认120秒；设为0表示不主动关闭半开连接
