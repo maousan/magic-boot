@@ -5,7 +5,7 @@
   "groupId" : "qou8in0pu4dvva7g20trefax4lo26ye8",
   "name" : "亮灯灭灯控制",
   "createTime" : null,
-  "updateTime" : 1780578804116,
+  "updateTime" : 1783070347165,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -217,6 +217,9 @@ let splitLocationCodeChunks = (locationCodes, chunkSize) => {
     return chunks
 }
 
+// 锁过期时间：比业务操作最大耗时稍长，超时自动释放避免死锁
+const lockExpireMillis = 60000
+
 let acquireGlobalLock = (lockKey, timeoutSeconds) => {
     let maxAttempts = 20
     if(timeoutSeconds != null && timeoutSeconds > 0){
@@ -226,42 +229,14 @@ let acquireGlobalLock = (lockKey, timeoutSeconds) => {
     while(attempt < maxAttempts){
         attempt = attempt + 1
         try {
-            let rowObj = db.selectOne("""
-                select get_lock(#{lockKey}, 0) as lock_result
-            """, {
-                lockKey: lockKey
-            })
-            let lockResult = null
-            if(rowObj != null){
-                try {
-                    lockResult = rowObj.lock_result
-                } catch (ignore) {
-                }
-                if(lockResult == null){
-                    try {
-                        lockResult = rowObj.lockResult
-                    } catch (ignore) {
-                    }
-                }
-                if(lockResult == null){
-                    try {
-                        lockResult = rowObj['lock_result']
-                    } catch (ignore) {
-                    }
-                }
-                if(lockResult == null){
-                    lockResult = rowObj
-                }
-            }
-            if(lockResult != null && (lockResult + '') == '1'){
+            if(redis.tryLock(lockKey, lockExpireMillis)){
                 return true
             }
-        } catch (ignoreLockQueryErr) {
+        } catch (redisLockErr) {
+            log.warn(logPrefix + ', redis tryLock error: ' + redisLockErr.message)
         }
-        try{
-            db.selectOne("""
-                select sleep(0.05) as wait_result
-            """)
+        try {
+            java.lang.Thread.sleep(50)
         } catch (ignoreSleepErr) {
         }
     }
@@ -270,12 +245,9 @@ let acquireGlobalLock = (lockKey, timeoutSeconds) => {
 
 let releaseGlobalLock = (lockKey) => {
     try {
-        db.selectOne("""
-            select release_lock(#{lockKey}) as release_result
-        """, {
-            lockKey: lockKey
-        })
-    } catch (ignore) {
+        redis.unlock(lockKey)
+    } catch (redisUnlockErr) {
+        log.warn(logPrefix + ', redis unlock error: ' + redisUnlockErr.message)
     }
 }
 

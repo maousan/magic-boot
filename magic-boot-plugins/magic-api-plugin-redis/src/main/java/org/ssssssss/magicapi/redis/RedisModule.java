@@ -757,6 +757,31 @@ public class RedisModule implements DynamicAttribute<RedisModule, RedisModule> {
         return getRedissonClient().getLock(key);
     }
 
+    @Comment("尝试获取分布式锁（非阻塞，获取不到立即返回 false）\n\n"
+            + "基于 Redisson RLock，获取成功后务必在同一线程调用 unlock(key) 释放。"
+            + "leaseTime 超时后锁自动释放，避免持锁线程崩溃导致死锁。")
+    public boolean tryLock(@Comment(name = "key", value = "锁键") String key,
+                           @Comment(name = "millis", value = "锁过期时间（毫秒），超时自动释放") long millis) {
+        RLock lock = getRedissonClient().getLock(key);
+        try {
+            return lock.tryLock(0, millis, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    @Comment("释放分布式锁\n\n"
+            + "只释放当前线程持有的锁，非持有者调用会抛 IllegalMonitorStateException（已捕获忽略）。")
+    public boolean unlock(@Comment(name = "key", value = "锁键") String key) {
+        RLock lock = getRedissonClient().getLock(key);
+        if (lock.isHeldByCurrentThread()) {
+            lock.unlock();
+            return true;
+        }
+        return false;
+    }
+
     @Comment("移除缓存")
     public void remove(String redisKey) {
         getRedissonClient().getBucket(redisKey).delete();
