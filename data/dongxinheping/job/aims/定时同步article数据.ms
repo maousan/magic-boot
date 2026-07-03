@@ -5,12 +5,12 @@
   "groupId" : "999006442fb54aebbb2015e4a23bdba8",
   "name" : "定时同步article数据",
   "createTime" : 1776664436822,
-  "updateTime" : 1779966598824,
+  "updateTime" : 1783042479008,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
   "path" : "/articles",
-  "cron" : "0 */30 * * * ?",
+  "cron" : "0 30 6,12 ? * *",
   "enabled" : true,
   "description" : "每30分钟运行一次",
   "params" : "",
@@ -128,6 +128,7 @@ let queryInventoryRowsByLocationPage = (locationId, pageOffset) => {
                 left(date_format(edit_time, '%f'), 3),
                 '+0000'
             ) as modified_date,
+            case when edit_time < date_sub(now(), interval 12 month) then 1 else 0 end as stg_flag,
             user_define1,
             user_define2,
             user_define3,
@@ -135,7 +136,7 @@ let queryInventoryRowsByLocationPage = (locationId, pageOffset) => {
             user_define5
           from t_inventory
          where location_id = #{locationId}
-         order by edit_time desc
+         order by stg_flag desc, edit_time desc
          limit #{batchSize} offset #{pageOffset}
     """, {
         locationId: locationId,
@@ -168,6 +169,7 @@ let appendInventoryRowsToArticleData = (articleItem, inventoryRows, pageIndex) =
         putIndexedField(articleItem.data, 'qtyAllocated', pageIndex, rowIndex, row.qtyAllocated)
         putIndexedField(articleItem.data, 'qtyPa', pageIndex, rowIndex, row.qtyPa)
         putIndexedField(articleItem.data, 'editTime', pageIndex, rowIndex, row.editTime)
+        putIndexedField(articleItem.data, 'stgFlag', pageIndex, rowIndex, row.stgFlag)
         // putIndexedField(articleItem.data, 'userDefine1', pageIndex, rowIndex, valueOf(row, 'user_define1', 'userDefine1'))
         // putIndexedField(articleItem.data, 'userDefine2', pageIndex, rowIndex, valueOf(row, 'user_define2', 'userDefine2'))
         // putIndexedField(articleItem.data, 'userDefine3', pageIndex, rowIndex, valueOf(row, 'user_define3', 'userDefine3'))
