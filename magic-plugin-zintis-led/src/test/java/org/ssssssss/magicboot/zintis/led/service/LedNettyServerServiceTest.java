@@ -130,19 +130,21 @@ class LedNettyServerServiceTest {
     }
 
     @Test
-    void updateHeartbeat_shouldNotStartActiveHeartbeatWhenServerIsRunning() throws Exception {
+    void updateHeartbeat_shouldStartActiveHeartbeatWhenServerIsRunning() throws Exception {
         LedNettyServerStatusResponse start = service.start(0);
         assertTrue(start.isRunning());
 
         try (Socket socket = new Socket("127.0.0.1", start.getPort())) {
-            socket.setSoTimeout(1500);
+            socket.setSoTimeout(5000);
             waitUntilClientConnected();
 
             LedNettyServerStatusResponse heartbeatStatus = service.updateHeartbeat(true);
 
+            // 厂家规范：开启后须周期性向客户端发送心跳帧（默认 3 秒间隔）
             assertTrue(heartbeatStatus.isHeartbeatEnabled());
-            assertFalse(heartbeatStatus.isHeartbeatRunning());
-            assertThrows(SocketTimeoutException.class, () -> socket.getInputStream().read());
+            assertTrue(heartbeatStatus.isHeartbeatRunning());
+            assertArrayEquals(new byte[]{0x38, 0x46, 0x55, 0x64, 0x73, (byte) 0x82},
+                    socket.getInputStream().readNBytes(6));
         }
     }
 

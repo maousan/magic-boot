@@ -378,6 +378,26 @@ public class LedNettyServerHandler extends ChannelInboundHandlerAdapter {
         }
         return new SendResult(total, success, failed, responses, pendingFutures);
     }
+    /**
+     * 向所有活跃连接非阻塞地发送服务端心跳帧（38 46 55 64 73 82）。
+     * 厂家规范：服务器须每 6 秒内发送一次心跳（建议 3 秒），设备收不到会主动断开重连。
+     * 与 broadcast 不同：不等待写入完成、不加发送间隔锁，
+     * 个别半开/慢连接不得阻塞心跳调度线程或拖累其他连接的心跳。
+     *
+     * @return 投递（提交写入）的客户端数量
+     */
+    public int broadcastHeartbeat() {
+        int sent = 0;
+        for (Map.Entry<SocketAddress, Channel> entry : activeChannels.entrySet()) {
+            Channel channel = entry.getValue();
+            if (channel != null && channel.isActive()) {
+                channel.writeAndFlush(Unpooled.wrappedBuffer(HEARTBEAT_FRAME));
+                sent++;
+            }
+        }
+        return sent;
+    }
+
     public SendResult broadcast(byte[] data) {
         if (data == null || data.length == 0) {
             return new SendResult(0, 0, new CopyOnWriteArrayList<>(), new CopyOnWriteArrayList<>());

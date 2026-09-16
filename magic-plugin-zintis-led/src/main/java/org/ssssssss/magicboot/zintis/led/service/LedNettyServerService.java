@@ -51,6 +51,8 @@ public class LedNettyServerService {
 
     public static final int DEFAULT_NETTY_SERVER_PORT = 9834;
     public static final int DEFAULT_CLIENT_READ_IDLE_SECONDS = 120;
+    /** 厂家规范：服务器心跳须 6 秒内发送一次，建议 3 秒 */
+    public static final long DEFAULT_HEARTBEAT_INTERVAL_SECONDS = 3;
     public static final int DEFAULT_TCP_KEEP_IDLE_SECONDS = 60;
     public static final int DEFAULT_TCP_KEEP_INTERVAL_SECONDS = 10;
     public static final int DEFAULT_TCP_KEEP_COUNT = 3;
@@ -70,6 +72,8 @@ public class LedNettyServerService {
         return thread;
     });
     private ScheduledExecutorService retryScanExecutor;
+    private ScheduledExecutorService heartbeatExecutor;
+    private long heartbeatIntervalSeconds = DEFAULT_HEARTBEAT_INTERVAL_SECONDS;
     private final LedNettyServerHandler serverHandler;
     private final LedPendingCommandRepository pendingCommandRepository;
 
@@ -121,6 +125,9 @@ public class LedNettyServerService {
         log.info("LED netty server trace log enabled={}, client-report reply ack enabled={}", traceEnabled, clientReportReplyAckEnabled);
         start(DEFAULT_NETTY_SERVER_PORT);
         startRetryScan();
+        if (heartbeatEnabled) {
+            startHeartbeat();
+        }
     }
 
     @PreDestroy
@@ -169,7 +176,7 @@ public class LedNettyServerService {
                         .port(boundPort)
                         .activeConnections(serverHandler.getActiveConnectionCount())
                         .heartbeatEnabled(heartbeatEnabled)
-                        .heartbeatRunning(false)
+                        .heartbeatRunning(heartbeatExecutor != null)
                         .clientReportRegistrationEnabled(clientReportRegistrationEnabled)
                         .message("Netty server already running")
                         .build();
@@ -212,6 +219,9 @@ public class LedNettyServerService {
             serverChannel = future.channel();
             boundPort = ((InetSocketAddress) serverChannel.localAddress()).getPort();
             log.info("LED netty server started on port {}", boundPort);
+            if (heartbeatEnabled) {
+                startHeartbeat();
+            }
             return status("Netty server started");
         } catch (Exception ex) {
             log.error("start netty server failed: {}", ex.getMessage(), ex);
@@ -290,9 +300,54 @@ public class LedNettyServerService {
         lock.lock();
         try {
             heartbeatEnabled = enabled;
-            return status(enabled ? "Netty client report ack enabled" : "Netty client report ack disabled");
+            if (enabled) {
+                startHeartbeat();
+            } else {
+                stopHeartbeat();
+            }
+            return status(enabled ? "Netty server heartbeat enabled" : "Netty server heartbeat disabled");
         } finally {
             lock.unlock();
+        }
+    }
+
+    /**
+     * 启动服务端周期心跳：每 heartbeatIntervalSeconds 秒向所有活跃连接发送心跳帧。
+     * 厂家规范要求 6 秒内至少一次（建议 3 秒），设备收不到会主动断开重连。
+     */
+    private void startHeartbeat() {
+        if (heartbeatExecutor != null) {
+            return;
+        }
+        long interval = heartbeatIntervalSeconds > 0 ? heartbeatIntervalSeconds : DEFAULT_HEARTBEAT_INTERVAL_SECONDS;
+        heartbeatExecutor = Executors.newSingleThreadScheduledExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "zintis-led-heartbeat");
+            thread.setDaemon(true);
+            return thread;
+        });
+        heartbeatExecutor.scheduleAtFixedRate(this::sendHeartbeatToAllClients, interval, interval, TimeUnit.SECONDS);
+        log.info("LED netty server heartbeat started: interval={}s", interval);
+    }
+
+    private void stopHeartbeat() {
+        if (heartbeatExecutor != null) {
+            heartbeatExecutor.shutdownNow();
+            heartbeatExecutor = null;
+            log.info("LED netty server heartbeat stopped");
+        }
+    }
+
+    private void sendHeartbeatToAllClients() {
+        if (!isRunning()) {
+            return;
+        }
+        try {
+            int sent = serverHandler.broadcastHeartbeat();
+            if (traceEnabled) {
+                log.info("[LED-HEARTBEAT] server heartbeat sent to {} clients", sent);
+            }
+        } catch (Exception exception) {
+            log.warn("LED netty server heartbeat broadcast error: {}", exception.getMessage());
         }
     }
 
@@ -689,13 +744,14 @@ public class LedNettyServerService {
                 .port(isRunning() ? boundPort : -1)
                 .activeConnections(serverHandler.getActiveConnectionCount())
                 .heartbeatEnabled(heartbeatEnabled)
-                .heartbeatRunning(false)
+                .heartbeatRunning(heartbeatExecutor != null)
                 .clientReportRegistrationEnabled(clientReportRegistrationEnabled)
                 .message(message)
                 .build();
     }
 
     private void safeStopInternal() {
+        stopHeartbeat();
         serverHandler.resetActiveConnections();
         if (serverChannel != null) {
             try {
@@ -800,6 +856,10 @@ public class LedNettyServerService {
 
     void setHeartbeatEnabled(boolean heartbeatEnabled) {
         this.heartbeatEnabled = heartbeatEnabled;
+    }
+
+    void setHeartbeatIntervalSeconds(long heartbeatIntervalSeconds) {
+        this.heartbeatIntervalSeconds = heartbeatIntervalSeconds;
     }
 
     void setClientReportRegistrationEnabled(boolean clientReportRegistrationEnabled) {

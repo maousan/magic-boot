@@ -40,8 +40,37 @@ public class LedNettyFrameDecoder extends ByteToMessageDecoder {
                 out.add(in.readRetainedSlice(frameLen));
                 continue;
             }
+            // 没找到完整帧时：缓冲区头部可能是"尚未到齐"的合法帧（TCP 分段），
+            // 此时必须等待更多数据，而不能按垃圾丢弃——否则整帧丢失（MAC 上报帧丢失
+            // 会导致设备连接正常但永远无法注册为活跃客户端）。
+            // 仅当头部不可能是合法帧前缀时才丢弃一字节重新同步；
+            // 缓冲区达到 MAX_FRAME_LENGTH 仍不匹配时强制丢弃，防止坏数据流无限积压。
+            if (in.readableBytes() < MAX_FRAME_LENGTH && looksLikeFramePrefix(window)) {
+                return;
+            }
             in.readByte();
         }
+    }
+
+    /**
+     * 判断缓冲区头部是否可能是合法帧的前缀（帧未到齐）：
+     * - 心跳帧：与 38 46 55 64 73 82 的前若干字节逐字节匹配；
+     * - 上报/控制帧：首字节为帧序号/主机地址（不固定），第 2 字节必须是合法控制命令。
+     */
+    private boolean looksLikeFramePrefix(byte[] window) {
+        if (window.length <= HEARTBEAT_FRAME_LENGTH) {
+            boolean heartbeatPrefix = true;
+            for (int i = 0; i < window.length; i++) {
+                if (window[i] != HEARTBEAT_FRAME[i]) {
+                    heartbeatPrefix = false;
+                    break;
+                }
+            }
+            if (heartbeatPrefix) {
+                return true;
+            }
+        }
+        return window.length >= 2 && VALID_CONTROL_COMMANDS.contains(window[1] & 0xFF);
     }
 
     private int findFrameLength(byte[] window) {

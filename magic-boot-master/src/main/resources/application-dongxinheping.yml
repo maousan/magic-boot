@@ -38,6 +38,8 @@ plugin:
 zintis:
   led:
     netty:
+      heartbeat:
+        enabled: true
       trace:
         enabled: true   # 默认关闭，调试时改 true 重启
         initial-delay-seconds: 30        # 启动后 30s 开始扫描
