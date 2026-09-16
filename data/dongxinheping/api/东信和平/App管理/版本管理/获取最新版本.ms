@@ -34,25 +34,38 @@
   "responseBodyDefinition" : null
 }
 ================================
+import log
+
 var list = db.select("""
-    select version_code, version_name, apk_url, apk_size, force_update, description
-    from app_version
-    where is_del = 0
+    select version_code, version_name, apk_url, apk_size, force_update, description, sha256, md5
+    from t_app_version
+    where is_del = 0 and disabled = 0
     order by version_code desc
     limit 1
 """)
 
 if(list == null || list.size() == 0){
+    log.info('app update check: clientIp={}, no available version', request.getRemoteAddr())
     return null
 }
 
 var v = list[0]
+log.info('app update check: clientIp={}, versionCode={}, versionName={}', request.getRemoteAddr(), v.versionCode, v.versionName)
+
+// 查询结果键为驼峰（全局 sql-column-case: camel）
+var apkUrl = v.apkUrl
+// 库里 apk_url 存相对路径（userfiles/...），按当前请求主机拼成完整 URL 供 App 直接下载
+if(apkUrl != null && apkUrl != '' && !(apkUrl + '').startsWith('http')){
+    apkUrl = 'http://' + request.getServerName() + ':' + request.getServerPort() + '/' + apkUrl
+}
 
 return {
-    versionCode: v.version_code,
-    versionName: v.version_name,
-    apkUrl: v.apk_url,
-    apkSize: v.apk_size,
-    forceUpdate: v.force_update != null && v.force_update == 1,
-    description: v.description
+    versionCode: v.versionCode,
+    versionName: v.versionName,
+    apkUrl: apkUrl,
+    apkSize: v.apkSize,
+    forceUpdate: v.forceUpdate != null && v.forceUpdate == 1,
+    description: v.description,
+    sha256: v.sha256,
+    md5: v.md5
 }

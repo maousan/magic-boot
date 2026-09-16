@@ -48,8 +48,8 @@
 ================================
 let sql = """
     select id, version_code, version_name, apk_url, apk_size,
-           force_update, description, create_date
-    from app_version
+           force_update, description, disabled, create_date
+    from t_app_version
     <where>
         is_del = 0
         <if test="keyword != null and keyword != ''">

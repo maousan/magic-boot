@@ -263,16 +263,27 @@ export interface PickingUploadDetail {
   createTime: string
 }
 
-// App 版本管理
+// App 版本管理（magic-api 全局 sql-column-case: camel，接口返回驼峰键）
 export interface AppVersion {
   id: string
-  version_code: number
-  version_name: string
-  apk_url: string
-  apk_size: string
-  force_update: number
+  versionCode: number
+  versionName: string
+  apkUrl: string
+  apkSize: string
+  forceUpdate: number
   description: string
-  create_date: string
+  disabled: number
+  createDate: string
+  sha256?: string
+  md5?: string
+}
+
+// APK manifest 解析结果（上传后自动填充版本号）
+export interface ApkParseInfo {
+  versionCode: number
+  versionName: string
+  packageName: string
+  apkSize: string
 }
 
 // Zintis Netty 服务状态

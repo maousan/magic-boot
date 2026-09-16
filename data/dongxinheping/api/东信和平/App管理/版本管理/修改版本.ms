@@ -94,7 +94,9 @@
   "responseBodyDefinition" : null
 }
 ================================
+import cn.hutool.core.util.HexUtil
 import org.ssssssss.magicboot.utils.FileUtils
+import java.security.MessageDigest
 import java.text.DecimalFormat
 
 if(!id){
@@ -118,9 +120,12 @@ if(description != null){
 
 var apkFile = request.getFile('file')
 if(apkFile != null && !apkFile.isEmpty()){
-    data.apk_url = FileUtils.saveFile(apkFile)
+    data.apk_url = FileUtils.saveFile(apkFile).url
     var df = new DecimalFormat("#.#")
     data.apk_size = df.format(apkFile.getSize() / 1024.0 / 1024.0) + "MB"
+    var apkBytes = apkFile.getBytes()
+    data.sha256 = HexUtil.encodeHexStr(MessageDigest.getInstance('SHA-256').digest(apkBytes), false)
+    data.md5 = HexUtil.encodeHexStr(MessageDigest.getInstance('MD5').digest(apkBytes), false)
 }
 
-db.table('app_version').primary('id').update(data, true)
+db.table('t_app_version').primary('id').update(data, true)

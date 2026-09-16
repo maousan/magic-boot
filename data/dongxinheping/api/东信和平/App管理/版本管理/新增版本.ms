@@ -83,7 +83,9 @@
 }
 ================================
 import cn.hutool.core.util.IdUtil
+import cn.hutool.core.util.HexUtil
 import org.ssssssss.magicboot.utils.FileUtils
+import java.security.MessageDigest
 import java.text.DecimalFormat
 
 var apkFile = request.getFile('file')
@@ -99,13 +101,18 @@ if(!versionName){
     exit 0, '版本名称不能为空'
 }
 
-var apkUrl = FileUtils.saveFile(apkFile)
+var apkUrl = FileUtils.saveFile(apkFile).url
 var df = new DecimalFormat("#.#")
 var apkSizeStr = df.format(apkFile.getSize() / 1024.0 / 1024.0) + "MB"
 
+// 计算 APK 完整性摘要（参考 litepos，供终端校验预留与人工核对）
+var apkBytes = apkFile.getBytes()
+var sha256 = HexUtil.encodeHexStr(MessageDigest.getInstance('SHA-256').digest(apkBytes), false)
+var md5 = HexUtil.encodeHexStr(MessageDigest.getInstance('MD5').digest(apkBytes), false)
+
 var id = IdUtil.simpleUUID()
 
-db.table('app_version').primary('id').save({
+db.table('t_app_version').primary('id').save({
     id: id,
     version_code: versionCode,
     version_name: versionName,
@@ -113,5 +120,8 @@ db.table('app_version').primary('id').save({
     apk_size: apkSizeStr,
     force_update: forceUpdate ? 1 : 0,
     description: description ?: '',
+    sha256: sha256,
+    md5: md5,
+    disabled: 0,
     is_del: 0
 })

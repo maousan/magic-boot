@@ -24,7 +24,7 @@
           :loading="loading"
           :bordered="true"
           :row-key="(row: AppVersion) => row.id"
-          :scroll-x="860"
+          :scroll-x="1000"
           :max-height="tableBodyMaxHeight"
         />
       </div>
@@ -50,6 +50,7 @@
             <n-button>选择文件</n-button>
           </n-upload>
           <n-text v-if="createForm.file" type="success" style="margin-left: 8px">{{ createForm.file?.name }}</n-text>
+          <n-text v-if="parsingApk" depth="3" style="margin-left: 8px">解析 APK 中…</n-text>
         </n-form-item>
         <n-form-item label="版本号" required>
           <n-input-number v-model:value="createForm.versionCode" :min="1" placeholder="整数，如 2" style="width: 100%" />
@@ -78,6 +79,7 @@
             <n-button>选择文件</n-button>
           </n-upload>
           <n-text v-if="editForm.file" type="success" style="margin-left: 8px">{{ editForm.file?.name }}</n-text>
+          <n-text v-if="parsingApk" depth="3" style="margin-left: 8px">解析 APK 中…</n-text>
         </n-form-item>
         <n-form-item label="版本号">
           <n-input-number v-model:value="editForm.versionCode" :min="1" style="width: 100%" />
@@ -100,7 +102,7 @@
 
     <!-- 删除确认 -->
     <n-modal v-model:show="showDelete" title="确认删除" preset="dialog">
-      <span>确定要删除版本 <b>{{ deleteTarget?.version_name }}</b>（v{{ deleteTarget?.version_code }}）吗？</span>
+      <span>确定要删除版本 <b>{{ deleteTarget?.versionName }}</b>（v{{ deleteTarget?.versionCode }}）吗？</span>
       <template #action>
         <n-button @click="showDelete = false">取消</n-button>
         <n-button type="error" :loading="submitting" @click="handleDelete">删除</n-button>
@@ -113,12 +115,18 @@
 import { ref, reactive, onMounted, h } from 'vue'
 import {
   NCard, NDataTable, NButton, NModal, NSpace, NFormItem, NInput, NInputNumber,
-  NSwitch, NUpload, NText, NFlex, NPagination,
+  NSwitch, NUpload, NText, NFlex, NPagination, NTag, useDialog, useMessage,
 } from 'naive-ui'
 import type { DataTableColumns, UploadFileInfo } from 'naive-ui'
-import { getAppVersionList, createAppVersion, updateAppVersion, deleteAppVersion } from '@/api/app-version'
+import {
+  getAppVersionList, createAppVersion, updateAppVersion, deleteAppVersion,
+  disableAppVersion, enableAppVersion, parseApk,
+} from '@/api/app-version'
 import type { AppVersion } from '@/types'
 import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
+
+const dialog = useDialog()
+const message = useMessage()
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -151,29 +159,40 @@ const editForm = reactive({
 })
 
 const columns: DataTableColumns<AppVersion> = [
-  { title: '版本号', key: 'version_code', width: 80 },
-  { title: '版本名称', key: 'version_name', width: 100 },
-  { title: '文件大小', key: 'apk_size', width: 90 },
+  { title: '版本号', key: 'versionCode', width: 80 },
+  { title: '版本名称', key: 'versionName', width: 100 },
+  { title: '文件大小', key: 'apkSize', width: 90 },
   {
     title: '强制更新',
-    key: 'force_update',
+    key: 'forceUpdate',
     width: 90,
-    render: (row) => h(NText, { type: row.force_update ? 'error' : 'success' }, () => row.force_update ? '是' : '否'),
+    render: (row) => h(NText, { type: row.forceUpdate ? 'error' : 'success' }, () => row.forceUpdate ? '是' : '否'),
+  },
+  {
+    title: '状态',
+    key: 'disabled',
+    width: 80,
+    render: (row) => h(NTag, { size: 'small', type: row.disabled ? 'default' : 'success' }, () => row.disabled ? '已停用' : '正常'),
   },
   {
     title: '更新说明',
     key: 'description',
     ellipsis: { tooltip: true },
   },
-  { title: '创建时间', key: 'create_date', width: 170 },
+  { title: '创建时间', key: 'createDate', width: 170 },
   {
     title: '操作',
     key: 'actions',
-    width: 140,
+    width: 200,
     fixed: 'right',
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
         h(NButton, { size: 'small', onClick: () => openEdit(row) }, () => '编辑'),
+        h(NButton, {
+          size: 'small',
+          type: row.disabled ? 'success' : 'warning',
+          onClick: () => handleToggleDisabled(row),
+        }, () => row.disabled ? '启用' : '停用'),
         h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '删除'),
       ]),
   },
@@ -199,12 +218,34 @@ function handleSearch() {
   fetchData()
 }
 
+const parsingApk = ref(false)
+
 function onFileChange({ file }: { file: UploadFileInfo }) {
   createForm.file = file.file ?? null
+  if (createForm.file) parseAndFill(createForm, createForm.file)
 }
 
 function onEditFileChange({ file }: { file: UploadFileInfo }) {
   editForm.file = file.file ?? null
+  if (editForm.file) parseAndFill(editForm, editForm.file)
+}
+
+// 上传 APK 后解析 manifest 自动填充版本号/版本名（参考 litepos）
+async function parseAndFill(form: { versionCode: number | null; versionName: string }, file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  parsingApk.value = true
+  try {
+    const info = await parseApk(formData)
+    if (!info) return
+    form.versionCode = info.versionCode
+    if (info.versionName) form.versionName = info.versionName
+    message.success(`已解析：v${info.versionCode}${info.versionName ? ' ' + info.versionName : ''}（${info.apkSize}）`)
+  } catch {
+    // 解析失败拦截器已提示，字段保留手动填写
+  } finally {
+    parsingApk.value = false
+  }
 }
 
 function openCreate() {
@@ -240,11 +281,34 @@ async function handleCreate() {
 function openEdit(row: AppVersion) {
   editForm.id = row.id
   editForm.file = null
-  editForm.versionCode = row.version_code
-  editForm.versionName = row.version_name
-  editForm.forceUpdate = row.force_update === 1
+  editForm.versionCode = row.versionCode
+  editForm.versionName = row.versionName
+  editForm.forceUpdate = row.forceUpdate === 1
   editForm.description = row.description
   showEdit.value = true
+}
+
+// 停用/启用（版本熔断，参考 litepos）：停用后不再下发，客户端下次检查落到次新可用版本
+function handleToggleDisabled(row: AppVersion) {
+  const enabling = !!row.disabled
+  dialog.warning({
+    title: enabling ? '启用版本' : '停用版本',
+    content: enabling
+      ? `确定启用版本「${row.versionName}」（v${row.versionCode}）吗？启用后恢复作为最新版本候选。`
+      : `确定停用版本「${row.versionName}」（v${row.versionCode}）吗？停用后不再下发，客户端下次检查将落到次新可用版本。`,
+    positiveText: '确定',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      if (enabling) {
+        await enableAppVersion(row.id)
+        message.success('已启用')
+      } else {
+        await disableAppVersion(row.id)
+        message.success('已停用')
+      }
+      await fetchData()
+    },
+  })
 }
 
 async function handleEdit() {

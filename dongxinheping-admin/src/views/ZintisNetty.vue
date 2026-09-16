@@ -123,11 +123,16 @@
 
     <!-- Right column: Connected devices (full height) -->
     <div class="netty-right">
-      <n-card title="连接设备" size="small">
+      <n-card
+        title="连接设备"
+        size="small"
+        style="height: 100%; min-height: 0; display: flex; flex-direction: column"
+        content-style="flex: 1; min-height: 0; display: flex; flex-direction: column"
+      >
         <template #header-extra>
           <n-text depth="3" style="font-size: 13px">{{ clientRows.length }} 台在线</n-text>
         </template>
-        <div class="devices-body">
+        <div ref="devicesAreaRef" class="devices-body">
           <div v-if="!clientRows.length" class="empty-clients">
             <n-text depth="3">暂无已连接设备</n-text>
           </div>
@@ -138,6 +143,7 @@
             :data="clientRows"
             :bordered="false"
             size="small"
+            :max-height="devicesTableMaxHeight"
             :row-key="(row: any) => row.remoteAddress"
           />
         </div>
@@ -315,11 +321,19 @@ import {
   zintisNettySend, zintisNettyBroadcast, zintisNettyHeartbeat, zintisNettyClientReportRegistration,
 } from '@/api/zintis-netty'
 import { controlLedDevice } from '@/api/led-device'
+import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 import type {
   ZintisNettyServerStatus, ZintisNettyClientList,
   ZintisNettySendResponse, ZintisNettySendResult,
   LedControlCommand, LedControlResult,
 } from '@/types'
+
+// ===== 测试模拟数据：需要再次联调滚动效果时改为 true =====
+const ENABLE_MOCK_CLIENTS = false
+const MOCK_CLIENT_COUNT = 40
+// =======================================================
+
+const { tableAreaRef: devicesAreaRef, tableBodyMaxHeight: devicesTableMaxHeight } = useTableBodyHeight(40)
 
 const opLoading = ref(false)
 const sendLoading = ref(false)
@@ -392,7 +406,22 @@ type NettyClientRow = {
   macAddress: string
 }
 
+function buildMockClients(count: number): NettyClientRow[] {
+  const rows: NettyClientRow[] = []
+  for (let i = 1; i <= count; i++) {
+    const hex = (n: number) => n.toString(16).toUpperCase().padStart(2, '0')
+    rows.push({
+      remoteAddress: `10.33.1.${(i % 250) + 1}:5${7000 + i}`,
+      macAddress: `3A:69:7A:08:${hex(i)}:${hex((i * 7) % 256)}`,
+    })
+  }
+  return rows
+}
+
 const clientRows = computed<NettyClientRow[]>(() => {
+  if (ENABLE_MOCK_CLIENTS) {
+    return buildMockClients(MOCK_CLIENT_COUNT)
+  }
   const details = clients.value?.clientDetails ?? []
   if (details.length) {
     return details.map(normalizeClientRow).filter((client) => client.remoteAddress)
@@ -590,22 +619,13 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
   min-height: 0;
 }
 
-/* Make devices card fill the full column height */
-.netty-right :deep(.n-card) {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-.netty-right :deep(.n-card__content) {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
+/* 表格区域高度完全由 flex 分配（basis 0），不受内容撑开，
+   与 AppVersion 页同款做法，保证 max-height 测量值稳定不发散 */
 .devices-body {
-  flex: 1;
+  flex: 1 1 0;
+  height: 0;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
 }
 .client-table {
   min-width: 100%;
