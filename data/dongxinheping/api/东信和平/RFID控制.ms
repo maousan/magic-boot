@@ -5,7 +5,7 @@
   "groupId" : "2ud9c5419ag5484mbxxsafin0b0myji0",
   "name" : "RFID控制",
   "createTime" : 1778052000000,
-  "updateTime" : 1780564514509,
+  "updateTime" : 1784705535708,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -25,10 +25,10 @@
     "expression" : null,
     "children" : null
   } ],
-  "requestBody" : "{\n  \"deviceId\": \"192.168.2.134\",\n  \"mode\": \"on\",\n  \"data\": {\n    \"locationId\": \"A1-11-01-01-02\",\n    \"sku\": \"2.01.26.01.20306\",\n    \"lotNo\":\"20260113_2025122365-1+01(1)_YS12_YS-JK-001_002\"\n  }\n}",
+  "requestBody" : "{\n  \"deviceId\": \"192.168.2.134\",\n  \"mode\": \"off\",\n  \"data\": {\n    \"locationId\": \"B2-11-02-01-02\",\n    \"sku\": \"2.01.26.01.20306\",\n    \"lotNo\":\"20260113_2025122365-1+01(1)_YS12_YS-JK-001_002\"\n  }\n}",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": \"操作成功\",\n    \"timestamp\": 1780482568749,\n    \"executeTime\": 62\n}",
+  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"success\",\n    \"data\": \"操作成功\",\n    \"timestamp\": 1784705530466,\n    \"executeTime\": 92\n}",
   "description" : "RFID控制：on=寻卡，off=停止寻卡。",
   "requestBodyDefinition" : {
     "name" : "",

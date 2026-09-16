@@ -5,7 +5,7 @@
   "groupId" : "qou8in0pu4dvva7g20trefax4lo26ye8",
   "name" : "亮灯灭灯控制",
   "createTime" : null,
-  "updateTime" : 1783070347165,
+  "updateTime" : 1783071525872,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -28,7 +28,7 @@
   "requestBody" : "{\"waveNo\":\"1W2605210002\",\"userId\":\"DZJH\",\"mode\":2}",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "{\n    \"code\": 200,\n    \"message\": \"指令发送成功\",\n    \"data\": null,\n    \"timestamp\": 1780578231894,\n    \"executeTime\": 84862\n}",
+  "responseBody" : "{\n    \"code\": 503,\n    \"message\": \"系统繁忙，请稍后重试\",\n    \"data\": null,\n    \"timestamp\": 1783071506687,\n    \"executeTime\": 211\n}",
   "description" : "亮灯/灭灯控制接口。mode=1/2启用主单并重算灯态，mode=3/4禁用主单并重算灯态。",
   "requestBodyDefinition" : {
     "name" : "root",
@@ -156,6 +156,7 @@
 ================================
 import cn.hutool.json.JSONUtil
 import log
+import redis
 import java.util.UUID
 import com.dtflys.forest.Forest
 import '@/aims/led/turnOffLedByArticleId' as turnOffLedByArticleId
@@ -229,7 +230,7 @@ let acquireGlobalLock = (lockKey, timeoutSeconds) => {
     while(attempt < maxAttempts){
         attempt = attempt + 1
         try {
-            if(redis.tryLock(lockKey, lockExpireMillis)){
+            if(redis.default.tryLock(lockKey, lockExpireMillis)){
                 return true
             }
         } catch (redisLockErr) {
@@ -245,7 +246,7 @@ let acquireGlobalLock = (lockKey, timeoutSeconds) => {
 
 let releaseGlobalLock = (lockKey) => {
     try {
-        redis.unlock(lockKey)
+        redis.default.unlock(lockKey)
     } catch (redisUnlockErr) {
         log.warn(logPrefix + ', redis unlock error: ' + redisUnlockErr.message)
     }
