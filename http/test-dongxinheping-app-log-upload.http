@@ -1,0 +1,70 @@
+### 东信和平 PDA App 运行日志上传接口测试（multipart zip）
+### 接口：POST /api/app/log/upload（无鉴权；与 com.zintis.rfidreader AppLogReporter 对接）
+### 先把 @zipFile 改成本机一个真实 zip 路径（App 端包名形如 rfid-log-{deviceId}-{yyyyMMdd-HHmmss}.zip）
+@baseUrl = http://127.0.0.1:8090
+@zipFile = D:/tmp/rfid-log-b3f2a1c9d4e5f607-20260921-170930.zip
+
+### 1. 成功上传（预期 code=200，data 含 fileName/fileSize；落盘 upload.dir/app-log/b3f2a1c9d4e5f607/）
+POST {{baseUrl}}/api/app/log/upload
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="rfid-log-b3f2a1c9d4e5f607-20260921-170930.zip"
+Content-Type: application/zip
+
+< {{zipFile}}
+--WebAppBoundary
+Content-Disposition: form-data; name="deviceId"
+
+b3f2a1c9d4e5f607
+--WebAppBoundary
+Content-Disposition: form-data; name="appVersion"
+
+1.2
+--WebAppBoundary--
+
+### 2. 缺少文件（预期400）
+POST {{baseUrl}}/api/app/log/upload
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="deviceId"
+
+b3f2a1c9d4e5f607
+--WebAppBoundary--
+
+### 3. deviceId 含路径穿越字符（预期400）
+POST {{baseUrl}}/api/app/log/upload
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="evil.zip"
+Content-Type: application/zip
+
+< {{zipFile}}
+--WebAppBoundary
+Content-Disposition: form-data; name="deviceId"
+
+..%2F..%2Ftmp
+--WebAppBoundary--
+
+### 验证入库与落盘（在业务库/服务器执行）：
+-- select id, device_id, app_version, file_name, file_size, uploaded_at
+--   from t_app_device_log order by id desc limit 10;
+-- ls {upload.dir}/app-log/b3f2a1c9d4e5f607/
+-- unzip -l {upload.dir}/app-log/b3f2a1c9d4e5f607/{file_name}   # 应含 device-info.txt / session-*.log / logcat.txt
+
+### 5. 管理端-日志列表（magic-api，分页参数 pageNo/pageSize）
+GET {{baseUrl}}/api/app/log/list?pageNo=1&pageSize=20
+
+### 6. 管理端-按设备过滤
+GET {{baseUrl}}/api/app/log/list?pageNo=1&pageSize=20&deviceId=b3f2a1c9d4e5f607
+
+### 7. 管理端-下载 zip（dongxinheping 插件控制器，预期 200 + zip 字节流）
+GET {{baseUrl}}/plugin/dongxinheping-plugin/api/applog/download?deviceId=b3f2a1c9d4e5f607&fileName=b3f2a1c9d4e5f607-20260921-170930.zip
+
+### 8. 管理端-下载参数穿越（预期400）
+GET {{baseUrl}}/plugin/dongxinheping-plugin/api/applog/download?deviceId=..%2Fetc&fileName=evil.zip
+
+### 9. 管理端-删除记录及文件（id 换成列表接口返回的真实 id，预期 data=true）
+DELETE {{baseUrl}}/api/app/log/delete/1

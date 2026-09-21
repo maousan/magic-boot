@@ -25,6 +25,10 @@ export default defineConfig({
         target: 'http://localhost:8090',
         changeOrigin: true,
       },
+      '/plugin/dongxinheping-plugin': {
+        target: 'http://localhost:8090',
+        changeOrigin: true,
+      },
       '/ws': {
         target: 'ws://localhost:8090',
         ws: true,

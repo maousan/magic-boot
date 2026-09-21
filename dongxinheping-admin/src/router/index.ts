@@ -33,6 +33,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'magic-api', name: 'MagicApiConsole', component: () => import('@/views/MagicApiConsole.vue'), meta: { label: 'Magic-API' } },
       { path: 'aims-config', name: 'AimsConfig', component: () => import('@/views/AimsConfig.vue'), meta: { label: 'AIMS 配置' } },
       { path: 'app-version', name: 'AppVersion', component: () => import('@/views/AppVersion.vue'), meta: { label: 'App 版本管理' } },
+      { path: 'app-log', name: 'AppDeviceLog', component: () => import('@/views/AppDeviceLog.vue'), meta: { label: 'App 运行日志' } },
       { path: 'logs', name: 'RealtimeLog', component: () => import('@/views/RealtimeLog.vue'), meta: { label: '实时日志' } },
     ],
   },

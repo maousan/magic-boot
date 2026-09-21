@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "981acd20d49f474b8f9a91aa0f862170",
+  "name" : "日志管理",
+  "type" : "api",
+  "parentId" : "appmgmt0000000000000000000001",
+  "path" : "/log",
+  "createTime" : null,
+  "updateTime" : null,
+  "createBy" : null,
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}
