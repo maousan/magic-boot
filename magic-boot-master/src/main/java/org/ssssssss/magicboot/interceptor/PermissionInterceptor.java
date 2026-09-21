@@ -17,6 +17,7 @@ import org.ssssssss.magicapi.core.service.MagicResourceService;
 import org.ssssssss.magicapi.core.servlet.MagicHttpServletRequest;
 import org.ssssssss.magicapi.core.servlet.MagicHttpServletResponse;
 import org.ssssssss.magicapi.utils.PathUtils;
+import org.ssssssss.magicboot.license.LicenseManager;
 import org.ssssssss.magicboot.model.StatusCode;
 import org.ssssssss.magicboot.pf4j.extension.ApiInterceptorExtensionProcessor;
 import org.ssssssss.magicboot.plugin.api.interceptor.ApiInterceptorContext;
@@ -46,6 +47,9 @@ public class PermissionInterceptor implements RequestInterceptor, HandlerInterce
 
     @Autowired(required = false)
     private ApiInterceptorExtensionProcessor extensionProcessor;
+
+    @Autowired(required = false)
+    private LicenseManager licenseManager;
 
     private static Boolean isDev;
     private static Boolean isDemo;
@@ -87,6 +91,10 @@ public class PermissionInterceptor implements RequestInterceptor, HandlerInterce
      */
     @Override
     public Object preHandle(ApiInfo info, MagicScriptContext context, MagicHttpServletRequest request, MagicHttpServletResponse response) {
+        // License 授权闸门：必须位于 dev 判断与 require_login 判断之前，否则两者都是绕过口
+        if (licenseManager != null && licenseManager.shouldBlock()) {
+            return licenseManager.blockResponse();
+        }
         context.getRootVariables().put("__user__", StpUtil.getLoginIdDefaultNull());
         // dev 环境下跳过登录校验
         if (isDevEnvironment()) {

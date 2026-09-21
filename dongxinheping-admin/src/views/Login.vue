@@ -1,6 +1,9 @@
 <template>
   <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background: #f5f5f5">
     <n-card title="东信和平管理后台" style="width: 360px">
+      <n-alert v-if="licenseNotice" :type="licenseNotice.type" style="margin-bottom: 16px">
+        {{ licenseNotice.text }}
+      </n-alert>
       <n-form ref="formRef" :model="form" :rules="rules" @submit.prevent="handleLogin">
         <n-form-item label="用户名" path="username">
           <n-input v-model:value="form.username" placeholder="请输入用户名" />
@@ -15,16 +18,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { NCard, NForm, NFormItem, NInput, NButton, useMessage, useNotification } from 'naive-ui'
+import { NCard, NForm, NFormItem, NInput, NButton, NAlert, useMessage, useNotification } from 'naive-ui'
 import type { FormRules } from 'naive-ui'
 import { login } from '@/auth'
+import { getLicenseStatus } from '@/api/license'
+import type { LicenseStatusView } from '@/types'
 
 const router = useRouter()
 const message = useMessage()
 const notification = useNotification()
 const loading = ref(false)
+
+const licenseNotice = ref<{ type: 'warning' | 'error'; text: string } | null>(null)
+
+onMounted(async () => {
+  try {
+    const view: LicenseStatusView = await getLicenseStatus()
+    if (!view.enabled || view.status === 'ok' || view.status === 'disabled') return
+    licenseNotice.value = {
+      type: view.status === 'warning' ? 'warning' : 'error',
+      text: view.message,
+    }
+  } catch {
+    // 后端不可达时静默
+  }
+})
 
 const form = reactive({ username: '', password: '' })
 

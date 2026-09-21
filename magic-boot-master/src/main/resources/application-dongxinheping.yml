@@ -46,3 +46,7 @@ zintis:
         period-seconds: 10               # 每 10s 扫描一次
         ack-timeout-ms: 3000   # 后台等回显超时，默认 3s
         client-read-idle-seconds: 120   # 读空闲阈值，默认120秒；设为0表示不主动关闭半开连接
+# License 授权（现场生产默认启用；宽限 7 天；NTP 可选按需配置）
+license:
+  enabled: true
+  graceDays: 7

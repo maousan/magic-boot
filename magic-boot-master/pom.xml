@@ -205,6 +205,13 @@
             <artifactId>tiga-engine-spring</artifactId>
         </dependency>
 
+        <!-- License 机器指纹采集（OSHI 硬件信息读取） -->
+        <dependency>
+            <groupId>com.github.oshi</groupId>
+            <artifactId>oshi-core</artifactId>
+            <version>6.4.11</version>
+        </dependency>
+
     </dependencies>
 
 <!--    <repositories>-->

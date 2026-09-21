@@ -18,3 +18,7 @@ plugin:
   auto-load: false
   auto-start: false
   signature-force-verify: false
+
+# License 授权（办公开发环境默认豁免）
+license:
+  enabled: false

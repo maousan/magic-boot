@@ -366,3 +366,28 @@ export interface ZintisNettySendResponse {
   responseCount: number
   responses: ZintisNettySendResult[]
 }
+
+// PDA App 运行日志上传记录（索引行，zip 落盘 upload.dir/app-log/{deviceId}/）
+export interface AppDeviceLog {
+  id: number
+  deviceId: string
+  appVersion: string | null
+  fileName: string
+  fileSize: number | null
+  uploadedAt: string
+  createTime: string
+  fileExists: boolean
+}
+
+// 系统授权状态（/system/license/status）
+export interface LicenseStatusView {
+  enabled: boolean
+  status: string          // ok/warning/grace/expired/abnormal/missing/disabled
+  message: string
+  customer: string | null
+  expireAt: string | null
+  remainDays: number | null
+  graceDays: number
+  fingerprints: string    // 3 行指纹块文本
+  serverTime: string
+}

@@ -18,6 +18,14 @@
         <n-layout-header bordered class="admin-header">
           <n-button text @click="handleLogout">退出登录</n-button>
         </n-layout-header>
+        <n-alert
+          v-if="licenseBanner"
+          :type="licenseBanner.type"
+          class="admin-license-banner"
+          :bordered="false"
+        >
+          {{ licenseBanner.text }}
+        </n-alert>
         <div ref="tabsRef" class="admin-tabs" @wheel.prevent="onTabsWheel">
           <div
             v-for="tab in storeTabs"
@@ -47,12 +55,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, nextTick } from 'vue'
+import { computed, ref, watch, nextTick, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { NLayout, NLayoutSider, NLayoutHeader, NLayoutContent, NMenu, NButton, useDialog } from 'naive-ui'
+import { NLayout, NLayoutSider, NLayoutHeader, NLayoutContent, NMenu, NButton, NAlert, useDialog } from 'naive-ui'
 import type { MenuOption } from 'naive-ui'
 import { logout } from '@/auth'
 import { useTabStore } from '@/composables/useTabStore'
+import { getLicenseStatus } from '@/api/license'
+import type { LicenseStatusView } from '@/types'
 
 const router = useRouter()
 const route = useRoute()
@@ -99,6 +109,8 @@ const menuOptions: MenuOption[] = [
   ]},
   { label: '系统管理', key: 'system', children: [
     { label: 'App 版本管理', key: 'AppVersion' },
+    { label: '系统授权', key: 'SystemLicense' },
+    { label: '授权签发', key: 'LicenseIssue' },
     { label: '数据库管理', key: 'DatabaseManagement' },
     { label: '定时任务', key: 'JobManagement' },
     { label: 'AIMS 配置', key: 'AimsConfig' },
@@ -108,6 +120,33 @@ const menuOptions: MenuOption[] = [
 ]
 
 const activeKey = computed(() => String(route.name))
+
+// License 授权横幅：warning 黄 / grace 红（宽限期）/ expired+abnormal 红；ok 或未启用不显示
+const licenseBanner = ref<{ type: 'warning' | 'error'; text: string } | null>(null)
+
+async function refreshLicenseBanner() {
+  try {
+    const view: LicenseStatusView = await getLicenseStatus()
+    if (!view.enabled || view.status === 'ok' || view.status === 'disabled') {
+      licenseBanner.value = null
+      return
+    }
+    if (view.status === 'warning') {
+      licenseBanner.value = { type: 'warning', text: `⚠ ${view.message}（剩余 ${view.remainDays ?? '-'} 天）` }
+    } else if (view.status === 'grace' || view.status === 'expired' || view.status === 'abnormal') {
+      licenseBanner.value = { type: 'error', text: `⛔ ${view.message}。可在「系统管理 → 系统授权」导入新授权文件恢复` }
+    } else {
+      licenseBanner.value = { type: 'error', text: `⛔ ${view.message}` }
+    }
+  } catch {
+    licenseBanner.value = null
+  }
+}
+
+onMounted(() => {
+  refreshLicenseBanner()
+  setInterval(refreshLicenseBanner, 60_000)
+})
 
 function onMenuSelect(key: string) {
   router.push({ name: key })
@@ -201,6 +240,11 @@ function handleLogout() {
   justify-content: flex-end;
   align-items: center;
   flex-shrink: 0;
+}
+
+.admin-license-banner {
+  flex-shrink: 0;
+  border-radius: 0;
 }
 
 .admin-content {
