@@ -1,6 +1,6 @@
 # 东信和平生产部署说明：PDA App 运行日志上传与管理页面
 
-> 部署内容版本：gitee `vben` 分支 commit `d97e088`（2026-09-21）
+> 部署内容版本：gitee `main` 分支 commit `d97e088`（2026-09-21）
 > 涉及：magic-api 脚本 3 个 + 索引表 1 张 + dongxinheping 插件 jar（含下载接口与新版管理页面）
 > 预计耗时：15 分钟（含重启与验证）
 
@@ -29,7 +29,7 @@
 在 现场 服务器上的仓库工作目录拉取：
 
 ```bash
-git fetch && git checkout vben && git pull gitee vben
+git fetch && git checkout main && git pull gitee main
 # 确认包含：data/dongxinheping/api/东信和平/App管理/日志管理/ 目录（3个.ms + group.json）
 ```
 
