@@ -160,7 +160,8 @@ let getLocalHostIp = () => {
 }
 
 let resolveDeviceId = () => {
-    let clientIp = normalizeText(request.getClientIP())
+    // magic-api 脚本 request 是 MagicHttpServletRequest 接口，没有 getClientIP，用声明的 getRemoteAddr
+    let clientIp = normalizeText(request.getRemoteAddr())
     if(clientIp != '' && !isLoopbackIp(clientIp)){
         return clientIp
     }

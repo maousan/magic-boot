@@ -5,7 +5,7 @@
   "groupId" : "89d74bcccfbc468a8dfcd06d6cc2fc56",
   "name" : "按库位查询库存返回",
   "createTime" : 1777017543541,
-  "updateTime" : 1778048261138,
+  "updateTime" : 1789623038362,
   "lock" : null,
   "createBy" : "admin",
   "updateBy" : "admin",
@@ -111,7 +111,7 @@ let appendQuery = (url, name, value) => {
     return url + separator + encodeParam(name) + '=' + encodeParam(value)
 }
 
-let targetUrl = valueOrConfig('Url', 'http://192.168.1.237:18080/datahub/FluxWmsDzjh/')
+let targetUrl = valueOrConfig('inventoryHost', 'http://192.168.1.237:18080/datahub/FluxWmsDzjh/')
 if(targetUrl == null || targetUrl == ''){
     return fail('缺少配置 forest.variables.Url')
 }

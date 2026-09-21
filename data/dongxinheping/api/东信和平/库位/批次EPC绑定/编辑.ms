@@ -72,9 +72,23 @@ if(existing != null && existing.size() > 0){
     exit 400, 'EPC已绑定批次: ' + conflict.batch_id
 }
 
-db.update("""
-    update t_batch_epc set batch_id = #{batchId}, epc = #{epc} where id = #{id}
-""", {id: id, batchId: batchId, epc: epc})
+// batchId 格式为 locationId_sku_lotNo（locationId、sku 不含下划线），同步维护三个拆分列；
+// 手工拼的 batchId 若不足两段下划线则置空，避免写脏数据
+let firstUnderscore = batchId.indexOf('_')
+let secondUnderscore = firstUnderscore >= 0 ? batchId.indexOf('_', firstUnderscore + 1) : -1
+
+if(secondUnderscore > 0){
+    let locationIdVal = batchId.substring(0, firstUnderscore)
+    let skuVal = batchId.substring(firstUnderscore + 1, secondUnderscore)
+    let lotNoVal = batchId.substring(secondUnderscore + 1)
+    db.update("""
+        update t_batch_epc set batch_id = #{batchId}, epc = #{epc}, location_id = #{locationId}, sku = #{sku}, lot_no = #{lotNo} where id = #{id}
+    """, {id: id, batchId: batchId, epc: epc, locationId: locationIdVal, sku: skuVal, lotNo: lotNoVal})
+}else{
+    db.update("""
+        update t_batch_epc set batch_id = #{batchId}, epc = #{epc}, location_id = null, sku = null, lot_no = null where id = #{id}
+    """, {id: id, batchId: batchId, epc: epc})
+}
 
 log.info('batch-epc update: id=' + id + ', batchId=' + batchId + ', epc=' + epc)
 

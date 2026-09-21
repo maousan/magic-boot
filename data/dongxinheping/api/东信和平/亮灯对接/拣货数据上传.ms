@@ -347,8 +347,12 @@ try {
         create_time: now
     }
     if(existingMaster != null && existingMaster.id != null && existingMaster.id != ''){
+        // 重新上传保留原 status，不打断进行中的拣货
         anyline.update('t_picking_upload', masterRow)
     } else {
+        // 上传≠开始拣货：主单默认禁用，PDA 调 /light/control mode=1/2 启用后才参与灯态，
+        // 避免未开始拣货的用户提前把共享库位算成多用户（亮混合色）
+        masterRow.status = 0
         anyline.insert('t_picking_upload', masterRow)
     }
 

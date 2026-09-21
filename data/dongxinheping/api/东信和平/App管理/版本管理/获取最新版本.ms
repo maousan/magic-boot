@@ -45,18 +45,22 @@ var list = db.select("""
 """)
 
 if(list == null || list.size() == 0){
-    log.info('app update check: clientIp={}, no available version', request.getRemoteAddr())
+    log.info('app update check: no available version')
     return null
 }
 
 var v = list[0]
-log.info('app update check: clientIp={}, versionCode={}, versionName={}', request.getRemoteAddr(), v.versionCode, v.versionName)
+log.info('app update check: versionCode={}, versionName={}', v.versionCode, v.versionName)
 
 // 查询结果键为驼峰（全局 sql-column-case: camel）
 var apkUrl = v.apkUrl
 // 库里 apk_url 存相对路径（userfiles/...），按当前请求主机拼成完整 URL 供 App 直接下载
+// 注意：magic-api 脚本的 request 是 MagicHttpServletRequest 接口，没有 getServerName/getServerPort，用 Host 请求头取 主机:端口
 if(apkUrl != null && apkUrl != '' && !(apkUrl + '').startsWith('http')){
-    apkUrl = 'http://' + request.getServerName() + ':' + request.getServerPort() + '/' + apkUrl
+    let host = (request.getHeader('Host') + '').trim()
+    if(host != '' && host != 'null'){
+        apkUrl = 'http://' + host + '/' + apkUrl
+    }
 }
 
 return {

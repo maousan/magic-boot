@@ -880,26 +880,8 @@ try {
         }
     }
 
-    // 查询单用户库位归属，确定亮灯颜色
+    // 查询单用户库位归属（颜色在单用户分派阶段解析）
     let singleUserLocationOwnerMap = querySingleUnpickedUserMap(singleUserCandidateCodes)
-    let singleColorLocationMap = {}
-    let singleColorKeys = []
-    let singleColorKeySet = {}
-    for(locationCode in singleUserCandidateCodes){
-        let ownerUserId = singleUserLocationOwnerMap[locationCode]
-        let singleColor = 'GREEN'
-        if(ownerUserId != null && ownerUserId != ''){
-            let mappedColor = getUserLightColor(ownerUserId)
-            if(mappedColor != null && mappedColor != ''){
-                singleColor = mappedColor
-            }
-        }
-        if(singleColorLocationMap[singleColor] == null){
-            singleColorLocationMap[singleColor] = []
-            addUnique(singleColorKeys, singleColorKeySet, singleColor)
-        }
-        singleColorLocationMap[singleColor].add(locationCode)
-    }
 
     // 汇总所有需要亮灯的库位
     let turnOnLocationCodes = []
@@ -914,26 +896,11 @@ try {
     let turnOnAisleResult = resolveAisleLedTurnOnCandidates(turnOnLocationCodes)
     let turnOffAisleResult = resolveAisleLedTurnOffCandidates(turnOffLocationCodes)
 
-    // 多用户分派（按 LED 去重）
+    // 多用户分派：电子标签逐库位下发（一个巷道灯绑定多个库位，按 LED 去重会漏亮其余库位）
     let turnOnMultiDispatchCodes = []
     let turnOnMultiDispatchCodeSet = {}
-    let ledMultiSet = {}
-    let turnOnLocationLedMap = turnOnAisleResult.locationLedMap
-    let representativeByLed = turnOnAisleResult.representativeByLed
     for(locationCode in multiUserLocationCodes){
-        let ledId = turnOnLocationLedMap[locationCode]
-        if(ledId != null && ledId != ''){
-            if(ledMultiSet[ledId] == null){
-                ledMultiSet[ledId] = 1
-                let representativeLocationCode = representativeByLed[ledId]
-                if(representativeLocationCode == null || representativeLocationCode == ''){
-                    representativeLocationCode = locationCode
-                }
-                addUnique(turnOnMultiDispatchCodes, turnOnMultiDispatchCodeSet, representativeLocationCode)
-            }
-        } else {
-            addUnique(turnOnMultiDispatchCodes, turnOnMultiDispatchCodeSet, locationCode)
-        }
+        addUnique(turnOnMultiDispatchCodes, turnOnMultiDispatchCodeSet, locationCode)
     }
 
     // 单用户分派（标签灯按 articleId 独立分派，不需要按 LED 去重）
@@ -948,7 +915,11 @@ try {
             let mappedColor = getUserLightColor(ownerUserId)
             if(mappedColor != null && mappedColor != ''){
                 singleColor = mappedColor
+            } else {
+                log.warn(logPrefix + ', stage=resolve_single_color_miss, locationCode=' + locationCode + ', ownerUserId=' + ownerUserId + ', fallback=GREEN, reason=t_user_light_color未配置或未启用')
             }
+        } else {
+            log.warn(logPrefix + ', stage=resolve_single_owner_miss, locationCode=' + locationCode + ', fallback=GREEN, reason=未查到归属用户')
         }
         if(singleLocationCodeSet[locationCode] != null){
             continue
@@ -960,8 +931,6 @@ try {
         }
         singleColorDispatchMap[singleColor].add(locationCode)
     }
-
-    let turnOffDispatchCodes = turnOffAisleResult.candidateLocationCodes
 
     // 锁外执行灯控，缩短全局锁占用时间
     if(lockAcquired){

@@ -69,3 +69,131 @@ Content-Type: application/json
 }
 
 ### 3. 未配置映射用户：按旧逻辑兜底（上传：单人GREEN/多人BLUE；完成：单人GREEN/多人CYAN）
+
+### ============================================================
+### 多用户分色全流程验证（2026-09 修复：分色不生效）
+### 前提：本流程会真实下发 AIMS/Zintis 灯光指令，请在可观察灯效的环境执行
+### 预期：上传后灯不亮（主单默认禁用）→ A 开始亮红 → B 开始共享库位变青
+###       → A 完成共享库位变蓝 → B 完成全灭
+### ============================================================
+
+### 4. 配置两个测试用户的颜色映射（也可在管理端「用户灯色映射」页面操作）
+POST {{baseUrl}}/api/user-light-color/add
+Content-Type: application/json
+
+{
+  "userId": "USER-COLOR-A",
+  "color": "RED",
+  "enabled": 1,
+  "remark": "多用户分色测试-A"
+}
+
+### 4.1
+POST {{baseUrl}}/api/user-light-color/add
+Content-Type: application/json
+
+{
+  "userId": "USER-COLOR-B",
+  "color": "BLUE",
+  "enabled": 1,
+  "remark": "多用户分色测试-B"
+}
+
+### 5. 上传 A：独占库位 LC-COLOR2-A1、与 B 共享的库位 LC-COLOR2-S1（上传后不应亮灯）
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV-COLOR2-0001",
+  "userId": "USER-COLOR-A",
+  "userName": "分色测试A",
+  "updateTime": 1648195200000,
+  "details": [
+    { "id": "C2-A-001", "materialCode": "MAT-C2-A", "batchNo": "B-C2-A", "locationCode": "LC-COLOR2-A1", "planQuantity": 10, "actualQuantity": 0, "status": 0 },
+    { "id": "C2-S-001", "materialCode": "MAT-C2-S1", "batchNo": "B-C2-S1", "locationCode": "LC-COLOR2-S1", "planQuantity": 5, "actualQuantity": 0, "status": 0 }
+  ]
+}
+
+### 6. 上传 B：独占库位 LC-COLOR2-B1、共享库位 LC-COLOR2-S1（上传后不应亮灯）
+POST {{baseUrl}}/api/light/picking/upload
+Content-Type: application/json
+
+{
+  "waveNo": "WV-COLOR2-0001",
+  "userId": "USER-COLOR-B",
+  "userName": "分色测试B",
+  "updateTime": 1648195200000,
+  "details": [
+    { "id": "C2-B-001", "materialCode": "MAT-C2-B", "batchNo": "B-C2-B", "locationCode": "LC-COLOR2-B1", "planQuantity": 8, "actualQuantity": 0, "status": 0 },
+    { "id": "C2-S-002", "materialCode": "MAT-C2-S2", "batchNo": "B-C2-S2", "locationCode": "LC-COLOR2-S1", "planQuantity": 3, "actualQuantity": 0, "status": 0 }
+  ]
+}
+
+### 7. A 开始拣货（mode=1）：预期 LC-COLOR2-A1 和 LC-COLOR2-S1 均亮红色（B 尚未开始，不参与灯态）
+POST {{baseUrl}}/api/light/control
+Content-Type: application/json
+
+{
+  "waveNo": "WV-COLOR2-0001",
+  "userId": "USER-COLOR-A",
+  "mode": 1
+}
+
+### 8. B 开始拣货（mode=1）：预期共享库位 LC-COLOR2-S1 变青色（CYAN 混合色），
+###    LC-COLOR2-B1 亮蓝色，LC-COLOR2-A1 保持红色
+POST {{baseUrl}}/api/light/control
+Content-Type: application/json
+
+{
+  "waveNo": "WV-COLOR2-0001",
+  "userId": "USER-COLOR-B",
+  "mode": 1
+}
+
+### 9. A 完成共享库位拣货：预期 LC-COLOR2-S1 只剩 B 未拣 → 从青色切换为蓝色
+POST {{baseUrl}}/api/light/picking/complete
+Content-Type: application/json
+
+{
+  "waveNo": "WV-COLOR2-0001",
+  "userId": "USER-COLOR-A",
+  "details": [
+    { "materialCode": "MAT-C2-S1", "batchNo": "B-C2-S1", "locationCode": "LC-COLOR2-S1", "planQuantity": 5, "actualQuantity": 5, "updateTime": 1648195201000 }
+  ]
+}
+
+### 9.1 A 完成独占库位：预期 LC-COLOR2-A1 熄灭
+POST {{baseUrl}}/api/light/picking/complete
+Content-Type: application/json
+
+{
+  "waveNo": "WV-COLOR2-0001",
+  "userId": "USER-COLOR-A",
+  "details": [
+    { "materialCode": "MAT-C2-A", "batchNo": "B-C2-A", "locationCode": "LC-COLOR2-A1", "planQuantity": 10, "actualQuantity": 10, "updateTime": 1648195202000 }
+  ]
+}
+
+### 10. B 完成全部：预期 LC-COLOR2-B1、LC-COLOR2-S1 全部熄灭
+POST {{baseUrl}}/api/light/picking/complete
+Content-Type: application/json
+
+{
+  "waveNo": "WV-COLOR2-0001",
+  "userId": "USER-COLOR-B",
+  "details": [
+    { "materialCode": "MAT-C2-B", "batchNo": "B-C2-B", "locationCode": "LC-COLOR2-B1", "planQuantity": 8, "actualQuantity": 8, "updateTime": 1648195203000 },
+    { "materialCode": "MAT-C2-S2", "batchNo": "B-C2-S2", "locationCode": "LC-COLOR2-S1", "planQuantity": 3, "actualQuantity": 3, "updateTime": 1648195203000 }
+  ]
+}
+
+### 11. 清理：删除测试用户颜色映射（测试主单/明细如需清理请手工删表数据）
+POST {{baseUrl}}/api/user-light-color/delete
+Content-Type: application/json
+
+{ "id": 0 }
+### ↑ delete 按 id 删除，执行前先 GET /api/user-light-color/list?userId=USER-COLOR 查出 id
+
+### 12. 未配置映射的用户亮灯时，magic-api 日志应出现：
+### stage=resolve_single_color_miss, ownerUserId=xxx, fallback=GREEN, reason=t_user_light_color未配置或未启用
+### 现场排查"全亮绿色"问题时先看这条日志确认用户ID

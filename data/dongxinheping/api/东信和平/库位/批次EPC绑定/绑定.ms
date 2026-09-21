@@ -54,9 +54,7 @@ if(epc == null || (epc + '').trim() == ''){
 
 locationId = (locationId + '').trim()
 raw = (raw + '').trim()
-raw = '"OrdNo":"2025122365-1+01";"Sup":"Ep刷";"SupCode":"印刷";"Mtl":"2.01.26.01.20306";"MtlCode":"2.01.26.01.20306";"MtIDesc":"辽宁工行沈阳市市本级公务卡贷记IC金卡(C4362)251229确认版黑色高磁0.82mmPVC两面光面YL贷记卡签名条/金标天线:RG401R-C49";"Lot":"20260113_2025122365-1+01(1)_YS12_YS-JK-001_002";"Qty":"170";"PD":"2026-01-13 07:09:13";"Exp":"2036-01-11 07:09:13"'
 epc = (epc + '').trim()
-epc = 'E281D0122000975658773D8C'
 
 let parsed = parseLot(raw)
 let sku = parsed.MtlCode
@@ -74,7 +72,7 @@ lotNo = (lotNo + '').trim()
 let batchId = locationId + '_' + sku + '_' + lotNo
 
 let existing = db.select("""
-    select id, batch_id, epc from t_batch_epc where status = 1 and (batch_id = #{batchId} or epc = #{epc})
+    select id, batch_id as batchId, epc, location_id as locationId, sku, lot_no as lotNo from t_batch_epc where status = 1 and (batch_id = #{batchId} or epc = #{epc})
 """, {batchId: batchId, epc: epc})
 
 let epcRow = null
@@ -95,28 +93,34 @@ if(epcRow != null && epcRow.batchId == batchId){
         id: epcRow.id,
         batchId,
         epc,
+        locationId: epcRow.locationId,
+        sku: epcRow.sku,
+        lotNo: epcRow.lotNo,
         bindTime: db.selectValue("select bind_time from t_batch_epc where id = #{id}", {id: epcRow.id})
     }
 }
 
 if(epcRow != null){
     db.update("""
-        update t_batch_epc set batch_id = #{batchId}, bind_time = now() where id = #{id}
-    """, {id: epcRow.id, batchId: batchId})
+        update t_batch_epc set batch_id = #{batchId}, location_id = #{locationId}, sku = #{sku}, lot_no = #{lotNo}, bind_time = now() where id = #{id}
+    """, {id: epcRow.id, batchId: batchId, locationId: locationId, sku: sku, lotNo: lotNo})
     log.info('batch-epc rebind: id=' + epcRow.id + ', oldBatchId=' + epcRow.batchId + ', newBatchId=' + batchId + ', epc=' + epc)
     return {
         id: epcRow.id,
         batchId,
         epc,
+        locationId,
+        sku,
+        lotNo,
         bindTime: db.selectValue("select bind_time from t_batch_epc where id = #{id}", {id: epcRow.id})
     }
 }
 
 let id = IdUtil.fastSimpleUUID()
 db.update("""
-    insert into t_batch_epc (id, batch_id, epc, status, bind_time)
-    values (#{id}, #{batchId}, #{epc}, 1, now())
-""", {id: id, batchId: batchId, epc: epc})
+    insert into t_batch_epc (id, batch_id, epc, status, bind_time, location_id, sku, lot_no)
+    values (#{id}, #{batchId}, #{epc}, 1, now(), #{locationId}, #{sku}, #{lotNo})
+""", {id: id, batchId: batchId, epc: epc, locationId: locationId, sku: sku, lotNo: lotNo})
 
 log.info('batch-epc bind: batchId=' + batchId + ', epc=' + epc)
 
@@ -124,5 +128,8 @@ return {
     id,
     batchId,
     epc,
+    locationId,
+    sku,
+    lotNo,
     bindTime: db.selectValue("select bind_time from t_batch_epc where id = #{id}", {id: id})
 }
