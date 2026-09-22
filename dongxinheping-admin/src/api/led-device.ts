@@ -1,5 +1,5 @@
 import client from './request'
-import type { LedDevice, LedControlCommand, LedControlResult, PageResult, ApiResponse } from '@/types'
+import type { LedDevicePageResult, LedControlCommand, LedControlResult, ApiResponse } from '@/types'
 
 export function getLedDeviceList(params: {
   page: number
@@ -7,8 +7,8 @@ export function getLedDeviceList(params: {
   macAddress?: string
   ip?: string
   remark?: string
-}): Promise<PageResult<LedDevice>> {
-  return client.get<ApiResponse<PageResult<LedDevice>>>('/location/led-device/list', { params }).then((r) => r.data.data)
+}): Promise<LedDevicePageResult> {
+  return client.get<ApiResponse<LedDevicePageResult>>('/location/led-device/list', { params }).then((r) => r.data.data)
 }
 
 export function createLedDevice(data: {

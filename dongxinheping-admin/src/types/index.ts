@@ -11,6 +11,18 @@ export interface LedDevice {
   macAddress: string
   ip: string
   remark: string
+  /** 在线状态：true 在线 / false 离线 / null 未知（灯控 Netty 服务不可用时） */
+  online?: boolean | null
+  /** Netty 连接远端地址（在线时） */
+  remoteAddress?: string | null
+}
+
+// LED 设备分页返回（附带在线统计）
+export interface LedDevicePageResult extends PageResult<LedDevice> {
+  /** 全量设备在线数，灯控服务不可用时为 null */
+  onlineTotal?: number | null
+  /** 灯控 Netty 服务是否运行中 */
+  nettyRunning?: boolean
 }
 
 // 库位-LED 绑定

@@ -144,7 +144,8 @@ async function loadData() {
       pageSize: pageSize.value,
       userId: searchUserId.value || undefined,
     })
-    list.value = res.list
+    // TINYINT(1) 经 JDBC 驱动会以 Boolean 返回，统一归一为 1/0
+    list.value = res.list.map((row) => ({ ...row, enabled: row.enabled ? 1 : 0 }))
     total.value = res.total
   } finally {
     loading.value = false

@@ -13,10 +13,16 @@
     </template>
 
     <div class="table-page-content">
-      <n-space :size="12" class="table-page-toolbar">
+      <n-space :size="12" class="table-page-toolbar" align="center">
         <n-input v-model:value="query.macAddress" placeholder="MAC 地址" clearable style="width: 200px" @keyup.enter="handleSearch" />
         <n-input v-model:value="query.ip" placeholder="IP 地址" clearable style="width: 160px" @keyup.enter="handleSearch" />
         <n-input v-model:value="query.remark" placeholder="备注" clearable style="width: 160px" @keyup.enter="handleSearch" />
+        <n-text v-if="!nettyRunning" type="warning">灯控服务未连接，在线状态不可用</n-text>
+        <n-text v-else depth="2">在线 {{ onlineTotal == null ? '-' : onlineTotal }} / {{ devices.total }}</n-text>
+        <n-flex align="center" :size="6">
+          <n-switch v-model:value="autoRefresh" size="small" />
+          <n-text depth="3" style="font-size: 12px">10秒自动刷新</n-text>
+        </n-flex>
       </n-space>
 
       <div ref="tableAreaRef" class="table-page-table led-device-table-area">
@@ -26,7 +32,7 @@
           :loading="loading"
           :bordered="true"
           :row-key="(row: LedDevice) => row.macAddress"
-          :scroll-x="620"
+          :scroll-x="720"
           :max-height="tableBodyMaxHeight"
         />
       </div>
@@ -38,8 +44,8 @@
           :item-count="devices.total"
           :page-sizes="[10, 20, 50]"
           show-size-picker
-          @update:page="fetchData"
-          @update:page-size="fetchData"
+          @update:page="() => fetchData()"
+          @update:page-size="() => fetchData()"
         />
       </n-flex>
     </div>
@@ -271,10 +277,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, h } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, watch, h } from 'vue'
 import {
   NCard, NDataTable, NButton, NModal, NSpace, NFormItem, NInput, NInputNumber,
   NFlex, NPagination, NDescriptions, NDescriptionsItem, NText, NEllipsis, NGrid, NGi, NMenu, NSpin, NPopover, NAlert,
+  NTag, NTooltip, NSwitch,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import {
@@ -324,9 +331,33 @@ const tcpTarget = reactive({ targetIp: '', targetPort: 9834 })
 const ota = reactive({ version: '1.0.7.bin' })
 
 const devices = reactive<{ list: LedDevice[]; total: number }>({ list: [], total: 0 })
+const onlineTotal = ref<number | null>(null)
+const nettyRunning = ref(true)
+const autoRefresh = ref(true)
+let refreshTimer: ReturnType<typeof setInterval> | null = null
 
 const columns: DataTableColumns<LedDevice> = [
   { title: 'MAC 地址', key: 'macAddress', width: 180 },
+  {
+    title: '在线状态',
+    key: 'online',
+    width: 100,
+    render: (row) => {
+      if (row.online == null) {
+        return h(NTooltip, null, {
+          trigger: () => h(NTag, { size: 'small', bordered: false }, () => '未知'),
+          default: () => '灯控服务不可用，无法判断在线状态',
+        })
+      }
+      if (row.online) {
+        return h(NTooltip, null, {
+          trigger: () => h(NTag, { size: 'small', type: 'success', bordered: false }, () => '在线'),
+          default: () => '连接地址 ' + (row.remoteAddress || '-'),
+        })
+      }
+      return h(NTag, { size: 'small', type: 'error', bordered: false }, () => '离线')
+    },
+  },
   { title: 'IP 地址', key: 'ip', width: 160 },
   { title: '备注', key: 'remark', width: 240 },
   {
@@ -344,8 +375,9 @@ const columns: DataTableColumns<LedDevice> = [
   },
 ]
 
-async function fetchData() {
-  loading.value = true
+async function fetchData(silent = false) {
+  // 分页等事件会把参数原样传入，只有显式传 true 才静默刷新
+  if (silent !== true) loading.value = true
   try {
     const res = await getLedDeviceList({
       page: page.value,
@@ -356,10 +388,31 @@ async function fetchData() {
     })
     devices.list = res.list
     devices.total = res.total
+    onlineTotal.value = res.onlineTotal ?? null
+    nettyRunning.value = res.nettyRunning !== false
   } finally {
-    loading.value = false
+    if (silent !== true) loading.value = false
   }
 }
+
+function stopAutoRefresh() {
+  if (refreshTimer != null) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
+}
+
+function startAutoRefresh() {
+  stopAutoRefresh()
+  if (!autoRefresh.value) return
+  refreshTimer = setInterval(() => {
+    if (document.visibilityState === 'visible' && !loading.value) {
+      fetchData(true)
+    }
+  }, 10000)
+}
+
+watch(autoRefresh, () => startAutoRefresh())
 
 function handleSearch() {
   page.value = 1
@@ -485,7 +538,12 @@ async function execOta() {
   })
 }
 
-onMounted(fetchData)
+onMounted(() => {
+  fetchData()
+  startAutoRefresh()
+})
+
+onUnmounted(stopAutoRefresh)
 </script>
 
 <style scoped>
