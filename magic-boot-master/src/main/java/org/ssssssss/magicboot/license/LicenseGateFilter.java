@@ -18,6 +18,9 @@ import java.util.List;
  */
 public class LicenseGateFilter extends OncePerRequestFilter {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LicenseGateFilter.class);
+
+
     /**
      * 内置放行清单：登录族（含验证码/validateToken/logout）、授权状态/导入（恢复闭环，
      * 无授权也能看到指纹并导入，不会死锁）、magic-api 控制台（独立口令，运维恢复通道）、
@@ -67,6 +70,9 @@ public class LicenseGateFilter extends OncePerRequestFilter {
         response.setHeader("X-License-Status", status.status);
 
         String uri = request.getRequestURI();
+        if (licenseManager.shouldBlock()) {
+            log.info("license gate BLOCK: uri={}, issueEnabled={}, permitted={}", uri, issueEnabled, isPermitted(uri));
+        }
         if (licenseManager.shouldBlock() && !isPermitted(uri)) {
             response.setStatus(HttpServletResponse.SC_OK); // 响应体 code 语义化，HTTP 层保持 200 供统一拦截
             response.setContentType("application/json;charset=UTF-8");

@@ -65,10 +65,12 @@ public class LicenseManager {
 
     @PostConstruct
     public void init() {
-        // 闸门硬化：只要 dongxinheping 业务 profile 在跑，闸门强制开启，
-        // license.enabled=false / 偷加 dev profile 都无法绕过（删 profile = 业务接口消失，自断臂膀）。
-        // 纯框架/纯开发环境（无 dongxinheping profile）才允许 license.enabled 配置豁免。
-        this.enabled = hasBusinessProfile() || properties.resolveEnabled(isDevProfile());
+        // 闸门硬化：dongxinheping 业务 profile 在跑时默认强制开启（客户偷改配置关不掉）。
+        // 例外：显式配置 license.enabled（办公签发实例 start-issue.bat 用 false 起签发模式，
+        // 前提是那台机器装着签发私钥——客户机器无私钥，改了也只会关掉自己的业务，无利可图）。
+        this.enabled = properties.getEnabled() != null
+                ? properties.getEnabled()
+                : (hasBusinessProfile() || properties.resolveEnabled(isDevProfile()));
         if (!this.enabled) {
             status = LicenseStatus.DISABLED;
             log.info("license check disabled (no business profile, license.enabled=false)");
