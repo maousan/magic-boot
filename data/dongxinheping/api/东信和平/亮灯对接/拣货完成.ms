@@ -5,7 +5,7 @@
   "groupId" : "l5kl0q2xiqa4ryz349c3fkzj3hzm07vw",
   "name" : "拣货完成",
   "createTime" : null,
-  "updateTime" : 1780563039307,
+  "updateTime" : 1790057839192,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -235,6 +235,7 @@ import '@/aims/led/turnOnLedByArticleId' as turnOnLedByArticleId
 import '@/utils/getUserLightColor' as getUserLightColor
 import '@/led/turnOnAisleLedByLotNo' as turnOnAisleLedByLotNo
 import '@/led/turnOffAisleLedByLotNo' as turnOffAisleLedByLotNo
+import redis
 
 log.info("拣货完成body: {}", JSONUtil.toJsonStr(body))
 
@@ -290,7 +291,7 @@ let acquireGlobalLock = (lockKey, timeoutSeconds) => {
     while(attempt < maxAttempts){
         attempt = attempt + 1
         try {
-            if(redis.tryLock(lockKey, lockExpireMillis)){
+            if(redis.default.tryLock(lockKey, lockExpireMillis)){
                 return true
             }
         } catch (redisLockErr) {
@@ -306,7 +307,7 @@ let acquireGlobalLock = (lockKey, timeoutSeconds) => {
 
 let releaseGlobalLock = (lockKey) => {
     try {
-        redis.unlock(lockKey)
+        redis.default.unlock(lockKey)
     } catch (redisUnlockErr) {
         log.warn(logPrefix + ', redis unlock error: ' + redisUnlockErr.message)
     }

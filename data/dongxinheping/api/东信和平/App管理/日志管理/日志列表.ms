@@ -5,10 +5,10 @@
   "groupId" : "981acd20d49f474b8f9a91aa0f862170",
   "name" : "日志列表",
   "createTime" : null,
-  "updateTime" : null,
+  "updateTime" : 1790051616313,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/list",
   "method" : "GET",
   "parameters" : [ {
@@ -28,6 +28,7 @@
   "requestBody" : "",
   "headers" : [ ],
   "paths" : [ ],
+  "responseBody" : null,
   "description" : "分页查询 App 上传日志索引（db.page 读 pageNo/pageSize），附带 zip 文件是否仍在盘的 fileExists 标记（保留策略会清理文件）",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null

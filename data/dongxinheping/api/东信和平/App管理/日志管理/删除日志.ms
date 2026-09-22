@@ -5,10 +5,10 @@
   "groupId" : "981acd20d49f474b8f9a91aa0f862170",
   "name" : "删除日志",
   "createTime" : null,
-  "updateTime" : null,
+  "updateTime" : 1790051620869,
   "lock" : "0",
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/delete/{id}",
   "method" : "DELETE",
   "parameters" : [ ],
@@ -17,6 +17,7 @@
   "headers" : [ ],
   "paths" : [ {
     "name" : "id",
+    "value" : null,
     "description" : "t_app_device_log 主键",
     "required" : true,
     "dataType" : "String",
@@ -27,6 +28,7 @@
     "expression" : null,
     "children" : null
   } ],
+  "responseBody" : null,
   "description" : "删除一条 App 日志上传记录及其落盘 zip 文件（管理页清理用）",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
