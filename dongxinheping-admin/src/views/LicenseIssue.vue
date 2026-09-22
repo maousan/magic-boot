@@ -7,7 +7,14 @@
           <n-input v-model:value="form.customer" placeholder="如：东信和平" />
         </n-form-item>
         <n-form-item label="有效期至" required>
-          <n-input v-model:value="form.expireAt" placeholder="yyyy-MM-dd，如 2027-09-21" />
+          <n-date-picker
+            v-model:value="form.expireAt"
+            type="date"
+            value-format="yyyy-MM-dd"
+            :is-date-disabled="disablePastDate"
+            placeholder="选择有效期至"
+            style="width: 100%"
+          />
         </n-form-item>
         <n-form-item label="机器指纹码" required>
           <n-input v-model:value="form.fingerprintCode" type="textarea" :rows="4" placeholder="粘贴客户「系统授权」页复制的机器指纹码" />
@@ -25,11 +32,15 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import { NCard, NForm, NFormItem, NInput, NButton, useMessage } from 'naive-ui'
+import { NCard, NForm, NFormItem, NInput, NButton, NDatePicker, useMessage } from 'naive-ui'
 import { issueLicense } from '@/api/license'
 
 const message = useMessage()
 const issuing = ref(false)
+
+function disablePastDate(ts: number) {
+  return ts < Date.now() - 86_400_000 // 允许今天及以后
+}
 
 const form = reactive({
   customer: '',
