@@ -5,10 +5,10 @@
   "groupId" : "ulc20260522001mgmt1234567890abcdef",
   "name" : "列表查询",
   "createTime" : null,
-  "updateTime" : null,
+  "updateTime" : 1790058251093,
   "lock" : null,
   "createBy" : null,
-  "updateBy" : null,
+  "updateBy" : "admin",
   "path" : "/list",
   "method" : "GET",
   "parameters" : [ {
@@ -48,31 +48,20 @@
     "expression" : null,
     "children" : null
   } ],
-  "options" : [ {
-    "name" : "require_login",
-    "value" : "false",
-    "description" : "",
-    "required" : false,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  } ],
+  "options" : [ ],
   "requestBody" : "",
   "headers" : [ ],
   "paths" : [ ],
-  "responseBody" : "",
+  "responseBody" : null,
   "description" : "分页查询用户灯光颜色映射",
   "requestBodyDefinition" : null,
   "responseBodyDefinition" : null
 }
 ================================
 let sql = """
-    select id, user_id as userId, color, enabled, remark,
-           create_time as createTime, update_time as updateTime
+    -- if 归一为 1/0，避免 TINYINT(1) 被 JDBC 驱动转成 Boolean 返回
+    select id, user_id, color, if(enabled = 1, 1, 0) as enabled, remark,
+           create_time, update_time
     from t_user_light_color
     <where>
         <if test="userId != null and userId != ''">

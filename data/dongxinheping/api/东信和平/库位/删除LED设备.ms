@@ -24,19 +24,7 @@
     "expression" : null,
     "children" : null
   } ],
-  "options" : [ {
-    "name" : "require_login",
-    "value" : "false",
-    "description" : "",
-    "required" : false,
-    "dataType" : "String",
-    "type" : null,
-    "defaultValue" : null,
-    "validateType" : null,
-    "error" : null,
-    "expression" : null,
-    "children" : null
-  } ],
+  "options" : [ ],
   "requestBody" : "",
   "headers" : [ ],
   "paths" : [ ],
