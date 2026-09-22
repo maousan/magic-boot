@@ -8,7 +8,7 @@
         </n-form-item>
         <n-form-item label="有效期至" required>
           <n-date-picker
-            v-model:value="form.expireAt"
+            v-model:formatted-value="form.expireAt"
             type="date"
             value-format="yyyy-MM-dd"
             :is-date-disabled="disablePastDate"

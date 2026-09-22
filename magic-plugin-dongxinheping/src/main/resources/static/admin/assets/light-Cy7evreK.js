@@ -1,0 +1,1 @@
+import{al as h}from"./index-UA_f-tcf.js";function l(e){const{opacityDisabled:o,heightTiny:t,heightSmall:s,heightMedium:a,heightLarge:n,heightHuge:r,primaryColor:i,fontSize:g}=e;return{fontSize:g,textColor:i,sizeTiny:t,sizeSmall:s,sizeMedium:a,sizeLarge:n,sizeHuge:r,color:i,opacitySpinning:o}}const c={common:h,self:l};export{c as a,l as s};
