@@ -13,6 +13,7 @@
             value-format="yyyy-MM-dd"
             :is-date-disabled="disablePastDate"
             placeholder="选择有效期至"
+            clearable
             style="width: 100%"
           />
         </n-form-item>
@@ -38,13 +39,14 @@ import { issueLicense } from '@/api/license'
 const message = useMessage()
 const issuing = ref(false)
 
+// 过去的日期不可选（只影响日历可选范围，不影响已签授权）
 function disablePastDate(ts: number) {
-  return ts < Date.now() - 86_400_000 // 允许今天及以后
+  return ts < Date.now() - 86_400_000
 }
 
 const form = reactive({
   customer: '',
-  expireAt: '',
+  expireAt: null as string | null,
   fingerprintCode: '',
   notes: '',
 })
@@ -82,3 +84,21 @@ async function handleIssue() {
   }
 }
 </script>
+
+<style scoped>
+.date-input {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgb(224, 224, 230);
+  border-radius: 3px;
+  background: #fff;
+  color: rgb(51, 54, 57);
+  font-size: 14px;
+  font-family: inherit;
+}
+.date-input:focus {
+  outline: none;
+  border-color: #36ad6a;
+}
+</style>

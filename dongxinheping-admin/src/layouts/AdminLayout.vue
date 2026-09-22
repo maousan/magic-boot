@@ -109,6 +109,7 @@ const menuOptions: MenuOption[] = [
   ]},
   { label: '系统管理', key: 'system', children: [
     { label: 'App 版本管理', key: 'AppVersion' },
+    { label: 'App 运行日志', key: 'AppDeviceLog' },
     { label: '系统授权', key: 'SystemLicense' },
     { label: '授权签发', key: 'LicenseIssue' },
     { label: '数据库管理', key: 'DatabaseManagement' },

@@ -367,18 +367,6 @@ export interface ZintisNettySendResponse {
   responses: ZintisNettySendResult[]
 }
 
-// PDA App 运行日志上传记录（索引行，zip 落盘 upload.dir/app-log/{deviceId}/）
-export interface AppDeviceLog {
-  id: number
-  deviceId: string
-  appVersion: string | null
-  fileName: string
-  fileSize: number | null
-  uploadedAt: string
-  createTime: string
-  fileExists: boolean
-}
-
 // 系统授权状态（/system/license/status）
 export interface LicenseStatusView {
   enabled: boolean
