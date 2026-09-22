@@ -40,11 +40,12 @@ public class LicenseIssueController {
     public ResponseEntity<?> issue(@RequestParam("customer") String customer,
                                    @RequestParam("expireAt") String expireAt,
                                    @RequestParam("fingerprintCode") String fingerprintCode,
+                                   @RequestParam(value = "graceDays", required = false) Integer graceDays,
                                    @RequestParam(value = "notes", required = false) String notes,
                                    @RequestParam(value = "file", required = false) MultipartFile file) {
         try {
             // file 参数兼容前端 n-upload 直接传文件；有文件时从文件名/内容外无额外信息，指纹仍走文本块
-            byte[] content = issueService.issue(customer, expireAt, fingerprintCode, notes, "admin");
+            byte[] content = issueService.issue(customer, expireAt, fingerprintCode, graceDays, notes, "admin");
             String fileName = customer.replaceAll("[^\\w\\u4e00-\\u9fa5-]", "") + "-" + expireAt + ".lic";
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);

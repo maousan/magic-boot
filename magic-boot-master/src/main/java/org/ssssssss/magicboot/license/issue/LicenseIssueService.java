@@ -60,7 +60,8 @@ public class LicenseIssueService {
     /**
      * 签发：机器指纹码解码（3 项指纹）→ 载荷构建 → Ed25519 签名 → 返回 .lic 文件字节并留痕。
      */
-    public byte[] issue(String customer, String expireAt, String fingerprintCode, String notes, String operator)
+    public byte[] issue(String customer, String expireAt, String fingerprintCode, Integer graceDays,
+                        String notes, String operator)
             throws Exception {
         if (customer == null || customer.isBlank()) {
             throw new IllegalArgumentException("客户名称不能为空");
@@ -80,6 +81,8 @@ public class LicenseIssueService {
         payload.setExpireAt(expireAt);
         payload.setFingerprints(fingerprints);
         payload.setFormatVersion(1);
+        // 宽限天数签入授权文件：客户改配置无法延长
+        payload.setGraceDays(graceDays == null ? 7 : Math.max(0, graceDays));
         payload.setNotes(notes == null ? "" : notes.trim());
         payload.setSignature(LicenseVerifier.sign(payload, privateKey()));
 

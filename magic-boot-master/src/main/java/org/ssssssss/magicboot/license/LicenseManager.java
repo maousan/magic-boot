@@ -65,12 +65,16 @@ public class LicenseManager {
 
     @PostConstruct
     public void init() {
-        this.enabled = properties.resolveEnabled(isDevProfile());
+        // 闸门硬化：只要 dongxinheping 业务 profile 在跑，闸门强制开启，
+        // license.enabled=false / 偷加 dev profile 都无法绕过（删 profile = 业务接口消失，自断臂膀）。
+        // 纯框架/纯开发环境（无 dongxinheping profile）才允许 license.enabled 配置豁免。
+        this.enabled = hasBusinessProfile() || properties.resolveEnabled(isDevProfile());
         if (!this.enabled) {
             status = LicenseStatus.DISABLED;
-            log.info("license check disabled (license.enabled=false or dev profile)");
+            log.info("license check disabled (no business profile, license.enabled=false)");
             return;
         }
+        log.info("license gate enabled (profiles={})", String.join(",", environment.getActiveProfiles()));
         antiRollbackService.init();
         loadPersistedLicense();
         runCheck();
@@ -99,7 +103,7 @@ public class LicenseManager {
             long threshold = Math.max(now, effectiveMax);
             long overdue = threshold - expireAtMillis;
             long remain = expireAtMillis - threshold;
-            if (overdue > properties.getGraceDays() * DAY_MILLIS) {
+            if (overdue > effectiveGraceDays() * DAY_MILLIS) {
                 status = LicenseStatus.EXPIRED;
                 message = "系统授权已过期（" + current.getExpireAt() + "），请导入有效授权文件";
             } else if (overdue > 0) {
@@ -175,7 +179,7 @@ public class LicenseManager {
         view.enabled = enabled;
         view.status = status.getKey();
         view.message = message;
-        view.graceDays = properties.getGraceDays();
+        view.graceDays = effectiveGraceDays();
         view.fingerprintCode = fingerprintService.fingerprintCode();
         view.serverTime = LocalDateTime.now().withNano(0).toString();
         if (current != null) {
@@ -251,6 +255,25 @@ public class LicenseManager {
     static long expireAtMillis(String expireAt) {
         LocalDate date = LocalDate.parse(expireAt, DATE_FMT);
         return LocalDateTime.of(date, LocalTime.MAX).atZone(ZoneId.of("Asia/Shanghai")).toInstant().toEpochMilli();
+    }
+
+    private boolean hasBusinessProfile() {
+        for (String profile : environment.getActiveProfiles()) {
+            if ("dongxinheping".equalsIgnoreCase(profile)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 宽限天数：优先取授权文件内签名保护的 graceDays（客户改配置无效），无则用配置默认 7。
+     */
+    private int effectiveGraceDays() {
+        if (current != null && current.getGraceDays() != null) {
+            return current.getGraceDays();
+        }
+        return properties.getGraceDays();
     }
 
     private boolean isDevProfile() {

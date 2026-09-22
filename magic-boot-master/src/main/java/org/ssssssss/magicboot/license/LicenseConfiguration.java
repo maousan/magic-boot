@@ -17,7 +17,7 @@ public class LicenseConfiguration {
     public FilterRegistrationBean<LicenseGateFilter> licenseGateFilter(LicenseManager licenseManager,
                                                                        LicenseProperties properties) {
         FilterRegistrationBean<LicenseGateFilter> registration =
-                new FilterRegistrationBean<>(new LicenseGateFilter(licenseManager, properties.getPermitPatterns()));
+                new FilterRegistrationBean<>(new LicenseGateFilter(licenseManager, properties.getPermitPatterns(), properties.isIssueEnabled()));
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
         registration.addUrlPatterns("/*");
         registration.setName("licenseGateFilter");

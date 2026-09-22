@@ -43,12 +43,15 @@ public class LicenseGateFilter extends OncePerRequestFilter {
 
     private final LicenseManager licenseManager;
     private final List<String> extraPermit;
+    private final boolean issueEnabled;
 
-    public LicenseGateFilter(LicenseManager licenseManager, String extraPermitPatterns) {
+    public LicenseGateFilter(LicenseManager licenseManager, String extraPermitPatterns, boolean issueEnabled) {
         this.licenseManager = licenseManager;
         this.extraPermit = extraPermitPatterns == null || extraPermitPatterns.isBlank()
                 ? List.of()
                 : Arrays.stream(extraPermitPatterns.split(",")).map(String::trim).toList();
+        // 签发模式下放行签发接口（办公实例有私钥才有意义；客户实例未开即不可达）
+        this.issueEnabled = issueEnabled;
     }
 
     @Override
@@ -76,6 +79,10 @@ public class LicenseGateFilter extends OncePerRequestFilter {
     }
 
     private boolean isPermitted(String uri) {
+        if (issueEnabled && (MATCHER.match("/system/license/issue/**", uri)
+                || MATCHER.match("/api/system/license/issue/**", uri))) {
+            return true;
+        }
         for (String pattern : extraPermit) {
             if (MATCHER.match(pattern, uri)) {
                 return true;

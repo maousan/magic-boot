@@ -22,3 +22,5 @@ plugin:
 # License 授权（办公开发环境默认豁免）
 license:
   enabled: false
+  issue:
+    enabled: true

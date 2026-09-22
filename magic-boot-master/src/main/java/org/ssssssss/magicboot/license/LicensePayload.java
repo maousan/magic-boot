@@ -24,6 +24,7 @@ public class LicensePayload {
     private List<String> fingerprints; // [系统盘, 主板, 网卡MAC] 各自 sha256
     private int formatVersion = 1;
     private String notes = "";
+    private Integer graceDays;     // 宽限天数（签入签名，客户改配置无效；null=未包含，按 7 处理）
     private String signature;      // Ed25519, base64
 
     /**
@@ -39,6 +40,9 @@ public class LicensePayload {
             sorted.put("fingerprints", fingerprints);
             sorted.put("formatVersion", formatVersion);
             sorted.put("notes", notes == null ? "" : notes);
+            if (graceDays != null) {
+                sorted.put("graceDays", graceDays); // 签名覆盖宽限天数，防止客户改配置延长
+            }
             return CANONICAL_MAPPER.writeValueAsBytes(sorted);
         } catch (Exception e) {
             throw new IllegalStateException("license payload serialize failed", e);
@@ -58,6 +62,9 @@ public class LicensePayload {
             ordered.put("fingerprints", fingerprints);
             ordered.put("formatVersion", formatVersion);
             ordered.put("notes", notes);
+            if (graceDays != null) {
+                ordered.put("graceDays", graceDays);
+            }
             ordered.put("signature", signature);
             return CANONICAL_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsBytes(ordered);
         } catch (Exception e) {
@@ -119,6 +126,14 @@ public class LicensePayload {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public Integer getGraceDays() {
+        return graceDays;
+    }
+
+    public void setGraceDays(Integer graceDays) {
+        this.graceDays = graceDays;
     }
 
     public String getSignature() {

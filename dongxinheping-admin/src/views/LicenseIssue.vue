@@ -17,6 +17,9 @@
             style="width: 100%"
           />
         </n-form-item>
+        <n-form-item label="宽限天数" required>
+          <n-input-number v-model:value="form.graceDays" :min="0" :max="365" style="width: 100%" />
+        </n-form-item>
         <n-form-item label="机器指纹码" required>
           <n-input v-model:value="form.fingerprintCode" type="textarea" :rows="4" placeholder="粘贴客户「系统授权」页复制的机器指纹码" />
         </n-form-item>
@@ -33,7 +36,7 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import { NCard, NForm, NFormItem, NInput, NButton, NDatePicker, useMessage } from 'naive-ui'
+import { NCard, NForm, NFormItem, NInput, NButton, NDatePicker, NInputNumber, useMessage } from 'naive-ui'
 import { issueLicense } from '@/api/license'
 
 const message = useMessage()
@@ -47,6 +50,7 @@ function disablePastDate(ts: number) {
 const form = reactive({
   customer: '',
   expireAt: null as string | null,
+  graceDays: 7,
   fingerprintCode: '',
   notes: '',
 })
@@ -62,6 +66,7 @@ async function handleIssue() {
     formData.append('customer', form.customer)
     formData.append('expireAt', form.expireAt)
     formData.append('fingerprintCode', form.fingerprintCode)
+    formData.append('graceDays', String(form.graceDays ?? 7))
     if (form.notes) formData.append('notes', form.notes)
 
     const { blob, filename } = await issueLicense(formData)
