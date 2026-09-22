@@ -31,19 +31,14 @@
       </n-card>
 
       <n-card title="导入授权文件" size="small" style="margin-top: 16px">
-        <n-space vertical>
-          <n-space :size="12" align="center">
-            <n-upload :max="1" accept=".lic" :default-upload="false" @change="onFileChange">
-              <n-button>选择 .lic 授权文件</n-button>
-            </n-upload>
-            <n-button type="primary" :loading="importing" :disabled="!importFile" @click="handleImport">
-              导入并生效
-            </n-button>
-          </n-space>
-          <n-text depth="3">
-            导入会校验签名与机器指纹；允许导入已过期文件（覆盖旧授权后按新文件重新判定状态）。
-          </n-text>
-        </n-space>
+        <div class="import-row">
+          <n-upload :max="1" accept=".lic" :default-upload="false" @change="onFileChange">
+            <n-button>选择 .lic 授权文件</n-button>
+          </n-upload>
+          <n-button type="primary" :loading="importing" :disabled="!importFile" @click="handleImport">
+            导入并生效
+          </n-button>
+        </div>
       </n-card>
     </div>
   </n-card>
@@ -52,8 +47,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import {
-  NCard, NAlert, NDescriptions, NDescriptionsItem, NTag, NText,
-  NUpload, NButton, NSpace, useMessage,
+  NCard, NAlert, NDescriptions, NDescriptionsItem, NTag,
+  NUpload, NButton, useMessage,
 } from 'naive-ui'
 import type { UploadFileInfo } from 'naive-ui'
 import { getLicenseStatus, importLicense } from '@/api/license'
@@ -132,6 +127,19 @@ async function copyFingerprints() {
 
 onMounted(fetchStatus)
 </script>
+
+<style scoped>
+.import-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.import-row :deep(.n-upload) {
+  height: 34px;
+  width: fit-content;
+}
+</style>
 
 <style scoped>
 .fingerprint-block {
