@@ -14,8 +14,8 @@
         <n-form-item label="有效期至" required>
           <n-input v-model:value="form.expireAt" placeholder="yyyy-MM-dd，如 2027-09-21" />
         </n-form-item>
-        <n-form-item label="机器指纹块" required>
-          <n-input v-model:value="form.fingerprints" type="textarea" :rows="4" placeholder="system-disk: …&#10;baseboard: …&#10;mac-set: …" />
+        <n-form-item label="机器指纹码" required>
+          <n-input v-model:value="form.fingerprintCode" type="textarea" :rows="4" placeholder="粘贴客户「系统授权」页复制的机器指纹码" />
         </n-form-item>
         <n-form-item label="备注">
           <n-input v-model:value="form.notes" placeholder="如合同号" />
@@ -39,13 +39,13 @@ const issuing = ref(false)
 const form = reactive({
   customer: '',
   expireAt: '',
-  fingerprints: '',
+  fingerprintCode: '',
   notes: '',
 })
 
 async function handleIssue() {
-  if (!form.customer || !form.expireAt || !form.fingerprints) {
-    message.error('请填写客户名、有效期与机器指纹块')
+  if (!form.customer || !form.expireAt || !form.fingerprintCode) {
+    message.error('请填写客户名、有效期与机器指纹码')
     return
   }
   issuing.value = true
@@ -53,7 +53,7 @@ async function handleIssue() {
     const formData = new FormData()
     formData.append('customer', form.customer)
     formData.append('expireAt', form.expireAt)
-    formData.append('fingerprints', form.fingerprints)
+    formData.append('fingerprintCode', form.fingerprintCode)
     if (form.notes) formData.append('notes', form.notes)
 
     const { blob, filename } = await issueLicense(formData)

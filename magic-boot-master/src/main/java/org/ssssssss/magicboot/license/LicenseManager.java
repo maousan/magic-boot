@@ -176,7 +176,7 @@ public class LicenseManager {
         view.status = status.getKey();
         view.message = message;
         view.graceDays = properties.getGraceDays();
-        view.fingerprints = fingerprintService.fingerprintBlock();
+        view.fingerprintCode = fingerprintService.fingerprintCode();
         view.serverTime = LocalDateTime.now().withNano(0).toString();
         if (current != null) {
             view.customer = current.getCustomer();
@@ -273,7 +273,7 @@ public class LicenseManager {
         public String expireAt;
         public Long remainDays;
         public int graceDays;
-        public String fingerprints; // 3 行指纹块文本
+        public String fingerprintCode; // 机器指纹码（base64url 打包的 3 项指纹）
         public String serverTime;
     }
 }

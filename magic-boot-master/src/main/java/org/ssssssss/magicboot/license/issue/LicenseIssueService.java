@@ -58,9 +58,9 @@ public class LicenseIssueService {
     }
 
     /**
-     * 签发：指纹块（3 行）解析 → 载荷构建 → Ed25519 签名 → 返回 .lic 文件字节并留痕。
+     * 签发：机器指纹码解码（3 项指纹）→ 载荷构建 → Ed25519 签名 → 返回 .lic 文件字节并留痕。
      */
-    public byte[] issue(String customer, String expireAt, String fingerprintBlock, String notes, String operator)
+    public byte[] issue(String customer, String expireAt, String fingerprintCode, String notes, String operator)
             throws Exception {
         if (customer == null || customer.isBlank()) {
             throw new IllegalArgumentException("客户名称不能为空");
@@ -70,17 +70,8 @@ public class LicenseIssueService {
         }
         LocalDate.parse(expireAt); // 格式校验
         java.util.List<String> fingerprints =
-                org.ssssssss.magicboot.license.MachineFingerprintService.parseFingerprintBlock(
-                        fingerprintBlock == null ? "" : fingerprintBlock);
-        int provided = 0;
-        for (String fp : fingerprints) {
-            if (fp != null && fp.matches("[0-9a-f]{64}")) {
-                provided++;
-            }
-        }
-        if (provided < 2) {
-            throw new IllegalArgumentException("指纹块无效：至少需要 2 项有效的 64 位十六进制指纹（3 项中机器不可用项可标 unavailable）");
-        }
+                org.ssssssss.magicboot.license.MachineFingerprintService.parseFingerprintCode(
+                        fingerprintCode);
 
         LicensePayload payload = new LicensePayload();
         payload.setLicenseId(UUID.randomUUID().toString().replace("-", ""));
@@ -98,7 +89,7 @@ public class LicenseIssueService {
         try {
             jdbcTemplate.update("insert into t_license_issue_log (license_id, customer, expire_at, fingerprints, notes, operator, create_time) values (?,?,?,?,?,?,now())",
                     payload.getLicenseId(), payload.getCustomer(), payload.getExpireAt(),
-                    String.join("\n", fingerprints), payload.getNotes(), operator);
+                    fingerprintCode, payload.getNotes(), operator);
         } catch (Exception e) {
             log.warn("license issue log failed (run t_license_issue_log DDL): {}", e.getMessage());
         }

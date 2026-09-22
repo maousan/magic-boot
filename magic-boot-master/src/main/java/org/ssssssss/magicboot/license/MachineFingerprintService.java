@@ -1,35 +1,42 @@
 package org.ssssssss.magicboot.license;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import oshi.SystemInfo;
-import oshi.hardware.CentralProcessor;
 import oshi.hardware.HWDiskStore;
 import oshi.hardware.HWPartition;
 import oshi.hardware.NetworkIF;
-import oshi.software.os.OperatingSystem;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 
 /**
- * 机器指纹采集（OSHI）：系统盘序列号 / 主板序列号 / 物理网卡 MAC 集合，各自规范化后 sha256。
+ * 机器指纹采集（OSHI）：系统盘序列号 / 主板序列号 / 物理网卡 MAC 集合，各自规范化后 sha256（取前 32 位 hex）。
  * 校验采用 3 项命中 ≥2（K-of-N）：单标识变更不误伤，整套搬机至少两项同变即失效。
  * 指纹是机器静态属性，启动采集一次并缓存。
+ *
+ * <p>对外只呈现一个「机器指纹码」：3 项指纹打包成 base64url(JSON) 的单一编码，
+ * 客户整块复制、签发侧整块解码还原 3 项——用户不需要理解内部有哪几项。
  */
 @Component
 public class MachineFingerprintService {
 
     private static final Logger log = LoggerFactory.getLogger(MachineFingerprintService.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    private static final int ITEM_HEX_LEN = 32; // sha256 截断为 128 位/项，碰撞风险可忽略
 
     private List<String> cached; // 与授权文件 fingerprints 顺序一一对应；采集失败项为 null
 
     /**
-     * 采集当前机器指纹（缓存）。返回列表长度恒为 3，顺序 [系统盘, 主板, 网卡MAC]，失败项 null。
+     * 采集当前机器指纹（缓存）。返回列表长度恒为 3，顺序 [系统盘, 主板, 网卡MAC]，
+     * 每项为 32 位 hex；采集失败项为 null。
      */
     public synchronized List<String> collect() {
         if (cached != null) {
@@ -74,9 +81,6 @@ public class MachineFingerprintService {
                 if (nif.getName() != null && nif.getName().startsWith("lo")) {
                     continue;
                 }
-                if (nif.getIfOperStatus() == NetworkIF.IfOperStatus.DOWN && !macs.isEmpty()) {
-                    // DOWN 的接口排后，仅作补充
-                }
                 macs.add(normalized);
             }
             Collections.sort(macs);
@@ -89,6 +93,12 @@ public class MachineFingerprintService {
                 if (result.get(i) != null && isPlaceholder(result.get(i))) {
                     log.info("license fingerprint: item {} is a known placeholder, treat as unavailable", i);
                     result.set(i, null);
+                }
+            }
+            // 截断为固定长度
+            for (int i = 0; i < 3; i++) {
+                if (result.get(i) != null) {
+                    result.set(i, result.get(i).substring(0, ITEM_HEX_LEN));
                 }
             }
             cached = result;
@@ -127,33 +137,55 @@ public class MachineFingerprintService {
     }
 
     /**
-     * 展示用指纹块（3 行 32hex，标注项名）；采集失败的项标注 unavailable。
+     * 机器指纹码：3 项指纹打包成 base64url(JSON) 单一编码。
+     * 客户在「系统授权」页看到并复制的只有这一个码。
      */
-    public String fingerprintBlock() {
+    public String fingerprintCode() {
         List<String> local = collect();
-        return "system-disk: " + (local.get(0) == null ? "unavailable" : local.get(0)) + "\n"
-                + "baseboard:  " + (local.get(1) == null ? "unavailable" : local.get(1)) + "\n"
-                + "mac-set:    " + (local.get(2) == null ? "unavailable" : local.get(2));
+        try {
+            List<String> packed = new ArrayList<>(3);
+            for (String item : local) {
+                packed.add(item == null ? "" : item);
+            }
+            byte[] json = MAPPER.writeValueAsBytes(packed);
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(json);
+        } catch (Exception e) {
+            throw new IllegalStateException("fingerprint code encode failed", e);
+        }
     }
 
     /**
-     * 解析签发表单粘贴的指纹块 → 3 项指纹列表。
+     * 解析签发表单粘贴的机器指纹码 → 3 项指纹列表（空串表示该项不可用）。
+     * 至少 2 项有效，否则抛出异常。
      */
-    public static List<String> parseFingerprintBlock(String block) {
+    public static List<String> parseFingerprintCode(String code) {
+        if (code == null || code.isBlank()) {
+            throw new IllegalArgumentException("机器指纹码不能为空");
+        }
+        List<?> parsed;
+        try {
+            byte[] json = Base64.getUrlDecoder().decode(code.trim());
+            parsed = MAPPER.readValue(json, List.class);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("机器指纹码格式无效，请完整复制客户「系统授权」页展示的指纹码");
+        }
+        if (parsed.size() != 3) {
+            throw new IllegalArgumentException("机器指纹码格式无效");
+        }
         List<String> result = new ArrayList<>(3);
-        for (String key : new String[]{"system-disk", "baseboard", "mac-set"}) {
-            String found = null;
-            for (String line : block.split("\\r?\\n")) {
-                String trimmed = line.trim();
-                if (trimmed.startsWith(key)) {
-                    String value = trimmed.substring(trimmed.indexOf(':') + 1).trim();
-                    if (!value.isEmpty() && !"unavailable".equalsIgnoreCase(value)) {
-                        found = value.toLowerCase();
-                    }
-                    break;
+        int valid = 0;
+        for (Object item : parsed) {
+            String value = item == null ? "" : String.valueOf(item).trim().toLowerCase();
+            if (!value.isEmpty()) {
+                if (!value.matches("[0-9a-f]{32}")) {
+                    throw new IllegalArgumentException("机器指纹码内容无效（指纹应为 32 位十六进制）");
                 }
+                valid++;
             }
-            result.add(found);
+            result.add(value);
+        }
+        if (valid < 2) {
+            throw new IllegalArgumentException("机器指纹码中有效指纹不足 2 项，无法签发");
         }
         return result;
     }

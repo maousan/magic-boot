@@ -388,6 +388,6 @@ export interface LicenseStatusView {
   expireAt: string | null
   remainDays: number | null
   graceDays: number
-  fingerprints: string    // 3 行指纹块文本
+  fingerprintCode: string // 机器指纹码（base64url 打包的 3 项指纹）
   serverTime: string
 }
