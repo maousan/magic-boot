@@ -18,7 +18,6 @@
           style="width: 260px"
           @keyup.enter="handleSearch"
         />
-        <n-text depth="3">PDA 设置页上传的运行日志包（按设备保留最近 20 个）</n-text>
       </n-space>
 
       <div ref="tableAreaRef" class="table-page-table">
@@ -64,7 +63,7 @@
 import { ref, reactive, onMounted, h } from 'vue'
 import {
   NCard, NDataTable, NButton, NModal, NSpace, NInput,
-  NText, NFlex, NPagination, NTag, useMessage,
+  NFlex, NPagination, NTag, useMessage,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { getAppLogList, deleteAppLog, appLogDownloadUrl } from '@/api/app-log'
