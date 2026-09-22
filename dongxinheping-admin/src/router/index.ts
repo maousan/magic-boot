@@ -1,6 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router'
 import { createRouter, createWebHashHistory } from 'vue-router'
-import { isAuthenticated } from '@/auth'
+import { isAuthenticated, canAccess } from '@/auth'
 
 const AdminLayout = () => import('@/layouts/AdminLayout.vue')
 
@@ -35,6 +35,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'app-version', name: 'AppVersion', component: () => import('@/views/AppVersion.vue'), meta: { label: 'App 版本管理' } },
       { path: 'app-log', name: 'AppDeviceLog', component: () => import('@/views/AppDeviceLog.vue'), meta: { label: 'App 运行日志' } },
       { path: 'system-license', name: 'SystemLicense', component: () => import('@/views/SystemLicense.vue'), meta: { label: '系统授权' } },
+      { path: 'admin-user', name: 'AdminUser', component: () => import('@/views/AdminUser.vue'), meta: { label: '用户管理' } },
       { path: 'license-issue', name: 'LicenseIssue', component: () => import('@/views/LicenseIssue.vue'), meta: { label: '授权签发' } },
       { path: 'logs', name: 'RealtimeLog', component: () => import('@/views/RealtimeLog.vue'), meta: { label: '实时日志' } },
     ],
@@ -49,6 +50,9 @@ const router = createRouter({
 router.beforeEach((to) => {
   if (to.meta.requiresAuth !== false && !isAuthenticated()) {
     return { name: 'Login' }
+  }
+  if (to.name !== 'Login' && to.name && !canAccess(String(to.name))) {
+    return { name: 'Dashboard' }
   }
 })
 

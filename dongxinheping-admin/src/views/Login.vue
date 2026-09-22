@@ -20,14 +20,14 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { NCard, NForm, NFormItem, NInput, NButton, NAlert, useMessage, useNotification } from 'naive-ui'
+import { NCard, NForm, NFormItem, NInput, NButton, NAlert, useNotification } from 'naive-ui'
 import type { FormRules } from 'naive-ui'
-import { login } from '@/auth'
+import { setSession } from '@/auth'
+import { apiLogin } from '@/api/auth'
 import { getLicenseStatus } from '@/api/license'
 import type { LicenseStatusView } from '@/types'
 
 const router = useRouter()
-const message = useMessage()
 const notification = useNotification()
 const loading = ref(false)
 
@@ -53,15 +53,17 @@ const rules: FormRules = {
   password: { required: true, message: '请输入密码', trigger: 'blur' },
 }
 
-function handleLogin() {
+async function handleLogin() {
   loading.value = true
-  const ok = login(form.username, form.password)
-  loading.value = false
-  if (ok) {
-    notification.success({ title: '登录成功', content: `欢迎回来，${form.username}`, duration: 3000 })
+  try {
+    const result = await apiLogin(form.username, form.password)
+    setSession(result.token, { id: result.id, username: result.username, name: result.name, role: result.role })
+    notification.success({ title: '登录成功', content: `欢迎回来，${result.name || result.username}`, duration: 3000 })
     router.push({ name: 'Dashboard' })
-  } else {
-    message.error('用户名或密码错误')
+  } catch {
+    // 失败提示由请求拦截器统一弹出
+  } finally {
+    loading.value = false
   }
 }
 </script>

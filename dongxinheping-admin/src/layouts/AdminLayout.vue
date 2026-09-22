@@ -12,10 +12,17 @@
         <div class="admin-brand">
           东信和平管理后台
         </div>
-        <n-menu class="admin-menu" :options="menuOptions" :value="activeKey" @update:value="onMenuSelect" />
+        <n-menu class="admin-menu" :options="visibleMenuOptions" :value="activeKey" @update:value="onMenuSelect" />
       </n-layout-sider>
       <n-layout class="admin-main" content-style="height: 100%; min-height: 0; display: flex; flex-direction: column">
         <n-layout-header bordered class="admin-header">
+          <span class="admin-user-info" v-if="currentUser">
+            {{ currentUser.name || currentUser.username }}
+            <n-tag size="small" :type="currentUser.role === 'admin' ? 'success' : 'info'" :bordered="false">
+              {{ currentUser.role === 'admin' ? '管理员' : '运营' }}
+            </n-tag>
+          </span>
+          <n-button text @click="showChangePwd = true">修改密码</n-button>
           <n-button text @click="handleLogout">退出登录</n-button>
         </n-layout-header>
         <n-alert
@@ -51,15 +58,38 @@
           </div>
         </n-layout-content>
       </n-layout>
+
+      <!-- 修改密码（自助） -->
+      <n-modal
+        v-model:show="showChangePwd"
+        title="修改密码"
+        preset="dialog"
+        positive-text="确认修改"
+        negative-text="取消"
+        @positive-click="handleChangePwd"
+      >
+        <n-space vertical>
+          <n-form-item label="原密码" required>
+            <n-input v-model:value="pwdForm.oldPwd" type="password" show-password-on="click" placeholder="请输入原密码" />
+          </n-form-item>
+          <n-form-item label="新密码" required>
+            <n-input v-model:value="pwdForm.newPwd" type="password" show-password-on="click" placeholder="至少6位" />
+          </n-form-item>
+          <n-form-item label="确认新密码" required>
+            <n-input v-model:value="pwdForm.confirmPwd" type="password" show-password-on="click" placeholder="再次输入新密码" />
+          </n-form-item>
+        </n-space>
+      </n-modal>
   </n-layout>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, nextTick, onMounted } from 'vue'
+import { computed, ref, reactive, watch, nextTick, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { NLayout, NLayoutSider, NLayoutHeader, NLayoutContent, NMenu, NButton, NAlert, useDialog } from 'naive-ui'
+import { NLayout, NLayoutSider, NLayoutHeader, NLayoutContent, NMenu, NButton, NAlert, NTag, NModal, NFormItem, NInput, useDialog, useMessage } from 'naive-ui'
 import type { MenuOption } from 'naive-ui'
-import { logout } from '@/auth'
+import { clearSession, getCurrentUser, getRole, canAccess } from '@/auth'
+import { apiLogout, apiChangeMyPassword } from '@/api/auth'
 import { useTabStore } from '@/composables/useTabStore'
 import { getLicenseStatus } from '@/api/license'
 import type { LicenseStatusView } from '@/types'
@@ -67,7 +97,39 @@ import type { LicenseStatusView } from '@/types'
 const router = useRouter()
 const route = useRoute()
 const dialog = useDialog()
-const { tabs: storeTabs, cachedNames, addTab, removeTab } = useTabStore()
+const message = useMessage()
+const { tabs: storeTabs, cachedNames, addTab, removeTab, clearTabs } = useTabStore()
+
+const currentUser = getCurrentUser()
+
+// 修改密码（自助）
+const showChangePwd = ref(false)
+const pwdForm = reactive({ oldPwd: '', newPwd: '', confirmPwd: '' })
+
+async function handleChangePwd() {
+  if (!pwdForm.oldPwd) {
+    message.error('请输入原密码')
+    return false
+  }
+  if (pwdForm.newPwd.length < 6) {
+    message.error('新密码至少6位')
+    return false
+  }
+  if (pwdForm.newPwd !== pwdForm.confirmPwd) {
+    message.error('两次输入的新密码不一致')
+    return false
+  }
+  if (pwdForm.newPwd === pwdForm.oldPwd) {
+    message.error('新密码不能与原密码相同')
+    return false
+  }
+  await apiChangeMyPassword(pwdForm.oldPwd, pwdForm.newPwd)
+  message.success('密码已修改，请使用新密码重新登录')
+  // 后端已使该账号全部会话失效
+  clearSession()
+  clearTabs()
+  router.push({ name: 'Login' })
+}
 
 const tabsRef = ref<HTMLElement | null>(null)
 const tabElMap = new Map<string, HTMLElement>()
@@ -108,6 +170,7 @@ const menuOptions: MenuOption[] = [
     { label: '用户灯色映射', key: 'UserLightColor' },
   ]},
   { label: '系统管理', key: 'system', children: [
+    { label: '用户管理', key: 'AdminUser' },
     { label: 'App 版本管理', key: 'AppVersion' },
     { label: 'App 运行日志', key: 'AppDeviceLog' },
     { label: '系统授权', key: 'SystemLicense' },
@@ -119,6 +182,18 @@ const menuOptions: MenuOption[] = [
     { label: '实时日志', key: 'RealtimeLog' },
   ]},
 ]
+
+// 按角色过滤：非 admin 角色只保留有权访问的菜单，过滤后为空的分组整组隐藏
+const visibleMenuOptions = computed(() => {
+  if (getRole() === 'admin') return menuOptions
+  return menuOptions
+    .map((group) =>
+      group.children
+        ? { ...group, children: group.children.filter((child) => canAccess(String(child.key))) }
+        : group,
+    )
+    .filter((group) => !group.children || group.children.length > 0)
+})
 
 const activeKey = computed(() => String(route.name))
 
@@ -184,7 +259,9 @@ function handleLogout() {
     positiveText: '确认',
     negativeText: '取消',
     onPositiveClick: () => {
-      logout()
+      apiLogout()
+      clearSession()
+      clearTabs()
       router.push({ name: 'Login' })
     },
   })
@@ -240,7 +317,16 @@ function handleLogout() {
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  gap: 16px;
   flex-shrink: 0;
+}
+
+.admin-user-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #666;
 }
 
 .admin-license-banner {
