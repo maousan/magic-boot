@@ -1,0 +1,14 @@
+{
+  "properties": {},
+  "id": "af95234eafa543429e74fb7d3255ec3c",
+  "name": "安全权限内部",
+  "type": "api",
+  "parentId": "0",
+  "path": "/system/security",
+  "createTime": null,
+  "updateTime": null,
+  "createBy": null,
+  "updateBy": null,
+  "paths": [],
+  "options": []
+}

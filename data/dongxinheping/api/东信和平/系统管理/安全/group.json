@@ -1,0 +1,14 @@
+{
+  "properties": {},
+  "id": "1713a9b35b73415da26919dd54682bdc",
+  "name": "安全",
+  "type": "api",
+  "parentId": "57e460bde8674929a0b7abc6ed21fa26",
+  "path": "/security",
+  "createTime": null,
+  "updateTime": null,
+  "createBy": null,
+  "updateBy": null,
+  "paths": [],
+  "options": []
+}
