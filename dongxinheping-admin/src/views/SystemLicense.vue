@@ -25,10 +25,7 @@
         <n-descriptions-item label="服务器时间">{{ view.serverTime }}</n-descriptions-item>
       </n-descriptions>
 
-      <n-card title="机器指纹码（签发授权时需提供）" size="small" style="margin-top: 16px">
-        <n-text depth="3" style="display: block; margin-bottom: 8px">
-          将此机器指纹码完整复制给软件供应商用于签发；一个码对应本机三项硬件特征，授权校验为 3 项命中 2 项。
-        </n-text>
+      <n-card title="机器指纹码" size="small" style="margin-top: 16px">
         <pre class="fingerprint-block">{{ view?.fingerprintCode ?? '' }}</pre>
         <n-button size="small" style="margin-top: 8px" @click="copyFingerprints">复制机器指纹码</n-button>
       </n-card>
@@ -53,7 +50,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import {
-  NCard, NAlert, NDescriptions, NDescriptionsItem, NTag, NText,
+  NCard, NAlert, NDescriptions, NDescriptionsItem, NTag,
   NUpload, NButton, NSpace, useMessage,
 } from 'naive-ui'
 import type { UploadFileInfo } from 'naive-ui'
