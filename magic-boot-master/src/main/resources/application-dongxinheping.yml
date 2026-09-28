@@ -49,4 +49,4 @@ zintis:
 # License 授权（现场生产默认启用；宽限 7 天；NTP 可选按需配置）
 license:
   enabled: true
-  graceDays: 7
+  graceDays: 0
