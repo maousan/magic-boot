@@ -25,9 +25,9 @@ export default defineConfig({
         target: 'http://localhost:8091',
         changeOrigin: true,
       },
-      // 授权签发/系统授权接口在 /system 前缀下（默认联调 8090；用 start-issue.bat 的 8091 签发实例时改指 8091）
+      // 授权签发/系统授权接口在 /system 前缀下 → 签发实例（start-issue.bat，8091）
       '/system': {
-        target: 'http://localhost:8090',
+        target: 'http://localhost:8091',
         changeOrigin: true,
       },
       '/ws': {

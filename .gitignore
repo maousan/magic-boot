@@ -55,3 +55,13 @@ upload/
 magic-boot-vben/
 tiga-platform/
 data/zintis-led/
+
+# 本机环境变量（签发私钥路径等，模板见 .env.example）
+.env
+.claude/tmp
+uploads
+data/.license
+
+# ZCode 本机工作文件（会话计划等；workflows 如需共享可单独取消忽略）
+.zcode/plans/
+.zcodeignore
