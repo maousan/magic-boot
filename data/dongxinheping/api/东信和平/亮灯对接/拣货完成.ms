@@ -794,9 +794,14 @@ for(item in details){
         exit 400, 'details[' + index + '].actualQuantity不能小于0'
     }
 
-    let uniqKey = item.materialCode + '|' + item.batchNo + '|' + item.locationCode
+    // 2026-09-24 按物料+批次+库位查重会拒掉WMS拆行(同物料批次库位、不同明细id)，改为按id查重，与/upload口径一致
+    // let uniqKey = item.materialCode + '|' + item.batchNo + '|' + item.locationCode
+    // if(detailUniqMap[uniqKey] != null){
+    //     exit 400, 'details[' + index + ']与前序明细重复(物料+批次+库位)'
+    // }
+    let uniqKey = item.id
     if(detailUniqMap[uniqKey] != null){
-        exit 400, 'details[' + index + ']与前序明细重复(物料+批次+库位)'
+        exit 400, 'details[' + index + '].id重复'
     }
     detailUniqMap[uniqKey] = 1
     addUnique(affectedLocationCodes, affectedLocationCodeSet, item.locationCode)
