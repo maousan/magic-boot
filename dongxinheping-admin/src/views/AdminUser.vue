@@ -43,13 +43,13 @@
     <n-modal v-model:show="showForm" :title="editId ? '编辑用户' : '新增用户'" preset="dialog" positive-text="确认" negative-text="取消" @positive-click="handleSubmit">
       <n-space vertical>
         <n-form-item label="用户名" required>
-          <n-input v-model:value="form.username" placeholder="请输入用户名" :disabled="!!editId" />
+          <n-input v-model:value="form.username" placeholder="请输入用户名" :disabled="!!editId" :input-props="{ autocomplete: 'off' }" />
         </n-form-item>
         <n-form-item label="姓名">
           <n-input v-model:value="form.name" placeholder="姓名/昵称（可选）" />
         </n-form-item>
         <n-form-item v-if="!editId" label="初始密码" required>
-          <n-input v-model:value="form.password" type="password" show-password-on="click" placeholder="至少6位" />
+          <n-input v-model:value="form.password" type="password" show-password-on="click" placeholder="至少6位" :input-props="{ autocomplete: 'new-password' }" />
         </n-form-item>
         <n-form-item label="角色" required>
           <n-select v-model:value="form.role" :options="roleOptions" placeholder="选择角色" />
@@ -61,7 +61,7 @@
     <n-modal v-model:show="showReset" title="重置密码" preset="dialog" positive-text="确认" negative-text="取消" @positive-click="handleReset">
       <n-space vertical>
         <p>为用户 <b>{{ resetTarget?.username }}</b> 设置新密码：</p>
-        <n-input v-model:value="resetPassword" type="password" show-password-on="click" placeholder="至少6位" />
+        <n-input v-model:value="resetPassword" type="password" show-password-on="click" placeholder="至少6位" :input-props="{ autocomplete: 'new-password' }" />
       </n-space>
     </n-modal>
 

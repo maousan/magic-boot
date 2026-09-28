@@ -4,12 +4,29 @@
       <n-alert v-if="licenseNotice" :type="licenseNotice.type" style="margin-bottom: 16px">
         {{ licenseNotice.text }}
       </n-alert>
-      <n-form ref="formRef" :model="form" :rules="rules" @submit.prevent="handleLogin">
+      <n-form ref="formRef" :model="form" :rules="rules" autocomplete="off" @submit.prevent="handleLogin">
         <n-form-item label="用户名" path="username">
-          <n-input v-model:value="form.username" placeholder="请输入用户名" />
+          <n-input
+            v-model:value="form.username"
+            placeholder="请输入用户名"
+            :input-props="{ autocomplete: 'off', readonly: !unlocked.username }"
+            @focus="unlocked.username = true"
+          />
         </n-form-item>
         <n-form-item label="密码" path="password">
-          <n-input v-model:value="form.password" type="password" show-password-on="click" placeholder="请输入密码" />
+          <n-input
+            v-model:value="form.password"
+            :class="{ 'password-masked': !showPlainPassword }"
+            placeholder="请输入密码"
+            :input-props="{ autocomplete: 'off', readonly: !unlocked.password }"
+            @focus="unlocked.password = true"
+          >
+            <template #suffix>
+              <n-button text type="primary" @click="showPlainPassword = !showPlainPassword">
+                {{ showPlainPassword ? '隐藏' : '显示' }}
+              </n-button>
+            </template>
+          </n-input>
         </n-form-item>
         <n-button type="primary" block attr-type="submit" :loading="loading">登录</n-button>
       </n-form>
@@ -48,6 +65,11 @@ onMounted(async () => {
 
 const form = reactive({ username: '', password: '' })
 
+// 初始 readonly 阻止浏览器载入时自动填充，聚焦后放开由用户手动输入
+const unlocked = reactive({ username: false, password: false })
+// 密码框刻意用 text + CSS 圆点遮罩（见下方 .password-masked），不用 type=password
+const showPlainPassword = ref(false)
+
 const rules: FormRules = {
   username: { required: true, message: '请输入用户名', trigger: 'blur' },
   password: { required: true, message: '请输入密码', trigger: 'blur' },
@@ -67,3 +89,11 @@ async function handleLogin() {
   }
 }
 </script>
+
+<style scoped>
+/* Chrome 对 type=password 强制弹"保存密码"且无属性可关；改用文本框 + 圆点遮罩，
+   页面上不存在密码框，保存提示/自动填充/凭据检测都不再触发 */
+.password-masked :deep(input) {
+  -webkit-text-security: disc;
+}
+</style>
