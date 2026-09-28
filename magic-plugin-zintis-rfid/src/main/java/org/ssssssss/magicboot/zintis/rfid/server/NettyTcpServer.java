@@ -23,6 +23,7 @@ import org.ssssssss.magicboot.zintis.rfid.service.DeviceManager;
 import org.ssssssss.magicboot.zintis.rfid.service.MessageService;
 import org.springframework.stereotype.Service;
 
+import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.locks.ReentrantLock;
@@ -92,7 +93,11 @@ public class NettyTcpServer {
             boundPort = ((InetSocketAddress) serverChannel.localAddress()).getPort();
             log.info("RFID TCP server started on port {}", boundPort);
         } catch (Exception e) {
-            log.error("Failed to start TCP server: {}", e.getMessage(), e);
+            if (e instanceof BindException) {
+                log.error("Failed to start TCP server: port {} already in use (netstat -ano | findstr {} to locate)", port, port, e);
+            } else {
+                log.error("Failed to start TCP server on port {}: {}", port, e.getMessage(), e);
+            }
             safeStopInternal();
         } finally {
             lock.unlock();

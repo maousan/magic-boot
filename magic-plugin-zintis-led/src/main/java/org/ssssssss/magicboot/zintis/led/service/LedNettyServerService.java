@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.SocketOption;
 import java.net.StandardSocketOptions;
@@ -169,6 +170,7 @@ public class LedNettyServerService {
             Thread.currentThread().interrupt();
             return status("Start failed: interrupted");
         }
+        int port = requestedPort == null ? DEFAULT_NETTY_SERVER_PORT : requestedPort;
         try {
             if (isRunning()) {
                 return LedNettyServerStatusResponse.builder()
@@ -182,7 +184,6 @@ public class LedNettyServerService {
                         .build();
             }
 
-            int port = requestedPort == null ? DEFAULT_NETTY_SERVER_PORT : requestedPort;
             if (port < 0 || port > 65535) {
                 return LedNettyServerStatusResponse.builder()
                         .running(false)
@@ -224,7 +225,11 @@ public class LedNettyServerService {
             }
             return status("Netty server started");
         } catch (Exception ex) {
-            log.error("start netty server failed: {}", ex.getMessage(), ex);
+            if (ex instanceof BindException) {
+                log.error("start netty server failed: port {} already in use (netstat -ano | findstr {} to locate)", port, port, ex);
+            } else {
+                log.error("start netty server failed on port {}: {}", port, ex.getMessage(), ex);
+            }
             safeStopInternal();
             return LedNettyServerStatusResponse.builder()
                     .running(false)
@@ -233,7 +238,7 @@ public class LedNettyServerService {
                     .heartbeatEnabled(heartbeatEnabled)
                     .heartbeatRunning(false)
                     .clientReportRegistrationEnabled(clientReportRegistrationEnabled)
-                    .message("Start failed: " + ex.getMessage())
+                    .message("Start failed on port " + port + ": " + ex.getMessage())
                     .build();
         } finally {
             lock.unlock();
