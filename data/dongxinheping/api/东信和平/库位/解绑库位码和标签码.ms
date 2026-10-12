@@ -36,7 +36,19 @@
     "expression" : null,
     "children" : null
   } ],
-  "options" : [ ],
+  "options" : [ {
+    "name" : "require_login",
+    "value" : "false",
+    "description" : "该接口需要登录才允许访问",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  } ],
   "requestBody" : "",
   "headers" : [ ],
   "paths" : [ ],
