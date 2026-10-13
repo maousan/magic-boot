@@ -90,15 +90,18 @@ const form = reactive({ userId: '', color: '', enabled: 1, remark: '' })
 const showDelete = ref(false)
 const deleteTarget = ref<UserLightColor | null>(null)
 
-const colorOptions = [
-  { label: 'RED', value: 'RED' },
-  { label: 'GREEN', value: 'GREEN' },
-  { label: 'BLUE', value: 'BLUE' },
-  { label: 'YELLOW', value: 'YELLOW' },
-  { label: 'CYAN', value: 'CYAN' },
-  { label: 'MAGENTA', value: 'MAGENTA' },
-  { label: 'WHITE', value: 'WHITE' },
-]
+/** 颜色中文名（下拉与列表展示用） */
+const colorLabels: Record<string, string> = {
+  RED: '红色',
+  GREEN: '绿色',
+  BLUE: '蓝色',
+  YELLOW: '黄色',
+  CYAN: '青色',
+  MAGENTA: '紫色',
+  WHITE: '白色',
+}
+
+const colorOptions = Object.entries(colorLabels).map(([value, label]) => ({ label, value }))
 
 const colorTagType: Record<string, string> = {
   RED: 'error',
@@ -106,6 +109,8 @@ const colorTagType: Record<string, string> = {
   BLUE: 'info',
   YELLOW: 'warning',
   CYAN: 'success',
+  MAGENTA: 'error',
+  WHITE: 'default',
 }
 
 const columns: DataTableColumns<UserLightColor> = [
@@ -114,7 +119,7 @@ const columns: DataTableColumns<UserLightColor> = [
     title: '颜色',
     key: 'color',
     render: (row) =>
-      h(NTag, { type: (colorTagType[row.color] || 'default') as any, size: 'small' }, () => row.color),
+      h(NTag, { type: (colorTagType[row.color] || 'default') as any, size: 'small' }, () => colorLabels[row.color] || row.color),
   },
   {
     title: '状态',
