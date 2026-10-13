@@ -59,8 +59,7 @@
 }
 ================================
 let sql = """
-    -- if 归一为 1/0，避免 TINYINT(1) 被 JDBC 驱动转成 Boolean 返回
-    select id, user_id, color, if(enabled = 1, 1, 0) as enabled, remark,
+    select id, user_id, color, case when enabled = 1 then 1 else 0 end as enabled, remark,
            create_time, update_time
     from t_user_light_color
     <where>
