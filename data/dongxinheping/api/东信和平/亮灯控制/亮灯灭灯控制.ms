@@ -800,8 +800,8 @@ if (modeVal == 3 || modeVal == 4) {
     durationVal = '60m'
 }
 
-if (colorVal != 'RED' && colorVal != 'GREEN' && colorVal != 'BLUE' && colorVal != 'YELLOW' && colorVal != 'CYAN') {
-    exit 400, 'color仅支持RED/GREEN/BLUE/YELLOW/CYAN'
+if (colorVal != 'RED' && colorVal != 'GREEN' && colorVal != 'BLUE' && colorVal != 'YELLOW' && colorVal != 'CYAN' && colorVal != 'MAGENTA' && colorVal != 'WHITE') {
+    exit 400, 'color仅支持RED/GREEN/BLUE/YELLOW/CYAN/MAGENTA/WHITE'
 }
 
 if (modeVal == 1 || modeVal == 2) {

@@ -96,6 +96,8 @@ const colorOptions = [
   { label: 'BLUE', value: 'BLUE' },
   { label: 'YELLOW', value: 'YELLOW' },
   { label: 'CYAN', value: 'CYAN' },
+  { label: 'MAGENTA', value: 'MAGENTA' },
+  { label: 'WHITE', value: 'WHITE' },
 ]
 
 const colorTagType: Record<string, string> = {

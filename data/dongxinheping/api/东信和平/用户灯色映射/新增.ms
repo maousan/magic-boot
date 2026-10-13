@@ -35,7 +35,7 @@ if(color == null || (color + '').trim() == ''){
 userId = (userId + '').trim()
 color = (color + '').trim().toUpperCase()
 
-let validColors = ['RED', 'GREEN', 'BLUE', 'YELLOW', 'CYAN']
+let validColors = ['RED', 'GREEN', 'BLUE', 'YELLOW', 'CYAN', 'MAGENTA', 'WHITE']
 let colorValid = false
 for(c in validColors){
     if(c == color){
@@ -43,7 +43,7 @@ for(c in validColors){
     }
 }
 if(!colorValid){
-    exit 400, '颜色仅支持 RED/GREEN/BLUE/YELLOW/CYAN'
+    exit 400, '颜色仅支持 RED/GREEN/BLUE/YELLOW/CYAN/MAGENTA/WHITE'
 }
 
 let exists = db.selectValue("""

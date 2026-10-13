@@ -48,7 +48,7 @@ if(body.userId != null){
 }
 if(body.color != null){
     let color = (body.color + '').trim().toUpperCase()
-    let validColors = ['RED', 'GREEN', 'BLUE', 'YELLOW', 'CYAN']
+    let validColors = ['RED', 'GREEN', 'BLUE', 'YELLOW', 'CYAN', 'MAGENTA', 'WHITE']
     let colorValid = false
     for(c in validColors){
         if(c == color){
@@ -56,7 +56,7 @@ if(body.color != null){
         }
     }
     if(!colorValid){
-        exit 400, '颜色仅支持 RED/GREEN/BLUE/YELLOW/CYAN'
+        exit 400, '颜色仅支持 RED/GREEN/BLUE/YELLOW/CYAN/MAGENTA/WHITE'
     }
     sets.add('color = #{color}')
     params.color = color
