@@ -5,7 +5,7 @@
   "groupId" : "l5kl0q2xiqa4ryz349c3fkzj3hzm07vw",
   "name" : "拣货数据上传",
   "createTime" : null,
-  "updateTime" : null,
+  "updateTime" : 1791873727075,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -254,7 +254,7 @@ import cn.hutool.json.JSONUtil
 import log
 import java.util.UUID
 
-log.info("拣货数据上传body: {}", JSONUtil.toJsonStr(body))
+log.info("拣货数据上传: {}", JSONUtil.toJsonStr(body))
 
 if(body == null){
     exit 400, '请求体不能为空'
@@ -335,6 +335,32 @@ try {
         masterId = existingMaster.id
     }
 
+    // 2026-10-13 同波次镜像归并配套：删行前抓同波次（含其他用户主单）已完成行快照，
+    // 重插后恢复完成态，避免 WMS 重推把已被他人完成的行打回未拣（灯复亮）
+    let waveDoneMap = {}
+    let waveDoneRows = db.select("""
+        select d2.id as line_id, max(d2.actual_quantity) as done_actual
+        from t_picking_upload_detail d2
+        inner join t_picking_upload m2 on m2.id = d2.bill_id
+        where m2.wave_no = #{waveNo} and d2.status = 1
+        group by d2.id
+    """, { waveNo: waveNo })
+    if(waveDoneRows != null){
+        for(waveDoneRow in waveDoneRows){
+            let waveDoneLineId = waveDoneRow.line_id
+            if(waveDoneLineId == null){
+                waveDoneLineId = waveDoneRow.lineId
+            }
+            let waveDoneActual = waveDoneRow.done_actual
+            if(waveDoneActual == null){
+                waveDoneActual = waveDoneRow.doneActual
+            }
+            if(waveDoneLineId != null && waveDoneActual != null){
+                waveDoneMap[waveDoneLineId] = waveDoneActual
+            }
+        }
+    }
+
     db.table('t_picking_upload_detail').where().eq('bill_id', masterId).delete()
 
     let masterRow = {
@@ -369,6 +395,13 @@ try {
 
         let statusVal = 0
         if(actualQty >= item.planQuantity){
+            statusVal = 1
+        }
+        // 2026-10-13 行已被同波次任一用户完成的，重推保持完成态（镜像归并配套）；
+        // payload 自身已完成的以 payload 为准（报文=该行当前完成总量）
+        let waveDoneQty = waveDoneMap[detailId]
+        if(statusVal != 1 && waveDoneQty != null){
+            actualQty = waveDoneQty
             statusVal = 1
         }
 

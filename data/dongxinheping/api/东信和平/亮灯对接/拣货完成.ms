@@ -5,7 +5,7 @@
   "groupId" : "l5kl0q2xiqa4ryz349c3fkzj3hzm07vw",
   "name" : "拣货完成",
   "createTime" : null,
-  "updateTime" : 1790057839192,
+  "updateTime" : 1791873672493,
   "lock" : "0",
   "createBy" : null,
   "updateBy" : "admin",
@@ -237,7 +237,7 @@ import '@/led/turnOnAisleLedByLotNo' as turnOnAisleLedByLotNo
 import '@/led/turnOffAisleLedByLotNo' as turnOffAisleLedByLotNo
 import redis
 
-log.info("拣货完成body: {}", JSONUtil.toJsonStr(body))
+log.info("拣货完成: {}", JSONUtil.toJsonStr(body))
 
 const mixColor = Forest.config().getVariableValue("mixColor")
 const stationCode = Forest.config().getVariableValue("stationCode")
@@ -903,6 +903,39 @@ try {
                 actual_quantity = values(actual_quantity),
                 status = values(status)
         """, batchUpsertParams)
+    }
+
+    // 2026-10-13 同波次镜像归并：WMS 推同一波次给多用户是全量镜像，任一用户完成的行
+    // 对同波次同明细id的全部行同步置完成（完成态只升不降）；未完成的行若他单已完成同样被拉起，
+    // 否则其余用户名下镜像永远未拣，库位灯常亮（幽灵需求）。只按 id 匹配，不跨波次。
+    for(item in details){
+        let mergeDoneActual = null
+        if(item.actualQuantity >= item.planQuantity){
+            mergeDoneActual = item.actualQuantity
+        } else {
+            let doneRow = db.selectOne("""
+                select max(d2.actual_quantity) as done_actual
+                from t_picking_upload_detail d2
+                inner join t_picking_upload m2 on m2.id = d2.bill_id
+                where m2.wave_no = #{waveNo} and d2.id = #{detailId} and d2.status = 1
+            """, { waveNo: waveNo, detailId: item.id })
+            if(doneRow != null){
+                mergeDoneActual = doneRow.done_actual
+                if(mergeDoneActual == null){
+                    mergeDoneActual = doneRow.doneActual
+                }
+            }
+        }
+        if(mergeDoneActual == null){
+            continue
+        }
+        db.update("""
+            update t_picking_upload_detail d
+            inner join t_picking_upload m on m.id = d.bill_id
+               set d.actual_quantity = #{mergeDoneActual},
+                   d.status = 1
+             where m.wave_no = #{waveNo} and d.id = #{detailId}
+        """, { waveNo: waveNo, detailId: item.id, mergeDoneActual: mergeDoneActual })
     }
 
     if(latestUpdateTime == 0){
