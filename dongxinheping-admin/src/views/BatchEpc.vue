@@ -247,7 +247,7 @@ async function handleUnbind() {
   if (!unbindTarget.value) return
   unbinding.value = true
   try {
-    await unbindBatchEpc({ batchId: unbindTarget.value.batchId, epc: unbindTarget.value.epc })
+    await unbindBatchEpc({ id: unbindTarget.value.id })
     showUnbind.value = false
     await fetchData()
   } finally {

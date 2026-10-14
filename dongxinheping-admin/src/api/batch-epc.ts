@@ -16,7 +16,8 @@ export function bindBatchEpc(data: { locationId: string; batchId: string; epc: s
   return client.post<ApiResponse<BatchEpcBinding>>('/location/batch-epc/bind', data).then((r) => r.data.data)
 }
 
-export function unbindBatchEpc(data: { batchId?: string; epc?: string }): Promise<void> {
+// 2026-10-13 解绑按 id 优先、epc 兜底，batchId 已在后端退役；管理端列表行必有 id
+export function unbindBatchEpc(data: { id?: string; epc?: string }): Promise<void> {
   return client.post('/location/batch-epc/unbind', data).then(() => {})
 }
 
