@@ -6,7 +6,10 @@ export interface AdminUserItem {
   id: string
   username: string
   name: string | null
-  role: 'admin' | 'ops'
+  /** 展示用角色名（多角色顿号连接；无绑定兜底"运营"） */
+  role: string
+  /** 实际绑定角色编码（编辑回显用，按创建时间排序） */
+  roleCodes?: string[]
   /** 禁止登录：0未禁用，1已禁用 */
   isLogin: number
   createDate: string
@@ -28,7 +31,8 @@ export interface SaveAdminUserParams {
   name?: string
   /** sha256(明文) */
   password: string
-  role: 'admin' | 'ops'
+  /** 角色编码（角色管理中的真实角色） */
+  role: string
 }
 
 export function saveAdminUser(params: SaveAdminUserParams): Promise<void> {
@@ -38,7 +42,7 @@ export function saveAdminUser(params: SaveAdminUserParams): Promise<void> {
   }).then(() => {})
 }
 
-export function updateAdminUser(params: { id: string; name?: string; role: 'admin' | 'ops' }): Promise<void> {
+export function updateAdminUser(params: { id: string; name?: string; role: string }): Promise<void> {
   return client.post<ApiResponse<boolean>>('/system/user/update', params).then(() => {})
 }
 

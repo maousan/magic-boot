@@ -52,9 +52,12 @@
           <n-input v-model:value="form.password" type="password" show-password-on="click" placeholder="至少6位" :input-props="{ autocomplete: 'new-password' }" />
         </n-form-item>
         <n-form-item label="角色" required>
-          <n-select v-model:value="form.role" :options="roleOptions" placeholder="选择角色" />
+          <n-select v-model:value="form.role" :options="roleOptions" :loading="rolesLoading" placeholder="选择角色" />
         </n-form-item>
       </n-space>
+      <div v-if="editId && (editRoleCodes?.length ?? 0) > 1" style="font-size: 12px; color: #999; margin-top: 4px">
+        该用户当前持有多个角色（多角色请在角色管理-成员管理调整），此处保存为所选单角色。
+      </div>
     </n-modal>
 
     <!-- 重置密码 -->
@@ -84,6 +87,7 @@ import {
   resetAdminUserPassword, toggleAdminUserLogin, deleteAdminUser,
 } from '@/api/admin-user'
 import type { AdminUserItem } from '@/api/admin-user'
+import { listRoles } from '@/api/role'
 import { getCurrentUser, canButton } from '@/auth'
 import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
@@ -100,10 +104,21 @@ const pageSize = ref(20)
 const total = ref(0)
 const searchUsername = ref('')
 
-const roleOptions = [
-  { label: '管理员', value: 'admin' },
-  { label: '运营', value: 'ops' },
-]
+const roleOptions = ref<{ label: string; value: string }[]>([])
+const rolesLoading = ref(false)
+const editRoleCodes = ref<string[]>([])
+
+async function loadRoleOptions() {
+  rolesLoading.value = true
+  try {
+    const roles = await listRoles()
+    roleOptions.value = roles.map((r) => ({ label: `${r.name}（${r.code}）`, value: r.code }))
+  } catch {
+    // 错误提示由请求拦截器统一弹出
+  } finally {
+    rolesLoading.value = false
+  }
+}
 
 const columns: DataTableColumns<AdminUserItem> = [
   { title: '用户名', key: 'username', width: 140 },
@@ -111,9 +126,9 @@ const columns: DataTableColumns<AdminUserItem> = [
   {
     title: '角色',
     key: 'role',
-    width: 100,
+    width: 140,
     render: (row) =>
-      h(NTag, { type: row.role === 'admin' ? 'success' : 'info', size: 'small', bordered: false }, { default: () => (row.role === 'admin' ? '管理员' : '运营') }),
+      h(NTag, { type: (row.roleCodes ?? []).includes('admin') ? 'success' : 'info', size: 'small', bordered: false }, { default: () => row.role }),
   },
   {
     title: '状态',
@@ -194,7 +209,7 @@ function handleSearch() {
 // 新增/编辑
 const showForm = ref(false)
 const editId = ref<string | null>(null)
-const form = reactive<{ username: string; name: string; password: string; role: 'admin' | 'ops' }>({
+const form = reactive<{ username: string; name: string; password: string; role: string }>({
   username: '',
   name: '',
   password: '',
@@ -203,6 +218,7 @@ const form = reactive<{ username: string; name: string; password: string; role: 
 
 function openAdd() {
   editId.value = null
+  editRoleCodes.value = []
   form.username = ''
   form.name = ''
   form.password = ''
@@ -212,10 +228,11 @@ function openAdd() {
 
 function openEdit(row: AdminUserItem) {
   editId.value = row.id
+  editRoleCodes.value = row.roleCodes ?? []
   form.username = row.username
   form.name = row.name || ''
   form.password = ''
-  form.role = row.role
+  form.role = row.roleCodes?.[0] ?? 'ops'
   showForm.value = true
 }
 
@@ -291,5 +308,8 @@ async function handleDelete() {
   loadData()
 }
 
-onMounted(loadData)
+onMounted(() => {
+  loadData()
+  loadRoleOptions()
+})
 </script>
