@@ -31,9 +31,6 @@ import '@/aims/articles/deleteArticleInfo' as deleteArticleInfo
 
 const stationCode = Forest.config().getVariableValue("stationCode")
 
-// const batchSize = 20
-// const maxLocationPages = 3
-// 2026-10-15 单库位行数上限 60→112（16*7），现场单库位最多112行
 const batchSize = 16
 const maxLocationPages = 7
 const placeholderData = deleteArticleInfo()
@@ -131,15 +128,14 @@ let queryInventoryRowsByLocationPage = (locationId, pageOffset) => {
                 left(date_format(edit_time, '%f'), 3),
                 '+0000'
             ) as modified_date,
-            case when edit_time < date_sub(now(), interval 12 month) then 1 else 0 end as stg_flag,
-            user_define1,
-            user_define2,
+            case when user_define1 = 'Y' then 1 else 0 end as user_define1,
+            case when user_define2 = 'Y' then 1 else 0 end as stg_flag,
             user_define3,
             user_define4,
             user_define5
           from t_inventory
          where location_id = #{locationId}
-         order by stg_flag desc, edit_time desc
+         order by user_define2 desc, edit_time desc
          limit #{batchSize} offset #{pageOffset}
     """, {
         locationId: locationId,
@@ -173,7 +169,7 @@ let appendInventoryRowsToArticleData = (articleItem, inventoryRows, pageIndex) =
         putIndexedField(articleItem.data, 'qtyPa', pageIndex, rowIndex, row.qtyPa)
         putIndexedField(articleItem.data, 'editTime', pageIndex, rowIndex, '')
         putIndexedField(articleItem.data, 'stgFlag', pageIndex, rowIndex, row.stgFlag)
-        // putIndexedField(articleItem.data, 'userDefine1', pageIndex, rowIndex, valueOf(row, 'user_define1', 'userDefine1'))
+        putIndexedField(articleItem.data, 'userDefine1', pageIndex, rowIndex, row.userDefine1)
         // putIndexedField(articleItem.data, 'userDefine2', pageIndex, rowIndex, valueOf(row, 'user_define2', 'userDefine2'))
         // putIndexedField(articleItem.data, 'userDefine3', pageIndex, rowIndex, valueOf(row, 'user_define3', 'userDefine3'))
         // putIndexedField(articleItem.data, 'userDefine4', pageIndex, rowIndex, valueOf(row, 'user_define4', 'userDefine4'))

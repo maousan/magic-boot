@@ -83,6 +83,11 @@ let skuRow = db.selectOne("""
 let sku = skuRow != null ? normalizeText(skuRow.sku) : ''
 
 // 查询该库位的库存数据
+// 2026-10-15 对齐生产口径（与定时同步任务一致）：
+//   ① stg_flag 由 user_define2='Y' 推导（原为 edit_time 超 12 个月推导）
+//   ② user_define1 归一 'Y'→1/0 下发（原为裸列）
+//   ③ 排序 user_define2 desc 优先，槽位映射与定时同步一致（原为 edit_time desc）
+//   注：SQL 字符串内不能留注释（druid wall 拦截 comment not allow），旧写法见 git 历史
 let queryInventoryPage = (pageOffset) => {
     return db.select("""
         select
@@ -93,21 +98,21 @@ let queryInventoryPage = (pageOffset) => {
             qty,
             qty_allocated,
             qty_pa,
-            case when edit_time < date_sub(now(), interval 12 month) then 1 else 0 end as stg_flag,
+            case when user_define2 = 'Y' then 1 else 0 end as stg_flag,
             date_format(edit_time, '%Y-%m-%d %H:%i:%s') as edit_time,
             concat(
                 date_format(edit_time, '%Y-%m-%dT%H:%i:%s.'),
                 left(date_format(edit_time, '%f'), 3),
                 '+0000'
             ) as modified_date,
-            user_define1,
+            case when user_define1 = 'Y' then 1 else 0 end as user_define1,
             user_define2,
             user_define3,
             user_define4,
             user_define5
           from t_inventory
          where location_id = #{locationId}
-         order by edit_time desc
+         order by user_define2 desc, edit_time desc
          limit #{batchSize} offset #{pageOffset}
     """, {
         locationId: locationId,
@@ -151,8 +156,11 @@ while(pageIndex <= maxPages){
         putIndexedField(articleItem.data, 'qtyPa', pageIndex, rowIndex, row.qtyPa)
         // 2026-10-15 补 stgFlag 写入：占位清单已含 stgFlag，不写入的话手工推送会把该库位 stgFlag 全清空
         putIndexedField(articleItem.data, 'stgFlag', pageIndex, rowIndex, row.stgFlag)
-        putIndexedField(articleItem.data, 'editTime', pageIndex, rowIndex, row.editTime)
-        // putIndexedField(articleItem.data, 'userDefine1', pageIndex, rowIndex, row.userDefine1)
+        // putIndexedField(articleItem.data, 'editTime', pageIndex, rowIndex, row.editTime)
+        // 2026-10-15 对齐生产口径（与定时同步一致）：editTime 恒写空串，不下发真实值
+        putIndexedField(articleItem.data, 'editTime', pageIndex, rowIndex, '')
+        // 2026-10-15 对齐生产口径：userDefine1 归一 1/0 下发（原注释未下发）
+        putIndexedField(articleItem.data, 'userDefine1', pageIndex, rowIndex, row.userDefine1)
         // putIndexedField(articleItem.data, 'userDefine2', pageIndex, rowIndex, row.userDefine2)
         // putIndexedField(articleItem.data, 'userDefine3', pageIndex, rowIndex, row.userDefine3)
         // putIndexedField(articleItem.data, 'userDefine4', pageIndex, rowIndex, row.userDefine4)
