@@ -43,6 +43,17 @@ db.update("""
     where id = #{id}
 """, { id: id, name: name, updateBy: StpUtil.getLoginIdDefaultNull() + '' })
 
+// if (role == 'admin') {
+//     var bound = db.selectValue("""
+//         select count(1) from sys_user_role where user_id = #{id} and role_id = '1'
+//     """, { id: id })
+//     if (bound == 0) {
+//         db.update("insert into sys_user_role (user_id, role_id) values (#{id}, '1')", { id: id })
+//     }
+// } else {
+//     db.update("delete from sys_user_role where user_id = #{id} and role_id = '1'", { id: id })
+// }
+// 2026-10-15 改因：切运营补写 ops 绑定、切管理员清掉 ops 绑定（admin/ops 二选一），与角色管理成员口径一致
 if (role == 'admin') {
     var bound = db.selectValue("""
         select count(1) from sys_user_role where user_id = #{id} and role_id = '1'
@@ -50,7 +61,14 @@ if (role == 'admin') {
     if (bound == 0) {
         db.update("insert into sys_user_role (user_id, role_id) values (#{id}, '1')", { id: id })
     }
+    db.update("delete from sys_user_role where user_id = #{id} and role_id = '2'", { id: id })
 } else {
     db.update("delete from sys_user_role where user_id = #{id} and role_id = '1'", { id: id })
+    var opsBound = db.selectValue("""
+        select count(1) from sys_user_role where user_id = #{id} and role_id = '2'
+    """, { id: id })
+    if (opsBound == 0) {
+        db.update("insert into sys_user_role (user_id, role_id) values (#{id}, '2')", { id: id })
+    }
 }
 return true

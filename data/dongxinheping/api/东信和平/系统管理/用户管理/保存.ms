@@ -51,10 +51,19 @@ db.update("""
     values (replace(uuid(), '-', ''), #{username}, #{name}, #{password}, 0, 0, #{createBy}, now())
 """, { username: username, name: name, password: password, createBy: StpUtil.getLoginIdDefaultNull() + '' })
 
+// if (role == 'admin') {
+//     var userId = db.selectValue("""
+//         select id from sys_user where username = #{username} and is_del = 0
+//     """, { username: username })
+//     db.update("insert into sys_user_role (user_id, role_id) values (#{userId}, '1')", { userId: userId })
+// }
+// 2026-10-15 改因：role=ops 也写显式 ops 绑定，用户管理与角色管理成员口径一致
+var userId = db.selectValue("""
+    select id from sys_user where username = #{username} and is_del = 0
+""", { username: username })
 if (role == 'admin') {
-    var userId = db.selectValue("""
-        select id from sys_user where username = #{username} and is_del = 0
-    """, { username: username })
     db.update("insert into sys_user_role (user_id, role_id) values (#{userId}, '1')", { userId: userId })
+} else {
+    db.update("insert into sys_user_role (user_id, role_id) values (#{userId}, '2')", { userId: userId })
 }
 return true
