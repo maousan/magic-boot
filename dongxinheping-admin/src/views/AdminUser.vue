@@ -9,7 +9,7 @@
       <n-space>
         <n-input v-model:value="searchUsername" placeholder="用户名" clearable style="width: 160px" @keyup.enter="handleSearch" />
         <n-button type="primary" @click="handleSearch">查询</n-button>
-        <n-button type="primary" @click="openAdd">新增用户</n-button>
+        <n-button v-perm="'AdminUser:create'" type="primary" @click="openAdd">新增用户</n-button>
       </n-space>
     </template>
 
@@ -84,7 +84,7 @@ import {
   resetAdminUserPassword, toggleAdminUserLogin, deleteAdminUser,
 } from '@/api/admin-user'
 import type { AdminUserItem } from '@/api/admin-user'
-import { getCurrentUser } from '@/auth'
+import { getCurrentUser, canButton } from '@/auth'
 import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
 const message = useMessage()
@@ -129,32 +129,42 @@ const columns: DataTableColumns<AdminUserItem> = [
     width: 320,
     render: (row) => {
       const actions = [
-        h(NButton, { size: 'small', onClick: () => openReset(row) }, { default: () => '重置密码' }),
+        canButton('AdminUser:resetPassword')
+          ? h(NButton, { size: 'small', onClick: () => openReset(row) }, { default: () => '重置密码' })
+          : null,
       ]
       if (row.id !== '1') {
-        actions.push(
-          h(NButton, { size: 'small', onClick: () => openEdit(row) }, { default: () => '编辑' }),
-        )
-        if (row.id !== currentUser?.id) {
+        if (canButton('AdminUser:update')) {
           actions.push(
-            h(
-              NButton,
-              {
-                size: 'small',
-                type: row.isLogin === 1 ? 'success' : 'warning',
-                onClick: () => handleToggle(row),
-              },
-              { default: () => (row.isLogin === 1 ? '解禁' : '禁用') },
-            ),
-            h(
-              NButton,
-              { size: 'small', type: 'error', onClick: () => openDelete(row) },
-              { default: () => '删除' },
-            ),
+            h(NButton, { size: 'small', onClick: () => openEdit(row) }, { default: () => '编辑' }),
           )
         }
+        if (row.id !== currentUser?.id) {
+          if (canButton('AdminUser:toggle')) {
+            actions.push(
+              h(
+                NButton,
+                {
+                  size: 'small',
+                  type: row.isLogin === 1 ? 'success' : 'warning',
+                  onClick: () => handleToggle(row),
+                },
+                { default: () => (row.isLogin === 1 ? '解禁' : '禁用') },
+              ),
+            )
+          }
+          if (canButton('AdminUser:delete')) {
+            actions.push(
+              h(
+                NButton,
+                { size: 'small', type: 'error', onClick: () => openDelete(row) },
+                { default: () => '删除' },
+              ),
+            )
+          }
+        }
       }
-      return h(NSpace, { size: 'small', wrap: false }, { default: () => actions })
+      return h(NSpace, { size: 'small', wrap: false }, { default: () => actions.filter(Boolean) })
     },
   },
 ]

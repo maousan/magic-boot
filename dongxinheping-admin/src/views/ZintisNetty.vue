@@ -40,8 +40,8 @@
             @update:value="updateClientReportRegistration"
           />
           <n-button size="small" secondary @click="refreshAll">刷新</n-button>
-          <n-button size="small" type="success" :disabled="status?.running ?? false" :loading="opLoading" @click="startServer">启动</n-button>
-          <n-button size="small" type="error" :disabled="!status?.running" :loading="opLoading" @click="stopServer">停止</n-button>
+          <n-button v-perm="'ZintisNetty:server'" size="small" type="success" :disabled="status?.running ?? false" :loading="opLoading" @click="startServer">启动</n-button>
+          <n-button v-perm="'ZintisNetty:server'" size="small" type="error" :disabled="!status?.running" :loading="opLoading" @click="stopServer">停止</n-button>
         </n-space>
       </div>
 
@@ -93,8 +93,8 @@
               size="small"
             />
             <n-space>
-              <n-button type="primary" size="small" :loading="sendLoading" :disabled="!sendForm.remoteAddress" @click="send">发送</n-button>
-              <n-button type="warning" size="small" :loading="sendLoading" @click="broadcast">广播</n-button>
+              <n-button v-perm="'ZintisNetty:command'" type="primary" size="small" :loading="sendLoading" :disabled="!sendForm.remoteAddress" @click="send">发送</n-button>
+              <n-button v-perm="'ZintisNetty:command'" type="warning" size="small" :loading="sendLoading" @click="broadcast">广播</n-button>
             </n-space>
           </n-space>
         </n-card>
@@ -153,14 +153,14 @@
     <!-- 控灯弹窗 -->
     <n-modal v-model:show="showLight" :title="'控灯 - ' + (lightDevice?.macAddress || '')" preset="card" style="width: 420px">
       <n-grid :cols="4" :x-gap="8" :y-gap="8">
-        <n-gi><n-button block type="success" :loading="lightLoading" @click="sendLight('ON', 'GREEN')">开绿灯</n-button></n-gi>
-        <n-gi><n-button block type="warning" :loading="lightLoading" @click="sendLight('ON', 'YELLOW')">开黄灯</n-button></n-gi>
-        <n-gi><n-button block type="error" :loading="lightLoading" @click="sendLight('ON', 'RED')">开红灯</n-button></n-gi>
-        <n-gi><n-button block type="primary" :loading="lightLoading" @click="sendLight('ON', 'ALL')">全部开</n-button></n-gi>
-        <n-gi><n-button block type="success" :loading="lightLoading" @click="sendLight('OFF', 'GREEN')">关绿灯</n-button></n-gi>
-        <n-gi><n-button block type="warning" :loading="lightLoading" @click="sendLight('OFF', 'YELLOW')">关黄灯</n-button></n-gi>
-        <n-gi><n-button block type="error" :loading="lightLoading" @click="sendLight('OFF', 'RED')">关红灯</n-button></n-gi>
-        <n-gi><n-button block type="primary" :loading="lightLoading" @click="sendLight('OFF', 'ALL')">全部关</n-button></n-gi>
+        <n-gi><n-button v-perm="'ZintisNetty:control'" block type="success" :loading="lightLoading" @click="sendLight('ON', 'GREEN')">开绿灯</n-button></n-gi>
+        <n-gi><n-button v-perm="'ZintisNetty:control'" block type="warning" :loading="lightLoading" @click="sendLight('ON', 'YELLOW')">开黄灯</n-button></n-gi>
+        <n-gi><n-button v-perm="'ZintisNetty:control'" block type="error" :loading="lightLoading" @click="sendLight('ON', 'RED')">开红灯</n-button></n-gi>
+        <n-gi><n-button v-perm="'ZintisNetty:control'" block type="primary" :loading="lightLoading" @click="sendLight('ON', 'ALL')">全部开</n-button></n-gi>
+        <n-gi><n-button v-perm="'ZintisNetty:control'" block type="success" :loading="lightLoading" @click="sendLight('OFF', 'GREEN')">关绿灯</n-button></n-gi>
+        <n-gi><n-button v-perm="'ZintisNetty:control'" block type="warning" :loading="lightLoading" @click="sendLight('OFF', 'YELLOW')">关黄灯</n-button></n-gi>
+        <n-gi><n-button v-perm="'ZintisNetty:control'" block type="error" :loading="lightLoading" @click="sendLight('OFF', 'RED')">关红灯</n-button></n-gi>
+        <n-gi><n-button v-perm="'ZintisNetty:control'" block type="primary" :loading="lightLoading" @click="sendLight('OFF', 'ALL')">全部关</n-button></n-gi>
       </n-grid>
     </n-modal>
 
@@ -210,9 +210,9 @@
                 <p>向当前客户端发送开关灯与脉冲控制指令。</p>
               </div>
               <n-grid :cols="3" :x-gap="8" :y-gap="8">
-                <n-gi><n-button block type="success" @click="execAdvancedCommand('CONTROL_ON')">开灯</n-button></n-gi>
-                <n-gi><n-button block type="error" @click="execAdvancedCommand('CONTROL_OFF')">关灯</n-button></n-gi>
-                <n-gi><n-button block type="warning" @click="execAdvancedCommand('CONTROL_PULSE')">脉冲</n-button></n-gi>
+                <n-gi><n-button v-perm="'ZintisNetty:control'" block type="success" @click="execAdvancedCommand('CONTROL_ON')">开灯</n-button></n-gi>
+                <n-gi><n-button v-perm="'ZintisNetty:control'" block type="error" @click="execAdvancedCommand('CONTROL_OFF')">关灯</n-button></n-gi>
+                <n-gi><n-button v-perm="'ZintisNetty:control'" block type="warning" @click="execAdvancedCommand('CONTROL_PULSE')">脉冲</n-button></n-gi>
               </n-grid>
             </div>
 
@@ -243,10 +243,10 @@
                 </n-form-item>
               </n-grid>
               <n-grid :cols="4" :x-gap="8" :y-gap="8">
-                <n-gi><n-button block @click="execAdvancedCommand('TCP_SERVER_OPEN')">开 Server</n-button></n-gi>
-                <n-gi><n-button block @click="execAdvancedCommand('TCP_SERVER_CLOSE')">关 Server</n-button></n-gi>
-                <n-gi><n-button block type="primary" @click="openAdvancedTcpClient">开 Client</n-button></n-gi>
-                <n-gi><n-button block @click="execAdvancedCommand('TCP_CLIENT_CLOSE')">关 Client</n-button></n-gi>
+                <n-gi><n-button v-perm="'ZintisNetty:server'" block @click="execAdvancedCommand('TCP_SERVER_OPEN')">开 Server</n-button></n-gi>
+                <n-gi><n-button v-perm="'ZintisNetty:server'" block @click="execAdvancedCommand('TCP_SERVER_CLOSE')">关 Server</n-button></n-gi>
+                <n-gi><n-button v-perm="'ZintisNetty:server'" block type="primary" @click="openAdvancedTcpClient">开 Client</n-button></n-gi>
+                <n-gi><n-button v-perm="'ZintisNetty:server'" block @click="execAdvancedCommand('TCP_CLIENT_CLOSE')">关 Client</n-button></n-gi>
               </n-grid>
             </div>
 
@@ -258,7 +258,7 @@
               <n-form-item label="版本文件名">
                 <n-input v-model:value="advancedOta.version" placeholder="1.0.7.bin" />
               </n-form-item>
-              <n-button type="primary" @click="execAdvancedCommand('OTA_UPDATE', { version: advancedOta.version })">发送 OTA 升级</n-button>
+              <n-button v-perm="'ZintisNetty:ota'" type="primary" @click="execAdvancedCommand('OTA_UPDATE', { version: advancedOta.version })">发送 OTA 升级</n-button>
             </div>
 
             <div class="advanced-result">
@@ -321,6 +321,7 @@ import {
   zintisNettySend, zintisNettyBroadcast, zintisNettyHeartbeat, zintisNettyClientReportRegistration,
 } from '@/api/zintis-netty'
 import { controlLedDevice } from '@/api/led-device'
+import { canButton } from '@/auth'
 import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 import type {
   ZintisNettyServerStatus, ZintisNettyClientList,
@@ -455,9 +456,11 @@ const clientColumns: DataTableColumns<NettyClientRow> = [
     width: 140,
     render: (row) =>
       h(NSpace, { size: 6 }, () => [
-        h(NButton, { size: 'small', type: 'primary', onClick: () => openLight(row) }, () => '控灯'),
+        canButton('ZintisNetty:control')
+          ? h(NButton, { size: 'small', type: 'primary', onClick: () => openLight(row) }, () => '控灯')
+          : null,
         h(NButton, { size: 'small', type: 'warning', onClick: () => openAdvanced(row) }, () => '高级'),
-      ]),
+      ].filter(Boolean)),
   },
 ]
 

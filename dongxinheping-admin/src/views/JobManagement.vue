@@ -61,6 +61,7 @@ defineOptions({ inheritAttrs: false })
 import { NCard, NDataTable, NButton, NSpace, NTag, NPopconfirm, NModal, useMessage } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { pluginClient } from '@/api/request'
+import { canButton } from '@/auth'
 import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
 interface JobItem {
@@ -158,38 +159,40 @@ const columns: DataTableColumns<JobItem> = [
           { size: 'small', onClick: () => openLogModal(row) },
           () => '日志',
         ),
-        h(
-          NPopconfirm,
-          { onPositiveClick: () => handleTrigger(row) },
-          {
-            trigger: () =>
-              h(
-                NButton,
-                {
-                  size: 'small',
-                  type: 'primary',
-                  loading: triggering.value.has(row.id),
-                },
-                () => '立即执行',
-              ),
-            default: () => `确认立即执行任务「${row.name}」？`,
-          },
-        ),
-        row.enabled && !row.paused
+        canButton('JobManagement:control')
+          ? h(
+              NPopconfirm,
+              { onPositiveClick: () => handleTrigger(row) },
+              {
+                trigger: () =>
+                  h(
+                    NButton,
+                    {
+                      size: 'small',
+                      type: 'primary',
+                      loading: triggering.value.has(row.id),
+                    },
+                    () => '立即执行',
+                  ),
+                default: () => `确认立即执行任务「${row.name}」？`,
+              },
+            )
+          : null,
+        canButton('JobManagement:control') && row.enabled && !row.paused
           ? h(
               NButton,
               { size: 'small', type: 'warning', onClick: () => handlePause(row) },
               () => '暂停',
             )
           : null,
-        row.paused
+        canButton('JobManagement:control') && row.paused
           ? h(
               NButton,
               { size: 'small', type: 'info', onClick: () => handleResume(row) },
               () => '恢复',
             )
           : null,
-      ]),
+      ].filter(Boolean)),
   },
 ]
 

@@ -24,7 +24,7 @@
       <template #action>
         <n-space>
           <n-button secondary :loading="loading" @click="loadConfig">刷新</n-button>
-          <n-button type="primary" :loading="saving" @click="handleSave">保存</n-button>
+          <n-button v-perm="'AimsConfig:save'" type="primary" :loading="saving" @click="handleSave">保存</n-button>
           <n-button :loading="testing" @click="handleTest">测试连接</n-button>
         </n-space>
       </template>

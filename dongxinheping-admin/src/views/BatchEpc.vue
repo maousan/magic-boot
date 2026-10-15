@@ -6,7 +6,7 @@
     content-style="flex: 1; min-height: 0; display: flex; flex-direction: column"
   >
     <template #header-extra>
-      <n-button @click="showBind = true">绑定</n-button>
+      <n-button v-perm="'BatchEpc:bind'" @click="showBind = true">绑定</n-button>
     </template>
 
     <div class="table-page-content">
@@ -100,6 +100,7 @@ import {
 import type { DataTableColumns } from 'naive-ui'
 import { getBatchEpcList, bindBatchEpc, unbindBatchEpc, updateBatchEpc, deleteBatchEpc } from '@/api/batch-epc'
 import type { BatchEpcBinding } from '@/types'
+import { canButton } from '@/auth'
 
 const message = useMessage()
 const loading = ref(false)
@@ -148,29 +149,33 @@ const columns: DataTableColumns<BatchEpcBinding> = [
     fixed: 'right',
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
-        h(
-          NButton,
-          { size: 'small', type: 'primary', ghost: true, onClick: () => openEdit(row) },
-          () => '编辑',
-        ),
-        row.status === 1
+        canButton('BatchEpc:update')
+          ? h(
+              NButton,
+              { size: 'small', type: 'primary', ghost: true, onClick: () => openEdit(row) },
+              () => '编辑',
+            )
+          : null,
+        row.status === 1 && canButton('BatchEpc:unbind')
           ? h(
               NButton,
               { size: 'small', type: 'error', onClick: () => openUnbind(row) },
               () => '解绑',
             )
           : null,
-        h(NPopconfirm, { onPositiveClick: () => handleDelete(row) }, {
-          trigger: () =>
-            h(NButton, {
-              size: 'small',
-              type: 'error',
-              ghost: true,
-              loading: deletingIds.value.has(row.id),
-            }, () => '删除'),
-          default: () => `确认删除该 EPC 绑定记录？`,
-        }),
-      ]),
+        canButton('BatchEpc:delete')
+          ? h(NPopconfirm, { onPositiveClick: () => handleDelete(row) }, {
+              trigger: () =>
+                h(NButton, {
+                  size: 'small',
+                  type: 'error',
+                  ghost: true,
+                  loading: deletingIds.value.has(row.id),
+                }, () => '删除'),
+              default: () => `确认删除该 EPC 绑定记录？`,
+            })
+          : null,
+      ].filter(Boolean)),
   },
 ]
 

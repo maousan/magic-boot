@@ -7,7 +7,7 @@
   >
     <template #header-extra>
       <n-space>
-        <n-button type="primary" @click="openCreate">新增版本</n-button>
+        <n-button v-perm="'AppVersion:create'" type="primary" @click="openCreate">新增版本</n-button>
         <n-button type="primary" @click="handleSearch">查询</n-button>
       </n-space>
     </template>
@@ -123,6 +123,7 @@ import {
   disableAppVersion, enableAppVersion, parseApk,
 } from '@/api/app-version'
 import type { AppVersion } from '@/types'
+import { canButton } from '@/auth'
 import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
 const dialog = useDialog()
@@ -187,14 +188,20 @@ const columns: DataTableColumns<AppVersion> = [
     fixed: 'right',
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
-        h(NButton, { size: 'small', onClick: () => openEdit(row) }, () => '编辑'),
-        h(NButton, {
-          size: 'small',
-          type: row.disabled ? 'success' : 'warning',
-          onClick: () => handleToggleDisabled(row),
-        }, () => row.disabled ? '启用' : '停用'),
-        h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '删除'),
-      ]),
+        canButton('AppVersion:update')
+          ? h(NButton, { size: 'small', onClick: () => openEdit(row) }, () => '编辑')
+          : null,
+        canButton('AppVersion:update')
+          ? h(NButton, {
+              size: 'small',
+              type: row.disabled ? 'success' : 'warning',
+              onClick: () => handleToggleDisabled(row),
+            }, () => row.disabled ? '启用' : '停用')
+          : null,
+        canButton('AppVersion:delete')
+          ? h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '删除')
+          : null,
+      ].filter(Boolean)),
   },
 ]
 

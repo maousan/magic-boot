@@ -27,7 +27,7 @@
           <n-input v-model:value="form.notes" placeholder="如合同号" />
         </n-form-item>
         <n-form-item>
-          <n-button type="primary" :loading="issuing" @click="handleIssue">签发并下载 .lic</n-button>
+          <n-button v-perm="'LicenseIssue:issue'" type="primary" :loading="issuing" @click="handleIssue">签发并下载 .lic</n-button>
         </n-form-item>
       </n-form>
     </div>

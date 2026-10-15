@@ -19,7 +19,7 @@
           <span class="admin-user-info" v-if="currentUser">
             {{ currentUser.name || currentUser.username }}
             <n-tag size="small" :type="currentUser.role === 'admin' ? 'success' : 'info'" :bordered="false">
-              {{ currentUser.role === 'admin' ? '管理员' : '运营' }}
+              {{ currentUser.role === 'admin' ? '管理员' : currentUser.role }}
             </n-tag>
           </span>
           <n-button text @click="showChangePwd = true">修改密码</n-button>
@@ -87,10 +87,10 @@
 import { computed, ref, reactive, watch, nextTick, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { NLayout, NLayoutSider, NLayoutHeader, NLayoutContent, NMenu, NButton, NAlert, NTag, NModal, NFormItem, NInput, useDialog, useMessage } from 'naive-ui'
-import type { MenuOption } from 'naive-ui'
-import { clearSession, getCurrentUser, getRole, canAccess } from '@/auth'
-import { apiLogout, apiChangeMyPassword } from '@/api/auth'
+import { clearSession, getCurrentUser, updateSessionUser } from '@/auth'
+import { apiLogout, apiChangeMyPassword, apiValidateToken } from '@/api/auth'
 import { useTabStore } from '@/composables/useTabStore'
+import { menuOptions } from '@/config/menus'
 import { getLicenseStatus } from '@/api/license'
 import type { LicenseStatusView } from '@/types'
 
@@ -100,7 +100,18 @@ const dialog = useDialog()
 const message = useMessage()
 const { tabs: storeTabs, cachedNames, addTab, removeTab, clearTabs } = useTabStore()
 
-const currentUser = getCurrentUser()
+// 会话用户：启动时经 validateToken 刷新（回写后端下发的 menus，并更新头部显示）
+const currentUser = ref(getCurrentUser())
+
+async function refreshSessionUser() {
+  try {
+    const fresh = await apiValidateToken()
+    updateSessionUser(fresh)
+    currentUser.value = fresh
+  } catch {
+    // 402 已由请求拦截器统一跳登录；其他异常保留本地会话
+  }
+}
 
 // 修改密码（自助）
 const showChangePwd = ref(false)
@@ -148,48 +159,21 @@ function scrollTabIntoView(name: string) {
   })
 }
 
-const menuOptions: MenuOption[] = [
-  { label: '仪表盘', key: 'Dashboard' },
-  { label: '库位管理', key: 'location', children: [
-    { label: '库位列表', key: 'WarehouseLocation' },
-    { label: '巷道灯绑定', key: 'LedMapping' },
-    { label: '标签绑定', key: 'LabelMapping' },
-    { label: '库存查询', key: 'InventoryQuery' },
-  ]},
-  { label: '巷道灯管理', key: 'led', children: [
-    { label: '设备管理', key: 'LedDevice' },
-    { label: '颜色管理', key: 'LedColor' },
-    { label: 'Netty 管理', key: 'ZintisNetty' },
-  ]},
-  { label: 'EPC 管理', key: 'epc', children: [
-    { label: '批次 EPC 绑定', key: 'BatchEpc' },
-    { label: 'RFID Server', key: 'RfidServer' },
-  ]},
-  { label: '拣货管理', key: 'picking', children: [
-    { label: '拣货单', key: 'PickingUpload' },
-    { label: '用户灯色映射', key: 'UserLightColor' },
-  ]},
-  { label: '系统管理', key: 'system', children: [
-    { label: '用户管理', key: 'AdminUser' },
-    { label: 'App 版本管理', key: 'AppVersion' },
-    { label: 'App 运行日志', key: 'AppDeviceLog' },
-    { label: '系统授权', key: 'SystemLicense' },
-    { label: '授权签发', key: 'LicenseIssue' },
-    { label: '数据库管理', key: 'DatabaseManagement' },
-    { label: '定时任务', key: 'JobManagement' },
-    { label: 'AIMS 配置', key: 'AimsConfig' },
-    { label: 'Magic-API', key: 'MagicApiConsole' },
-    { label: '实时日志', key: 'RealtimeLog' },
-  ]},
-]
+// 菜单目录抽到 @/config/menus 与「菜单权限」设置页共用（叶子 key=路由名）
 
-// 按角色过滤：非 admin 角色只保留有权访问的菜单，过滤后为空的分组整组隐藏
+// 按后端下发的菜单清单过滤（依赖 currentUser ref，validateToken 刷新后自动重算）；
+// 老会话缺 menus（刷新完成前）只留 Dashboard，'*' 全量
 const visibleMenuOptions = computed(() => {
-  if (getRole() === 'admin') return menuOptions
+  const menus = currentUser.value?.menus
+  if (menus == null) {
+    return menuOptions.filter((m) => m.key === 'Dashboard')
+  }
+  if (menus.includes('*')) return menuOptions
+  const allowed = (key: string | number | undefined) => key != null && menus.includes(String(key))
   return menuOptions
     .map((group) =>
       group.children
-        ? { ...group, children: group.children.filter((child) => canAccess(String(child.key))) }
+        ? { ...group, children: group.children.filter((child) => allowed(child.key)) }
         : group,
     )
     .filter((group) => !group.children || group.children.length > 0)
@@ -220,6 +204,7 @@ async function refreshLicenseBanner() {
 }
 
 onMounted(() => {
+  refreshSessionUser()
   refreshLicenseBanner()
   setInterval(refreshLicenseBanner, 60_000)
 })

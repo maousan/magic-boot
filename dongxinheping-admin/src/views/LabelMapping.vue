@@ -6,7 +6,7 @@
     content-style="flex: 1; min-height: 0; display: flex; flex-direction: column"
   >
     <template #header-extra>
-      <n-button type="primary" @click="showCreate = true">新增绑定</n-button>
+      <n-button v-perm="'LabelMapping:create'" type="primary" @click="showCreate = true">新增绑定</n-button>
     </template>
 
     <div class="table-page-content">
@@ -134,6 +134,7 @@ import {
 import type { DataTableColumns } from 'naive-ui'
 import { getLabelMappingList, createLabelMapping, unbindLabelMapping, deleteLabelMapping, lightOnLabel, lightOffLabel, getLabelLedStatus, type LabelLedStatus } from '@/api/label-mapping'
 import type { LocationLabelBinding } from '@/types'
+import { canButton } from '@/auth'
 import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
 const loading = ref(false)
@@ -203,11 +204,19 @@ const columns: DataTableColumns<LocationLabelBinding> = [
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
         h(NButton, { size: 'small', type: 'info', ghost: true, onClick: () => handleLedStatus(row) }, () => '灯状态'),
-        h(NButton, { size: 'small', type: 'warning', onClick: () => openLightOn(row) }, () => '亮灯'),
-        h(NButton, { size: 'small', onClick: () => handleLightOff(row) }, () => '灭灯'),
-        h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '解绑'),
-        h(NButton, { size: 'small', type: 'error', ghost: true, onClick: () => openDbDelete(row) }, () => '删除'),
-      ]),
+        canButton('LabelMapping:light')
+          ? h(NButton, { size: 'small', type: 'warning', onClick: () => openLightOn(row) }, () => '亮灯')
+          : null,
+        canButton('LabelMapping:light')
+          ? h(NButton, { size: 'small', onClick: () => handleLightOff(row) }, () => '灭灯')
+          : null,
+        canButton('LabelMapping:unbind')
+          ? h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '解绑')
+          : null,
+        canButton('LabelMapping:delete')
+          ? h(NButton, { size: 'small', type: 'error', ghost: true, onClick: () => openDbDelete(row) }, () => '删除')
+          : null,
+      ].filter(Boolean)),
   },
 ]
 

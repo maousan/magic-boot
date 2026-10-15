@@ -170,9 +170,9 @@
               <p>向当前设备发送开关灯与脉冲控制指令。</p>
             </div>
             <n-grid :cols="3" :x-gap="8" :y-gap="8">
-              <n-gi><n-button block type="success" @click="execClientCommand('CONTROL_ON')">开灯</n-button></n-gi>
-              <n-gi><n-button block type="error" @click="execClientCommand('CONTROL_OFF')">关灯</n-button></n-gi>
-              <n-gi><n-button block type="warning" @click="execClientCommand('CONTROL_PULSE')">脉冲</n-button></n-gi>
+              <n-gi><n-button v-perm="'LedDevice:control'" block type="success" @click="execClientCommand('CONTROL_ON')">开灯</n-button></n-gi>
+              <n-gi><n-button v-perm="'LedDevice:control'" block type="error" @click="execClientCommand('CONTROL_OFF')">关灯</n-button></n-gi>
+              <n-gi><n-button v-perm="'LedDevice:control'" block type="warning" @click="execClientCommand('CONTROL_PULSE')">脉冲</n-button></n-gi>
             </n-grid>
           </div>
 
@@ -203,10 +203,10 @@
               </n-form-item>
             </n-grid>
             <n-grid :cols="4" :x-gap="8" :y-gap="8">
-              <n-gi><n-button block @click="execClientCommand('TCP_SERVER_OPEN')">开 Server</n-button></n-gi>
-              <n-gi><n-button block @click="execClientCommand('TCP_SERVER_CLOSE')">关 Server</n-button></n-gi>
-              <n-gi><n-button block type="primary" @click="openTcpClient">开 Client</n-button></n-gi>
-              <n-gi><n-button block @click="execClientCommand('TCP_CLIENT_CLOSE')">关 Client</n-button></n-gi>
+              <n-gi><n-button v-perm="'LedDevice:server'" block @click="execClientCommand('TCP_SERVER_OPEN')">开 Server</n-button></n-gi>
+              <n-gi><n-button v-perm="'LedDevice:server'" block @click="execClientCommand('TCP_SERVER_CLOSE')">关 Server</n-button></n-gi>
+              <n-gi><n-button v-perm="'LedDevice:server'" block type="primary" @click="openTcpClient">开 Client</n-button></n-gi>
+              <n-gi><n-button v-perm="'LedDevice:server'" block @click="execClientCommand('TCP_CLIENT_CLOSE')">关 Client</n-button></n-gi>
             </n-grid>
           </div>
 
@@ -218,7 +218,7 @@
             <n-form-item label="版本文件名">
               <n-input v-model:value="ota.version" placeholder="1.0.7.bin" />
             </n-form-item>
-            <n-button type="primary" @click="execOta">发送 OTA 升级</n-button>
+            <n-button v-perm="'LedDevice:ota'" type="primary" @click="execOta">发送 OTA 升级</n-button>
           </div>
 
           <div class="advanced-result">
@@ -288,6 +288,7 @@ import {
   getLedDeviceList, createLedDevice, updateLedDevice, deleteLedDevice, controlLedDevice,
 } from '@/api/led-device'
 import type { LedDevice, LedControlCommand, ZintisLedControlRequest } from '@/types'
+import { canButton } from '@/auth'
 import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
 const loading = ref(false)
@@ -367,11 +368,17 @@ const columns: DataTableColumns<LedDevice> = [
     fixed: 'right',
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
-        h(NButton, { size: 'small', type: 'primary', onClick: () => openLight(row) }, () => '控灯'),
+        canButton('LedDevice:control')
+          ? h(NButton, { size: 'small', type: 'primary', onClick: () => openLight(row) }, () => '控灯')
+          : null,
         h(NButton, { size: 'small', type: 'warning', onClick: () => openControl(row) }, () => '高级'),
-        h(NButton, { size: 'small', onClick: () => openEdit(row) }, () => '编辑'),
-        h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '删除'),
-      ]),
+        canButton('LedDevice:update')
+          ? h(NButton, { size: 'small', onClick: () => openEdit(row) }, () => '编辑')
+          : null,
+        canButton('LedDevice:delete')
+          ? h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '删除')
+          : null,
+      ].filter(Boolean)),
   },
 ]
 

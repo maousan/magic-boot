@@ -13,11 +13,12 @@
           <n-button type="primary" @click="loadData">查询</n-button>
         </n-space>
         <n-space>
-          <n-button @click="showAddModal = true">手动添加</n-button>
-          <n-dropdown :options="templateOptions" @select="downloadTemplate">
+          <n-button v-perm="'WarehouseLocation:create'" @click="showAddModal = true">手动添加</n-button>
+          <n-dropdown v-perm="'WarehouseLocation:import'" :options="templateOptions" @select="downloadTemplate">
             <n-button>下载模板</n-button>
           </n-dropdown>
           <n-upload
+            v-perm="'WarehouseLocation:import'"
             :max="1"
             accept=".xlsx,.xls,.csv"
             :custom-request="handleUpload"
@@ -93,6 +94,7 @@ import type { DataTableColumns, FormRules, DropdownOption } from 'naive-ui'
 import type { UploadCustomRequestOptions } from 'naive-ui'
 import { getWarehouseLocations, addWarehouseLocation, updateWarehouseLocation, deleteWarehouseLocation, importWarehouseLocations, syncLocationInventory, updateLocationArticle } from '@/api/warehouse'
 import type { WarehouseLocation, ImportResult } from '@/types'
+import { canButton } from '@/auth'
 
 const message = useMessage()
 const dialog = useDialog()
@@ -143,35 +145,43 @@ const columns: DataTableColumns<WarehouseLocation> = [
     fixed: 'right',
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
-        h(NPopconfirm, { onPositiveClick: () => handleSync(row) }, {
-          trigger: () =>
-            h(NButton, {
+        canButton('WarehouseLocation:update')
+          ? h(NPopconfirm, { onPositiveClick: () => handleSync(row) }, {
+              trigger: () =>
+                h(NButton, {
+                  size: 'small',
+                  type: 'primary',
+                  loading: syncingIds.value.has(row.id),
+                }, () => '同步库存'),
+              default: () => `确认同步库位「${row.locationId}」的库存数据？`,
+            })
+          : null,
+        canButton('WarehouseLocation:update')
+          ? h(NPopconfirm, { onPositiveClick: () => handleUpdateArticle(row) }, {
+              trigger: () =>
+                h(NButton, {
+                  size: 'small',
+                  type: 'info',
+                  loading: updatingIds.value.has(row.id),
+                }, () => '更新标签'),
+              default: () => `确认更新库位「${row.locationId}」的标签数据？`,
+            })
+          : null,
+        canButton('WarehouseLocation:update')
+          ? h(NButton, {
               size: 'small',
-              type: 'primary',
-              loading: syncingIds.value.has(row.id),
-            }, () => '同步库存'),
-          default: () => `确认同步库位「${row.locationId}」的库存数据？`,
-        }),
-        h(NPopconfirm, { onPositiveClick: () => handleUpdateArticle(row) }, {
-          trigger: () =>
-            h(NButton, {
+              type: 'warning',
+              onClick: () => openEdit(row),
+            }, () => '编辑')
+          : null,
+        canButton('WarehouseLocation:delete')
+          ? h(NButton, {
               size: 'small',
-              type: 'info',
-              loading: updatingIds.value.has(row.id),
-            }, () => '更新标签'),
-          default: () => `确认更新库位「${row.locationId}」的标签数据？`,
-        }),
-        h(NButton, {
-          size: 'small',
-          type: 'warning',
-          onClick: () => openEdit(row),
-        }, () => '编辑'),
-        h(NButton, {
-          size: 'small',
-          type: 'error',
-          onClick: () => openDelete(row),
-        }, () => '删除'),
-      ]),
+              type: 'error',
+              onClick: () => openDelete(row),
+            }, () => '删除')
+          : null,
+      ].filter(Boolean)),
   },
 ]
 

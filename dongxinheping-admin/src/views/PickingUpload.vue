@@ -13,8 +13,8 @@
           <n-input v-model:value="query.userName" placeholder="用户姓名" clearable style="width: 120px" @keyup.enter="handleSearch" />
           <n-input v-model:value="query.locationCode" placeholder="库位号" clearable style="width: 160px" @keyup.enter="handleSearch" />
           <n-button type="primary" @click="handleSearch">查询</n-button>
-          <n-button type="primary" @click="openAddMaster">新增单据</n-button>
-          <n-button secondary @click="showMockDialog = true">生成模拟单据</n-button>
+          <n-button v-perm="'PickingUpload:create'" type="primary" @click="openAddMaster">新增单据</n-button>
+          <n-button v-perm="'PickingUpload:mock'" secondary @click="showMockDialog = true">生成模拟单据</n-button>
         </n-space>
       </template>
 
@@ -48,7 +48,7 @@
       <n-drawer-content :title="'明细 - ' + (selectedMaster?.waveNo ?? '')" closable>
         <!-- @vue-expect-error header-extra slot exists at runtime -->
         <template #header-extra>
-          <n-button type="primary" size="small" @click="openAddDetail">新增明细</n-button>
+          <n-button v-perm="'PickingUpload:create'" type="primary" size="small" @click="openAddDetail">新增明细</n-button>
         </template>
         <n-data-table
           :columns="detailColumns"
@@ -139,6 +139,7 @@ import {
 } from '@/api/picking-upload'
 import { getWarehouseLocations } from '@/api/warehouse'
 import type { PickingUpload, PickingUploadDetail } from '@/types'
+import { canButton } from '@/auth'
 import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
 const message = useMessage()
@@ -211,27 +212,37 @@ const masterColumns: DataTableColumns<PickingUpload> = [
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
         h(NButton, { size: 'small', onClick: () => openDetailDrawer(row) }, () => '明细'),
-        h(NButton, {
-          size: 'small',
-          type: 'warning',
-          loading: uploadingMasterIds.value.has(row.id),
-          onClick: () => handlePickingUpload(row),
-        }, () => '上传'),
-        h(NButton, {
-          size: 'small',
-          type: 'success',
-          loading: lightControlIds.value.has(row.id + '_on'),
-          onClick: () => handleLightOn(row),
-        }, () => '开灯'),
-        h(NButton, {
-          size: 'small',
-          type: 'error',
-          loading: lightControlIds.value.has(row.id + '_off'),
-          onClick: () => handleLightOff(row),
-        }, () => '关灯'),
-        h(NButton, { size: 'small', onClick: () => openEditMaster(row) }, () => '编辑'),
-        h(NButton, { size: 'small', type: 'error', onClick: () => openDeleteMaster(row) }, () => '删除'),
-      ]),
+        canButton('PickingUpload:upload')
+          ? h(NButton, {
+              size: 'small',
+              type: 'warning',
+              loading: uploadingMasterIds.value.has(row.id),
+              onClick: () => handlePickingUpload(row),
+            }, () => '上传')
+          : null,
+        canButton('PickingUpload:light')
+          ? h(NButton, {
+              size: 'small',
+              type: 'success',
+              loading: lightControlIds.value.has(row.id + '_on'),
+              onClick: () => handleLightOn(row),
+            }, () => '开灯')
+          : null,
+        canButton('PickingUpload:light')
+          ? h(NButton, {
+              size: 'small',
+              type: 'error',
+              loading: lightControlIds.value.has(row.id + '_off'),
+              onClick: () => handleLightOff(row),
+            }, () => '关灯')
+          : null,
+        canButton('PickingUpload:update')
+          ? h(NButton, { size: 'small', onClick: () => openEditMaster(row) }, () => '编辑')
+          : null,
+        canButton('PickingUpload:delete')
+          ? h(NButton, { size: 'small', type: 'error', onClick: () => openDeleteMaster(row) }, () => '删除')
+          : null,
+      ].filter(Boolean)),
   },
 ]
 
@@ -263,20 +274,28 @@ const detailColumns: DataTableColumns<PickingUploadDetail> = [
           loading: uploadingDetailIds.value.has(row.id),
           onClick: () => handlePickingComplete(row),
         }, () => '上传'),
-        h(NButton, {
-          size: 'small',
-          type: 'primary',
-          loading: completingDetailIds.value.has(row.id),
-          onClick: () => handleDetailComplete(row),
-        }, () => '完成'),
-        h(NButton, {
-          size: 'small',
-          loading: resettingDetailIds.value.has(row.id),
-          onClick: () => handleDetailReset(row),
-        }, () => '重拣'),
-        h(NButton, { size: 'small', onClick: () => openEditDetail(row) }, () => '编辑'),
-        h(NButton, { size: 'small', type: 'error', onClick: () => openDeleteDetail(row) }, () => '删除'),
-      ]),
+        canButton('PickingUpload:update')
+          ? h(NButton, {
+              size: 'small',
+              type: 'primary',
+              loading: completingDetailIds.value.has(row.id),
+              onClick: () => handleDetailComplete(row),
+            }, () => '完成')
+          : null,
+        canButton('PickingUpload:update')
+          ? h(NButton, {
+              size: 'small',
+              loading: resettingDetailIds.value.has(row.id),
+              onClick: () => handleDetailReset(row),
+            }, () => '重拣')
+          : null,
+        canButton('PickingUpload:update')
+          ? h(NButton, { size: 'small', onClick: () => openEditDetail(row) }, () => '编辑')
+          : null,
+        canButton('PickingUpload:delete')
+          ? h(NButton, { size: 'small', type: 'error', onClick: () => openDeleteDetail(row) }, () => '删除')
+          : null,
+      ].filter(Boolean)),
   },
 ]
 

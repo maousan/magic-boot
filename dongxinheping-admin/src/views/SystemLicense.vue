@@ -31,7 +31,7 @@
       </n-card>
 
       <n-card title="导入授权文件" size="small" style="margin-top: 16px">
-        <div class="import-row">
+        <div v-perm="'SystemLicense:import'" class="import-row">
           <n-upload :max="1" accept=".lic" :default-upload="false" @change="onFileChange">
             <n-button>选择 .lic 授权文件</n-button>
           </n-upload>

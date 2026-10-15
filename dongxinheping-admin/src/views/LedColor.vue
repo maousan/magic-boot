@@ -7,7 +7,7 @@
   >
     <template #header-extra>
       <n-space>
-        <n-button type="primary" @click="openCreate">新增颜色</n-button>
+        <n-button v-perm="'LedColor:create'" type="primary" @click="openCreate">新增颜色</n-button>
         <n-button type="primary" @click="handleSearch">查询</n-button>
       </n-space>
     </template>
@@ -101,6 +101,7 @@ import {
 import type { DataTableColumns } from 'naive-ui'
 import { getLedColorList, createLedColor, updateLedColor, deleteLedColor } from '@/api/led-color'
 import type { LedColor } from '@/types'
+import { canButton } from '@/auth'
 import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
 const loading = ref(false)
@@ -149,9 +150,13 @@ const columns: DataTableColumns<LedColor> = [
     fixed: 'right',
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
-        h(NButton, { size: 'small', onClick: () => openEdit(row) }, () => '编辑'),
-        h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '删除'),
-      ]),
+        canButton('LedColor:update')
+          ? h(NButton, { size: 'small', onClick: () => openEdit(row) }, () => '编辑')
+          : null,
+        canButton('LedColor:delete')
+          ? h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '删除')
+          : null,
+      ].filter(Boolean)),
   },
 ]
 

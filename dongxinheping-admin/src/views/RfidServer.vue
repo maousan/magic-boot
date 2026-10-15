@@ -25,8 +25,8 @@
           <n-text depth="3" style="font-size: 12px">自动刷新</n-text>
           <n-switch v-model:value="autoRefresh" size="small" />
           <n-button size="small" secondary :loading="loading" @click="refreshAll">刷新</n-button>
-          <n-button size="small" type="success" :disabled="status?.running ?? false" :loading="opLoading" @click="startServer">启动</n-button>
-          <n-button size="small" type="error" :disabled="!status?.running" :loading="opLoading" @click="stopServer">停止</n-button>
+          <n-button v-perm="'RfidServer:server'" size="small" type="success" :disabled="status?.running ?? false" :loading="opLoading" @click="startServer">启动</n-button>
+          <n-button v-perm="'RfidServer:server'" size="small" type="error" :disabled="!status?.running" :loading="opLoading" @click="stopServer">停止</n-button>
         </n-space>
       </div>
 
@@ -105,6 +105,7 @@
             </n-form-item>
             <n-space>
               <n-button
+                v-perm="'RfidServer:command'"
                 type="primary"
                 size="small"
                 :loading="sending"

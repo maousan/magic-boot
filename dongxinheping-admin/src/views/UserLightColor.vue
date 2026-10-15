@@ -9,7 +9,7 @@
       <n-space>
         <n-input v-model:value="searchUserId" placeholder="用户ID" clearable style="width: 160px" @keyup.enter="handleSearch" />
         <n-button type="primary" @click="handleSearch">查询</n-button>
-        <n-button type="primary" @click="openAdd">新增</n-button>
+        <n-button v-perm="'UserLightColor:create'" type="primary" @click="openAdd">新增</n-button>
       </n-space>
     </template>
 
@@ -71,6 +71,7 @@ import {
 import type { DataTableColumns } from 'naive-ui'
 import { getUserLightColorList, addUserLightColor, updateUserLightColor, deleteUserLightColor } from '@/api/user-light-color'
 import type {UserLightColor} from '@/types'
+import { canButton } from '@/auth'
 import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
 const message = useMessage()
@@ -137,9 +138,13 @@ const columns: DataTableColumns<UserLightColor> = [
     key: 'actions',
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
-        h(NButton, { size: 'small', onClick: () => openEdit(row) }, () => '编辑'),
-        h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '删除'),
-      ]),
+        canButton('UserLightColor:create')
+          ? h(NButton, { size: 'small', onClick: () => openEdit(row) }, () => '编辑')
+          : null,
+        canButton('UserLightColor:delete')
+          ? h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '删除')
+          : null,
+      ].filter(Boolean)),
   },
 ]
 

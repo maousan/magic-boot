@@ -1,37 +1,27 @@
 const TOKEN_KEY = 'dxhp_admin_token'
 const USER_KEY = 'dxhp_admin_user'
 
-export type Role = 'admin' | 'ops'
+/** 'admin' 为管理员标记；其他值为角色显示名（后端按用户第一个绑定角色名下发，无绑定为「运营」） */
+export type Role = string
 
 export interface SessionUser {
   id: string
   username: string
   name: string | null
   role: Role
+  /** 后端下发的可见路由名清单；['*'] 表示全量（admin）。老会话可能缺该字段，启动时会经 validateToken 刷新 */
+  menus?: string[]
+  /** 后端下发的按钮权限点清单（`路由:动作`）；['*'] 全量；缺失视为全量（兼容旧会话） */
+  buttons?: string[]
 }
-
-/** 运营角色可见的路由；admin 全量可见 */
-const OPS_ALLOWED_ROUTES: ReadonlySet<string> = new Set([
-  'Dashboard',
-  // 库存管理（库位管理组）
-  'WarehouseLocation',
-  'LedMapping',
-  'LabelMapping',
-  'InventoryQuery',
-  // 巷道灯管理
-  'LedDevice',
-  'LedColor',
-  'ZintisNetty',
-  // EPC 管理
-  'BatchEpc',
-  'RfidServer',
-  // 拣货管理
-  'PickingUpload',
-  'UserLightColor',
-])
 
 export function setSession(token: string, user: SessionUser): void {
   localStorage.setItem(TOKEN_KEY, token)
+  localStorage.setItem(USER_KEY, JSON.stringify(user))
+}
+
+/** 仅刷新会话中的用户信息（token 不变），供启动时 validateToken 回写 */
+export function updateSessionUser(user: SessionUser): void {
   localStorage.setItem(USER_KEY, JSON.stringify(user))
 }
 
@@ -58,12 +48,20 @@ export function isAuthenticated(): boolean {
 }
 
 export function getRole(): Role {
-  // 无用户信息时按低权限角色处理
-  return getCurrentUser()?.role ?? 'ops'
+  // 无用户信息时按低权限显示名处理
+  return getCurrentUser()?.role ?? '运营'
 }
 
-/** 当前角色是否可访问该路由 */
+/** 当前账号是否可访问该路由（菜单清单由后端下发，'*' 表示全量） */
 export function canAccess(routeName: string): boolean {
-  if (getRole() === 'admin') return true
-  return OPS_ALLOWED_ROUTES.has(routeName)
+  const menus = getCurrentUser()?.menus
+  if (menus == null) return routeName === 'Dashboard'
+  return menus.includes('*') || menus.includes(routeName)
+}
+
+/** 当前账号是否可用该操作按钮（key 形如 'AdminUser:delete'；缺失视为全量，兼容旧会话） */
+export function canButton(key: string): boolean {
+  const buttons = getCurrentUser()?.buttons
+  if (buttons == null) return true
+  return buttons.includes('*') || buttons.includes(key)
 }

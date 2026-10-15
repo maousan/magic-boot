@@ -79,7 +79,7 @@ async function handleLogin() {
   loading.value = true
   try {
     const result = await apiLogin(form.username, form.password)
-    setSession(result.token, { id: result.id, username: result.username, name: result.name, role: result.role })
+    setSession(result.token, { id: result.id, username: result.username, name: result.name, role: result.role, menus: result.menus, buttons: result.buttons })
     notification.success({ title: '登录成功', content: `欢迎回来，${result.name || result.username}`, duration: 3000 })
     router.push({ name: 'Dashboard' })
   } catch {

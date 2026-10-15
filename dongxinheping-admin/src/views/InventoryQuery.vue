@@ -7,9 +7,9 @@
   >
     <template #header-extra>
       <n-space>
-        <n-button type="primary" @click="showCreate = true">手动录入</n-button>
-        <n-button @click="showMock = true">生成模拟数据</n-button>
-        <n-button type="error" @click="showClear = true">清空库存</n-button>
+        <n-button v-perm="'InventoryQuery:maintain'" type="primary" @click="showCreate = true">手动录入</n-button>
+        <n-button v-perm="'InventoryQuery:maintain'" @click="showMock = true">生成模拟数据</n-button>
+        <n-button v-perm="'InventoryQuery:maintain'" type="error" @click="showClear = true">清空库存</n-button>
         <n-button type="primary" @click="handleSearch">查询</n-button>
       </n-space>
     </template>
@@ -144,6 +144,7 @@ import { NCard, NDataTable, NButton, NSpace, NGrid, NGi, NInput, NInputNumber, N
 import type { DataTableColumns } from 'naive-ui'
 import { getInventoryList, createInventory, deleteInventory, clearInventory, generateMockInventory } from '@/api/inventory'
 import type { InventoryItem } from '@/types'
+import { canButton } from '@/auth'
 
 const loading = ref(false)
 const creating = ref(false)
@@ -204,7 +205,9 @@ const columns: DataTableColumns<InventoryItem> = [
     width: 80,
     fixed: 'right',
     render: (row) =>
-      h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '删除'),
+      canButton('InventoryQuery:maintain')
+        ? h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '删除')
+        : null,
   },
 ]
 

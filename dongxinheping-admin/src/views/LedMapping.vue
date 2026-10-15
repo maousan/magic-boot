@@ -7,8 +7,8 @@
   >
     <template #header-extra>
       <n-space>
-        <n-button @click="showImport = true">导入</n-button>
-        <n-button type="primary" @click="showCreate = true">新增绑定</n-button>
+        <n-button v-perm="'LedMapping:import'" @click="showImport = true">导入</n-button>
+        <n-button v-perm="'LedMapping:create'" type="primary" @click="showCreate = true">新增绑定</n-button>
       </n-space>
     </template>
 
@@ -140,6 +140,7 @@ import type { DataTableColumns, UploadFileInfo } from 'naive-ui'
 import { getLedMappingList, createLedMapping, deleteLedMapping, importLedMappings } from '@/api/led-mapping'
 import { getLedDeviceList } from '@/api/led-device'
 import type { LedDevice, LocationLedBinding, ImportResult } from '@/types'
+import { canButton } from '@/auth'
 
 const loading = ref(false)
 const creating = ref(false)
@@ -205,7 +206,9 @@ const columns: DataTableColumns<LocationLedBinding> = [
     title: '操作',
     key: 'actions',
     render: (row) =>
-      h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '删除'),
+      canButton('LedMapping:delete')
+        ? h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '删除')
+        : null,
   },
 ]
 

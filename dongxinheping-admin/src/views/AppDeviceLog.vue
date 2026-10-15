@@ -68,6 +68,7 @@ import {
 import type { DataTableColumns } from 'naive-ui'
 import { getAppLogList, deleteAppLog, appLogDownloadUrl } from '@/api/app-log'
 import type { AppDeviceLog } from '@/types'
+import { canButton } from '@/auth'
 import { useTableBodyHeight } from '@/composables/useTableBodyHeight'
 
 const message = useMessage()
@@ -122,8 +123,10 @@ const columns: DataTableColumns<AppDeviceLog> = [
           },
           () => '下载',
         ),
-        h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '删除'),
-      ]),
+        canButton('AppDeviceLog:delete')
+          ? h(NButton, { size: 'small', type: 'error', onClick: () => openDelete(row) }, () => '删除')
+          : null,
+      ].filter(Boolean)),
   },
 ]
 
