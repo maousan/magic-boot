@@ -28,9 +28,10 @@ let role = body.role
 if (id == null || (id + '').trim() == '') {
     exit 400, '用户ID不能为空'
 }
-if (role != 'admin' && role != 'ops') {
-    exit 400, '角色不合法'
-}
+// if (role != 'admin' && role != 'ops') {
+//     exit 400, '角色不合法'
+// }
+// 2026-10-15 改因：角色选项放开为真实角色列表，合法性改为下方按编码查 sys_role 校验
 id = (id + '').trim()
 
 var exists = db.selectValue("select count(1) from sys_user where id = #{id} and is_del = 0", { id: id })
@@ -54,21 +55,36 @@ db.update("""
 //     db.update("delete from sys_user_role where user_id = #{id} and role_id = '1'", { id: id })
 // }
 // 2026-10-15 改因：切运营补写 ops 绑定、切管理员清掉 ops 绑定（admin/ops 二选一），与角色管理成员口径一致
-if (role == 'admin') {
-    var bound = db.selectValue("""
-        select count(1) from sys_user_role where user_id = #{id} and role_id = '1'
-    """, { id: id })
-    if (bound == 0) {
-        db.update("insert into sys_user_role (user_id, role_id) values (#{id}, '1')", { id: id })
-    }
-    db.update("delete from sys_user_role where user_id = #{id} and role_id = '2'", { id: id })
-} else {
-    db.update("delete from sys_user_role where user_id = #{id} and role_id = '1'", { id: id })
-    var opsBound = db.selectValue("""
-        select count(1) from sys_user_role where user_id = #{id} and role_id = '2'
-    """, { id: id })
-    if (opsBound == 0) {
-        db.update("insert into sys_user_role (user_id, role_id) values (#{id}, '2')", { id: id })
-    }
+// if (role == 'admin') {
+//     var bound = db.selectValue("""
+//         select count(1) from sys_user_role where user_id = #{id} and role_id = '1'
+//     """, { id: id })
+//     if (bound == 0) {
+//         db.update("insert into sys_user_role (user_id, role_id) values (#{id}, '1')", { id: id })
+//     }
+//     db.update("delete from sys_user_role where user_id = #{id} and role_id = '2'", { id: id })
+// } else {
+//     db.update("delete from sys_user_role where user_id = #{id} and role_id = '1'", { id: id })
+//     var opsBound = db.selectValue("""
+//         select count(1) from sys_user_role where user_id = #{id} and role_id = '2'
+//     """, { id: id })
+//     if (opsBound == 0) {
+//         db.update("insert into sys_user_role (user_id, role_id) values (#{id}, '2')", { id: id })
+//     }
+// }
+// 2026-10-15 改因：角色选项放开为真实角色列表——用户未持有所选角色时整组替换为该角色（单角色语义，
+// 多角色请走角色管理-成员管理）；已持有则不动绑定，避免普通改名把多角色抹掉
+var roleRow = db.selectOne("""
+    select id from sys_role where code = #{code} and is_del = 0
+""", { code: role })
+if (roleRow == null) {
+    exit 400, '角色不存在: ' + role
+}
+var hasRole = db.selectValue("""
+    select count(1) from sys_user_role where user_id = #{id} and role_id = #{roleId}
+""", { id: id, roleId: roleRow.id })
+if (hasRole == 0) {
+    db.update("delete from sys_user_role where user_id = #{id}", { id: id })
+    db.update("insert into sys_user_role (user_id, role_id) values (#{id}, #{roleId})", { id: id, roleId: roleRow.id })
 }
 return true

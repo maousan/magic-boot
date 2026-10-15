@@ -74,10 +74,7 @@
 }
 ================================
 let sql = """
-    select u.id, u.username, u.name, u.is_login, u.create_date,
-        (select count(1) from sys_user_role sur
-          join sys_role r on r.id = sur.role_id
-          where sur.user_id = u.id and r.code = 'admin' and r.is_del = 0) as admin_binding
+    select u.id, u.username, u.name, u.is_login, u.create_date
     from sys_user u
     <where>
     u.is_del = 0
@@ -91,8 +88,49 @@ let sql = """
     order by u.create_date desc
 """
 var pageResult = db.page(sql, pageSize, (page - 1) * pageSize)
+
+// 2026-10-15 改因：角色列改为真实绑定角色（多角色顿号连接，无绑定兜底"运营"）；
+// group_concat 子查询 magic-api SQL 解析不支持，改脚本内组装
+var codeMap = {}
+var nameMap = {}
+var userIds = []
 for (row in pageResult.list) {
-    row.role = row.adminBinding > 0 ? 'admin' : 'ops'
-    row.remove('adminBinding')
+    userIds.add(row.id)
+}
+if (userIds.size() > 0) {
+    var bindRows = db.select("""
+        select sur.user_id, r.code, r.name
+        from sys_user_role sur
+        join sys_role r on r.id = sur.role_id
+        where sur.user_id in (#{userIds}) and r.is_del = 0
+        order by r.create_date
+    """, { userIds: userIds })
+    for (b in bindRows) {
+        var bindUserId = b.userId
+        if (bindUserId == null) {
+            bindUserId = b.user_id
+        }
+        if (codeMap[bindUserId] == null) {
+            codeMap[bindUserId] = []
+            nameMap[bindUserId] = []
+        }
+        codeMap[bindUserId].add(b.code)
+        nameMap[bindUserId].add(b.name)
+    }
+}
+for (row in pageResult.list) {
+    var codes = codeMap[row.id]
+    if (codes == null || codes.size() == 0) {
+        row.role = '运营'
+        row.roleCodes = []
+    } else {
+        var displayName = ''
+        var names = nameMap[row.id]
+        for (n in names) {
+            displayName = displayName == '' ? n : displayName + '、' + n
+        }
+        row.role = displayName
+        row.roleCodes = codes
+    }
 }
 return pageResult
