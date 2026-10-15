@@ -1,1 +1,0 @@
-import{an as h}from"./index--SyK1IFT.js";function l(e){const{opacityDisabled:o,heightTiny:t,heightSmall:n,heightMedium:s,heightLarge:a,heightHuge:r,primaryColor:i,fontSize:g}=e;return{fontSize:g,textColor:i,sizeTiny:t,sizeSmall:n,sizeMedium:s,sizeLarge:a,sizeHuge:r,color:i,opacitySpinning:o}}const c={common:h,self:l};export{c as a,l as s};
