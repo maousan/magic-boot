@@ -28,8 +28,11 @@ import '@/aims/articles/updateArticleInfo' as updateArticleInfo
 import '@/aims/articles/deleteArticleInfo' as deleteArticleInfo
 
 const stationCode = Forest.config().getVariableValue("stationCode")
-const maxPages = 3
-const batchSize = 20
+// const maxPages = 3
+// const batchSize = 20
+// 2026-10-15 行数上限 60→112（16*7），与定时同步任务保持一致；占位模板已扩到112槽位，不跟进会把高位槽位清空
+const maxPages = 7
+const batchSize = 16
 
 let normalizeText = (value) => {
     if(value == null){
@@ -90,6 +93,7 @@ let queryInventoryPage = (pageOffset) => {
             qty,
             qty_allocated,
             qty_pa,
+            case when edit_time < date_sub(now(), interval 12 month) then 1 else 0 end as stg_flag,
             date_format(edit_time, '%Y-%m-%d %H:%i:%s') as edit_time,
             concat(
                 date_format(edit_time, '%Y-%m-%dT%H:%i:%s.'),
@@ -145,6 +149,8 @@ while(pageIndex <= maxPages){
         putIndexedField(articleItem.data, 'qty', pageIndex, rowIndex, row.qty)
         putIndexedField(articleItem.data, 'qtyAllocated', pageIndex, rowIndex, row.qtyAllocated)
         putIndexedField(articleItem.data, 'qtyPa', pageIndex, rowIndex, row.qtyPa)
+        // 2026-10-15 补 stgFlag 写入：占位清单已含 stgFlag，不写入的话手工推送会把该库位 stgFlag 全清空
+        putIndexedField(articleItem.data, 'stgFlag', pageIndex, rowIndex, row.stgFlag)
         putIndexedField(articleItem.data, 'editTime', pageIndex, rowIndex, row.editTime)
         // putIndexedField(articleItem.data, 'userDefine1', pageIndex, rowIndex, row.userDefine1)
         // putIndexedField(articleItem.data, 'userDefine2', pageIndex, rowIndex, row.userDefine2)

@@ -31,8 +31,11 @@ import '@/aims/articles/deleteArticleInfo' as deleteArticleInfo
 
 const stationCode = Forest.config().getVariableValue("stationCode")
 
-const batchSize = 20
-const maxLocationPages = 3
+// const batchSize = 20
+// const maxLocationPages = 3
+// 2026-10-15 单库位行数上限 60→112（16*7），现场单库位最多112行
+const batchSize = 16
+const maxLocationPages = 7
 const placeholderData = deleteArticleInfo()
 
 let normalizeText = (value) => {
@@ -168,7 +171,7 @@ let appendInventoryRowsToArticleData = (articleItem, inventoryRows, pageIndex) =
         putIndexedField(articleItem.data, 'qty', pageIndex, rowIndex, row.qty)
         putIndexedField(articleItem.data, 'qtyAllocated', pageIndex, rowIndex, row.qtyAllocated)
         putIndexedField(articleItem.data, 'qtyPa', pageIndex, rowIndex, row.qtyPa)
-        putIndexedField(articleItem.data, 'editTime', pageIndex, rowIndex, row.editTime)
+        putIndexedField(articleItem.data, 'editTime', pageIndex, rowIndex, '')
         putIndexedField(articleItem.data, 'stgFlag', pageIndex, rowIndex, row.stgFlag)
         // putIndexedField(articleItem.data, 'userDefine1', pageIndex, rowIndex, valueOf(row, 'user_define1', 'userDefine1'))
         // putIndexedField(articleItem.data, 'userDefine2', pageIndex, rowIndex, valueOf(row, 'user_define2', 'userDefine2'))

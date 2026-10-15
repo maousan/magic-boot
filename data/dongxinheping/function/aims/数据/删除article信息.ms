@@ -28,10 +28,15 @@
   } ]
 }
 ================================
-const batchSize = 20
-const maxPages = 3
+// const batchSize = 20
+// const maxPages = 3
+// 2026-10-15 槽位 60→112（16*7），与定时同步任务/按库位更新标签保持一致
+const batchSize = 16
+const maxPages = 7
 const placeholderData = {}
-const dataFields = ['warehouseId', 'sku', 'lotAtt09', 'qty', 'qtyAllocated', 'qtyPa', 'editTime']
+// const dataFields = ['warehouseId', 'sku', 'lotAtt09', 'qty', 'qtyAllocated', 'qtyPa', 'editTime']
+// 2026-10-15 stgFlag 补入占位清单：行数变少时高位 stgFlag_N 不在报文中、AIMS 合并保留旧值，靠占位空串清理
+const dataFields = ['warehouseId', 'sku', 'lotAtt09', 'qty', 'qtyAllocated', 'qtyPa', 'editTime', 'stgFlag']
 var slotIdx = 1
 while(slotIdx <= batchSize * maxPages){
     for(fieldName in dataFields){
