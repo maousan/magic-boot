@@ -51,6 +51,11 @@ if(raw == null || (raw + '').trim() == ''){
 if(epc == null || (epc + '').trim() == ''){
     exit 400, 'EPC不能为空'
 }
+// 2026-10-19 生产实测：操作员把外箱二维码扫进 EPC 输入框（350+字符）导致 Data too long for column 'epc'，
+// 专拦二维码特征输入，把 500 变成可操作的提示
+if(epc.indexOf(':"') >= 0 || epc.indexOf(';') >= 0 || (epc + '').length() > 64){
+    exit 400, 'EPC不能是外箱二维码，请扫描RFID标签'
+}
 
 locationId = (locationId + '').trim()
 raw = (raw + '').trim()
@@ -71,19 +76,31 @@ sku = (sku + '').trim()
 lotNo = (lotNo + '').trim()
 let batchId = locationId + '_' + sku + '_' + lotNo
 
+// 2026-10-16 改因：①驼峰别名（batch_id as batchId）经全局 camel 转换变全小写，row.batchId 恒 null，
+// "批次ID已绑定EPC"拦截与幂等判断自 09-21(cb5d893) 起是死代码；②按业务口径固化"1标1箱（活跃）、1箱多标"：
+// 查重只按 EPC——同 EPC 同箱幂等、同 EPC 异箱改绑、不同 EPC 同箱直接插新行
+// ---- 旧查询与死掉的 400 分支（注释保留，回滚取消注释） ----
+// let existing = db.select("""
+//     select id, batch_id as batchId, epc, location_id as locationId, sku, lot_no as lotNo from t_batch_epc where status = 1 and (batch_id = #{batchId} or epc = #{epc})
+// """, {batchId: batchId, epc: epc})
+//
+// let epcRow = null
+// if(existing != null && existing.size() > 0){
+//     for(row in existing){
+//         if(row.epc == epc){
+//             epcRow = row
+//         }else if(row.batchId == batchId){
+//             exit 400, '批次ID已绑定EPC: ' + row.epc
+//         }
+//     }
+// }
 let existing = db.select("""
-    select id, batch_id as batchId, epc, location_id as locationId, sku, lot_no as lotNo from t_batch_epc where status = 1 and (batch_id = #{batchId} or epc = #{epc})
-""", {batchId: batchId, epc: epc})
+    select id, batch_id, epc, location_id, sku, lot_no from t_batch_epc where status = 1 and epc = #{epc}
+""", { epc: epc })
 
 let epcRow = null
 if(existing != null && existing.size() > 0){
-    for(row in existing){
-        if(row.epc == epc){
-            epcRow = row
-        }else if(row.batchId == batchId){
-            exit 400, '批次ID已绑定EPC: ' + row.epc
-        }
-    }
+    epcRow = existing.get(0)
 }
 
 // 覆盖更新：EPC 已绑定其他批次时，将该记录改绑到新 batchId

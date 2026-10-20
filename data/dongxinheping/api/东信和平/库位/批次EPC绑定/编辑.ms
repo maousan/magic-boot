@@ -37,6 +37,10 @@ if(batchId == null || (batchId + '').trim() == ''){
 if(epc == null || (epc + '').trim() == ''){
     exit 400, 'EPC不能为空'
 }
+// 2026-10-19 生产实测：操作员把外箱二维码扫进 EPC 输入框导致 Data too long，专拦二维码特征输入
+if(epc.indexOf(':"') >= 0 || epc.indexOf(';') >= 0 || (epc + '').length() > 64){
+    exit 400, 'EPC不能是外箱二维码，请扫描RFID标签'
+}
 
 id = (id + '').trim()
 batchId = (batchId + '').trim()
@@ -48,16 +52,26 @@ if(record == null){
     exit 404, '记录不存在'
 }
 
-let existing = db.select("""
-    select batch_id, epc from t_batch_epc where status = 1 and id != #{id} and (batch_id = #{batchId} or epc = #{epc})
-""", {id: id, batchId: batchId, epc: epc})
-
-if(existing != null && existing.size() > 0){
-    let conflict = existing.get(0)
-    if(conflict.batch_id == batchId){
-        exit 400, '批次ID已绑定EPC: ' + conflict.epc
-    }
-    exit 400, 'EPC已绑定批次: ' + conflict.batch_id
+// ---- 旧冲突检查（注释保留，回滚取消注释） ----
+// 缺陷：conflict.batch_id 从 camel 转换后的行里读下划线键恒为 null，batchId 冲突分支是死代码，
+// 且"同箱多标"场景会误落到 EPC 冲突分支报"EPC已绑定批次: null"
+// let existing = db.select("""
+//     select batch_id, epc from t_batch_epc where status = 1 and id != #{id} and (batch_id = #{batchId} or epc = #{epc})
+// """, {id: id, batchId: batchId, epc: epc})
+//
+// if(existing != null && existing.size() > 0){
+//     let conflict = existing.get(0)
+//     if(conflict.batch_id == batchId){
+//         exit 400, '批次ID已绑定EPC: ' + conflict.epc
+//     }
+//     exit 400, 'EPC已绑定批次: ' + conflict.batch_id
+// }
+// 2026-10-16 改因：按业务口径"1箱可多标"去掉 batchId 冲突拦截，仅保留 EPC 冲突（一个标签同时只能挂一条活跃记录）
+let epcConflict = db.select("""
+    select id from t_batch_epc where status = 1 and id != #{id} and epc = #{epc}
+""", {id: id, epc: epc})
+if(epcConflict != null && epcConflict.size() > 0){
+    exit 400, 'EPC已绑定其他记录'
 }
 
 // batchId 格式为 locationId_sku_lotNo（locationId、sku 不含下划线），同步维护三个拆分列；
