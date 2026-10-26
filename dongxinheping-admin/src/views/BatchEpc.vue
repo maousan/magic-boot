@@ -11,7 +11,10 @@
 
     <div class="table-page-content">
       <n-space :size="12" class="table-page-toolbar">
-        <n-input v-model:value="searchKeyword" placeholder="搜索批次ID或EPC" clearable @keyup.enter="fetchData" />
+        <n-input v-model:value="searchLocationId" placeholder="库位号" clearable style="width: 140px" @keyup.enter="fetchData" />
+        <n-input v-model:value="searchSku" placeholder="物料编码" clearable style="width: 170px" @keyup.enter="fetchData" />
+        <n-input v-model:value="searchLotNo" placeholder="批次号" clearable style="width: 220px" @keyup.enter="fetchData" />
+        <n-input v-model:value="searchEpc" placeholder="EPC" clearable style="width: 220px" @keyup.enter="fetchData" />
         <n-select
           v-model:value="searchStatus"
           :options="statusOptions"
@@ -111,8 +114,12 @@ const deletingIds = ref<Set<string>>(new Set())
 const showBind = ref(false)
 const showEdit = ref(false)
 const showUnbind = ref(false)
-const searchKeyword = ref('')
+// 2026-10-21 查询条件：综合关键字（批次ID/EPC）退役，改为拆分列独立筛选
 const searchStatus = ref<number | null>(null)
+const searchLocationId = ref('')
+const searchSku = ref('')
+const searchLotNo = ref('')
+const searchEpc = ref('')
 const unbindTarget = ref<BatchEpcBinding | null>(null)
 
 const bindings = reactive<{ list: BatchEpcBinding[]; total: number }>({
@@ -130,7 +137,10 @@ const statusOptions = [
 ]
 
 const columns: DataTableColumns<BatchEpcBinding> = [
-  { title: '批次ID', key: 'batchId', width: 180 },
+  // 2026-10-21 改因：批次ID 列退役，改为展示拆分列（后端列表查询已返回 location_id/sku/lot_no）
+  { title: '库位号', key: 'locationId', width: 140, render: (row) => row.locationId || '-' },
+  { title: '物料编码', key: 'sku', width: 160, render: (row) => row.sku || '-' },
+  { title: '批次号', key: 'lotNo', width: 200, ellipsis: { tooltip: { contentStyle: { maxWidth: '420px', whiteSpace: 'pre-wrap' } } }, render: (row) => row.lotNo || '-' },
   { title: 'EPC', key: 'epc', width: 280 },
   {
     title: '状态',
@@ -145,10 +155,11 @@ const columns: DataTableColumns<BatchEpcBinding> = [
   {
     title: '操作',
     key: 'actions',
-    width: 160,
+    // 2026-10-21 改因：批次ID 拆三列后操作列被挤压导致按钮换行，加宽并禁止换行
+    width: 220,
     fixed: 'right',
     render: (row) =>
-      h(NSpace, { size: 'small' }, () => [
+      h(NSpace, { size: 'small', wrap: false }, () => [
         canButton('BatchEpc:update')
           ? h(
               NButton,
@@ -198,8 +209,11 @@ async function fetchData() {
     const res = await getBatchEpcList({
       page: pagination.page,
       pageSize: pagination.pageSize,
-      keyword: searchKeyword.value || undefined,
       status: searchStatus.value ?? undefined,
+      locationId: searchLocationId.value || undefined,
+      sku: searchSku.value || undefined,
+      lotNo: searchLotNo.value || undefined,
+      epc: searchEpc.value || undefined,
     })
     bindings.list = res.list
     bindings.total = res.total

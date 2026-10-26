@@ -50,6 +50,9 @@ export interface BatchEpcBinding {
   status: number
   bindTime: string
   unbindTime?: string
+  locationId?: string | null
+  sku?: string | null
+  lotNo?: string | null
 }
 
 // 库位记录

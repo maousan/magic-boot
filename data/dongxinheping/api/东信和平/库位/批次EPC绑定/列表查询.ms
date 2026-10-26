@@ -80,6 +80,18 @@ let sql = """
     <if test="keyword != null and keyword != ''">
     and (batch_id like concat('%', #{keyword}, '%') or epc like concat('%', #{keyword}, '%'))
     </if>
+    <if test="locationId != null and locationId != ''">
+    and location_id like concat('%', #{locationId}, '%')
+    </if>
+    <if test="sku != null and sku != ''">
+    and sku like concat('%', #{sku}, '%')
+    </if>
+    <if test="lotNo != null and lotNo != ''">
+    and lot_no like concat('%', #{lotNo}, '%')
+    </if>
+    <if test="epc != null and epc != ''">
+    and epc like concat('%', #{epc}, '%')
+    </if>
     </where>
     order by create_time desc
 """

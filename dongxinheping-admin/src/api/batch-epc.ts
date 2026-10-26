@@ -6,6 +6,10 @@ export function getBatchEpcList(params: {
   pageSize: number
   status?: number
   keyword?: string
+  locationId?: string
+  sku?: string
+  lotNo?: string
+  epc?: string
 }): Promise<PageResult<BatchEpcBinding>> {
   return client
     .get<ApiResponse<PageResult<BatchEpcBinding>>>('/location/batch-epc/list', { params })
