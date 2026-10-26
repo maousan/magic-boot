@@ -114,7 +114,7 @@ let rows = null
 if(lot != null && lot != ''){
     // 2026-10-16 用户口径：外箱二维码按 lot_no + sku 双条件匹配，仅 lot_no 会跨物料误查；OrdNo 兜底同带 sku
     rows = db.select("""
-        select id, batch_id, epc, bind_time, location_id, sku, lot_no
+        select id, batch_id, epc, bind_time, location_id, sku, lot_no, material_name
         from t_batch_epc
         where status = 1 and lot_no = #{lot}
         <if test="sku != null">
@@ -123,7 +123,7 @@ if(lot != null && lot != ''){
     """, { lot: lot, sku: qrSku })
     if((rows == null || rows.size() == 0) && ordNo != null && ordNo != ''){
         rows = db.select("""
-            select id, batch_id, epc, bind_time, location_id, sku, lot_no
+            select id, batch_id, epc, bind_time, location_id, sku, lot_no, material_name
             from t_batch_epc
             where status = 1 and lot_no = #{lot}
             <if test="sku != null">
@@ -139,7 +139,7 @@ if(lot != null && lot != ''){
     //     where status = 1 and (lot_no = #{keyword} or epc = #{keyword})
     // """, { keyword: keyword })
     rows = db.select("""
-        select id, batch_id, epc, bind_time, location_id, sku, lot_no
+        select id, batch_id, epc, bind_time, location_id, sku, lot_no, material_name
         from t_batch_epc
         where status = 1 and epc = #{keyword}
     """, { keyword: keyword })
@@ -159,6 +159,7 @@ if(rows != null){
             locationId: row.locationId,
             sku: row.sku,
             lotNo: row.lotNo,
+            materialName: row.materialName,
             epc: row.epc,
             bindTime: row.bindTime
         })

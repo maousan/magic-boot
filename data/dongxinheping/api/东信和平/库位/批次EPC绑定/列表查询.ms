@@ -71,7 +71,7 @@
 }
 ================================
 let sql = """
-    select id, batch_id, epc, status, bind_time, unbind_time, location_id, sku, lot_no
+    select id, batch_id, epc, status, bind_time, unbind_time, location_id, sku, lot_no, material_name
     from t_batch_epc
     <where>
     <if test="status != null and status != ''">

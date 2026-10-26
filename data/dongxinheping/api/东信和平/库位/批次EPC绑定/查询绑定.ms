@@ -70,12 +70,12 @@ if(queryBatchId == '' && queryEpc == ''){
 let record = null
 if(queryBatchId != ''){
     record = db.selectOne("""
-        select id, batch_id, epc, bind_time, location_id, sku, lot_no from t_batch_epc
+        select id, batch_id, epc, bind_time, location_id, sku, lot_no, material_name from t_batch_epc
         where status = 1 and batch_id = #{batchId}
     """, {batchId: queryBatchId})
 }else{
     record = db.selectOne("""
-        select id, batch_id, epc, bind_time, location_id, sku, lot_no from t_batch_epc
+        select id, batch_id, epc, bind_time, location_id, sku, lot_no, material_name from t_batch_epc
         where status = 1 and epc = #{epc}
     """, {epc: queryEpc})
 }
@@ -93,6 +93,7 @@ return {
         bindTime: record.bindTime,
         locationId: record.locationId,
         sku: record.sku,
-        lotNo: record.lotNo
+        lotNo: record.lotNo,
+        materialName: record.materialName
     }
 }

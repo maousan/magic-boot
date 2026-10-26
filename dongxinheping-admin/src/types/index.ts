@@ -53,6 +53,7 @@ export interface BatchEpcBinding {
   locationId?: string | null
   sku?: string | null
   lotNo?: string | null
+  materialName?: string | null
 }
 
 // 库位记录

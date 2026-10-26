@@ -140,6 +140,8 @@ const columns: DataTableColumns<BatchEpcBinding> = [
   // 2026-10-21 改因：批次ID 列退役，改为展示拆分列（后端列表查询已返回 location_id/sku/lot_no）
   { title: '库位号', key: 'locationId', width: 140, render: (row) => row.locationId || '-' },
   { title: '物料编码', key: 'sku', width: 160, render: (row) => row.sku || '-' },
+  // 2026-10-21 新增：物料名称（外箱二维码 MtlDesc，绑定时记录）
+  { title: '物料名称', key: 'materialName', width: 200, ellipsis: { tooltip: { contentStyle: { maxWidth: '420px', whiteSpace: 'pre-wrap' } } }, render: (row) => row.materialName || '-' },
   { title: '批次号', key: 'lotNo', width: 200, ellipsis: { tooltip: { contentStyle: { maxWidth: '420px', whiteSpace: 'pre-wrap' } } }, render: (row) => row.lotNo || '-' },
   { title: 'EPC', key: 'epc', width: 280 },
   {

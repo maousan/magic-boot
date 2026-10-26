@@ -65,6 +65,8 @@ epc = (epc + '').trim()
 let parsed = parseLot(raw)
 let sku = parsed.MtlCode
 let lotNo = parsed.Lot
+// 2026-10-21 新增：记录物料名称（外箱二维码 MtlDesc 键，parseLot 通用解析直接取）
+let materialName = parsed.MtlDesc == null ? null : (parsed.MtlDesc + '').trim()
 
 if(sku == null || (sku + '').trim() == ''){
     exit 400, '二维码中未找到MtlCode'
@@ -96,7 +98,7 @@ let batchId = locationId + '_' + sku + '_' + lotNo
 //     }
 // }
 let existing = db.select("""
-    select id, batch_id, epc, location_id, sku, lot_no from t_batch_epc where status = 1 and epc = #{epc}
+    select id, batch_id, epc, location_id, sku, lot_no, material_name from t_batch_epc where status = 1 and epc = #{epc}
 """, { epc: epc })
 
 let epcRow = null
@@ -114,6 +116,7 @@ if(epcRow != null && epcRow.batchId == batchId){
         locationId: epcRow.locationId,
         sku: epcRow.sku,
         lotNo: epcRow.lotNo,
+        materialName: epcRow.materialName,
         bindTime: db.selectValue("select bind_time from t_batch_epc where id = #{id}", {id: epcRow.id})
     }
 }
@@ -134,8 +137,8 @@ if((strictOne + '') == 'true'){
 
 if(epcRow != null){
     db.update("""
-        update t_batch_epc set batch_id = #{batchId}, location_id = #{locationId}, sku = #{sku}, lot_no = #{lotNo}, bind_time = now() where id = #{id}
-    """, {id: epcRow.id, batchId: batchId, locationId: locationId, sku: sku, lotNo: lotNo})
+        update t_batch_epc set batch_id = #{batchId}, location_id = #{locationId}, sku = #{sku}, lot_no = #{lotNo}, material_name = #{materialName}, bind_time = now() where id = #{id}
+    """, {id: epcRow.id, batchId: batchId, locationId: locationId, sku: sku, lotNo: lotNo, materialName: materialName})
     log.info('batch-epc rebind: id=' + epcRow.id + ', oldBatchId=' + epcRow.batchId + ', newBatchId=' + batchId + ', epc=' + epc)
     return {
         id: epcRow.id,
@@ -144,15 +147,16 @@ if(epcRow != null){
         locationId,
         sku,
         lotNo,
+        materialName,
         bindTime: db.selectValue("select bind_time from t_batch_epc where id = #{id}", {id: epcRow.id})
     }
 }
 
 let id = IdUtil.fastSimpleUUID()
 db.update("""
-    insert into t_batch_epc (id, batch_id, epc, status, bind_time, location_id, sku, lot_no)
-    values (#{id}, #{batchId}, #{epc}, 1, now(), #{locationId}, #{sku}, #{lotNo})
-""", {id: id, batchId: batchId, epc: epc, locationId: locationId, sku: sku, lotNo: lotNo})
+    insert into t_batch_epc (id, batch_id, epc, status, bind_time, location_id, sku, lot_no, material_name)
+    values (#{id}, #{batchId}, #{epc}, 1, now(), #{locationId}, #{sku}, #{lotNo}, #{materialName})
+""", {id: id, batchId: batchId, epc: epc, locationId: locationId, sku: sku, lotNo: lotNo, materialName: materialName})
 
 log.info('batch-epc bind: batchId=' + batchId + ', epc=' + epc)
 
@@ -163,5 +167,6 @@ return {
     locationId,
     sku,
     lotNo,
+    materialName,
     bindTime: db.selectValue("select bind_time from t_batch_epc where id = #{id}", {id: id})
 }
