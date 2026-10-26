@@ -16,10 +16,10 @@
   "groupId" : "redis:0",
   "name" : "default",
   "createTime" : 1775323717929,
-  "updateTime" : null,
+  "updateTime" : 1792549748881,
   "lock" : null,
   "createBy" : "admin",
-  "updateBy" : null,
+  "updateBy" : "admin",
   "key" : "default",
   "type" : "single"
 }
