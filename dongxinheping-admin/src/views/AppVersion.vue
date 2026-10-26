@@ -178,7 +178,12 @@ const columns: DataTableColumns<AppVersion> = [
   {
     title: '更新说明',
     key: 'description',
-    ellipsis: { tooltip: true },
+    // 2026-10-21 改因：更新说明是多行长文本，默认 tooltip 不限宽会横向拉满，限宽并保留换行
+    ellipsis: {
+      tooltip: {
+        contentStyle: { maxWidth: '420px', whiteSpace: 'pre-wrap' },
+      },
+    },
   },
   { title: '创建时间', key: 'createDate', width: 170 },
   {
