@@ -5,6 +5,7 @@ export function getLedDeviceList(params: {
   page: number
   pageSize: number
   macAddress?: string
+  name?: string
   ip?: string
   remark?: string
 }): Promise<LedDevicePageResult> {
@@ -13,6 +14,7 @@ export function getLedDeviceList(params: {
 
 export function createLedDevice(data: {
   macAddress: string
+  name?: string
   ip: string
   remark?: string
 }): Promise<string> {
@@ -21,6 +23,7 @@ export function createLedDevice(data: {
 
 export function updateLedDevice(data: {
   macAddress: string
+  name?: string
   ip?: string
   remark?: string
 }): Promise<string> {

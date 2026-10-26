@@ -48,6 +48,18 @@
     "expression" : null,
     "children" : null
   }, {
+    "name" : "name",
+    "value" : "",
+    "description" : "设备名称（模糊查询）",
+    "required" : false,
+    "dataType" : "String",
+    "type" : null,
+    "defaultValue" : null,
+    "validateType" : null,
+    "error" : null,
+    "expression" : null,
+    "children" : null
+  }, {
     "name" : "ip",
     "value" : "",
     "description" : "IP地址（模糊查询）",
@@ -88,11 +100,14 @@ import org.ssssssss.magicapi.utils.JsonUtils
 import java.util.Map
 
 let sql = """
-    select mac_address, ip, remark
+    select mac_address, name, ip, remark
     from t_led_device
     <where>
         <if test="macAddress != null and macAddress != ''">
             and mac_address like concat('%', #{macAddress}, '%')
+        </if>
+        <if test="name != null and name != ''">
+            and name like concat('%', #{name}, '%')
         </if>
         <if test="ip != null and ip != ''">
             and ip like concat('%', #{ip}, '%')

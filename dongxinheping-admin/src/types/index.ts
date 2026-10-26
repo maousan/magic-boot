@@ -9,6 +9,7 @@ export interface LedColor {
 // LED 设备
 export interface LedDevice {
   macAddress: string
+  name?: string | null
   ip: string
   remark: string
   /** 在线状态：true 在线 / false 离线 / null 未知（灯控 Netty 服务不可用时） */

@@ -14,6 +14,7 @@
 
     <div class="table-page-content">
       <n-space :size="12" class="table-page-toolbar" align="center">
+        <n-input v-model:value="query.name" placeholder="设备名称" clearable style="width: 160px" @keyup.enter="handleSearch" />
         <n-input v-model:value="query.macAddress" placeholder="MAC 地址" clearable style="width: 200px" @keyup.enter="handleSearch" />
         <n-input v-model:value="query.ip" placeholder="IP 地址" clearable style="width: 160px" @keyup.enter="handleSearch" />
         <n-input v-model:value="query.remark" placeholder="备注" clearable style="width: 160px" @keyup.enter="handleSearch" />
@@ -57,6 +58,9 @@
           <n-form-item label="MAC 地址" required>
             <n-input v-model:value="form.macAddress" placeholder="3A:69:7A:08:D0:A5" />
           </n-form-item>
+          <n-form-item label="名称">
+            <n-input v-model:value="form.name" placeholder="可选" />
+          </n-form-item>
           <n-form-item label="IP 地址" required>
             <n-input v-model:value="form.ip" placeholder="192.168.2.102" />
           </n-form-item>
@@ -77,6 +81,9 @@
         <n-space vertical>
           <n-form-item label="MAC 地址">
             <n-input :value="editForm.macAddress" disabled />
+          </n-form-item>
+          <n-form-item label="名称">
+            <n-input v-model:value="editForm.name" placeholder="可选" />
           </n-form-item>
           <n-form-item label="IP 地址" required>
             <n-input v-model:value="editForm.ip" />
@@ -308,9 +315,9 @@ const lightDevice = ref<LedDevice | null>(null)
 const ctrlResult = ref<Record<string, any> | null>(null)
 const { tableAreaRef, tableBodyMaxHeight } = useTableBodyHeight()
 
-const query = reactive({ macAddress: '', ip: '', remark: '' })
-const form = reactive({ macAddress: '', ip: '', remark: '' })
-const editForm = reactive({ macAddress: '', ip: '', remark: '' })
+const query = reactive({ name: '', macAddress: '', ip: '', remark: '' })
+const form = reactive({ name: '', macAddress: '', ip: '', remark: '' })
+const editForm = reactive({ name: '', macAddress: '', ip: '', remark: '' })
 
 const ctrl = reactive<ZintisLedControlRequest>({
   deviceIp: '',
@@ -339,6 +346,7 @@ let refreshTimer: ReturnType<typeof setInterval> | null = null
 
 const columns: DataTableColumns<LedDevice> = [
   { title: 'MAC 地址', key: 'macAddress', width: 180 },
+  { title: '名称', key: 'name', width: 140, render: (row) => row.name || '-' },
   {
     title: '在线状态',
     key: 'online',
@@ -389,6 +397,7 @@ async function fetchData(silent = false) {
     const res = await getLedDeviceList({
       page: page.value,
       pageSize: pageSize.value,
+      name: query.name || undefined,
       macAddress: query.macAddress || undefined,
       ip: query.ip || undefined,
       remark: query.remark || undefined,
@@ -428,6 +437,7 @@ function handleSearch() {
 
 // CRUD
 function openCreate() {
+  form.name = ''
   form.macAddress = ''
   form.ip = ''
   form.remark = ''
@@ -438,7 +448,7 @@ async function handleCreate() {
   if (!form.macAddress || !form.ip) return
   submitting.value = true
   try {
-    await createLedDevice({ macAddress: form.macAddress, ip: form.ip, remark: form.remark || undefined })
+    await createLedDevice({ macAddress: form.macAddress, name: form.name || undefined, ip: form.ip, remark: form.remark || undefined })
     showCreate.value = false
     await fetchData()
   } finally {
@@ -448,6 +458,7 @@ async function handleCreate() {
 
 function openEdit(row: LedDevice) {
   editForm.macAddress = row.macAddress
+  editForm.name = row.name ?? ''
   editForm.ip = row.ip
   editForm.remark = row.remark
   showEdit.value = true
@@ -456,7 +467,7 @@ function openEdit(row: LedDevice) {
 async function handleEdit() {
   submitting.value = true
   try {
-    await updateLedDevice({ macAddress: editForm.macAddress, ip: editForm.ip, remark: editForm.remark })
+    await updateLedDevice({ macAddress: editForm.macAddress, name: editForm.name ?? '', ip: editForm.ip, remark: editForm.remark })
     showEdit.value = false
     await fetchData()
   } finally {

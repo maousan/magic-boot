@@ -25,6 +25,7 @@
 let macAddress = body.macAddress
 let ip = body.ip
 let remark = body.remark
+let name = body.name
 
 if (macAddress == null || (macAddress + '').trim() == '') {
     exit 0, 'MAC地址不能为空'
@@ -52,6 +53,11 @@ if (remark != null) {
     remark = (remark + '').trim()
     updates.add('remark = #{remark}')
     params.remark = remark
+}
+if (name != null) {
+    name = (name + '').trim()
+    updates.add('name = #{name}')
+    params.name = name
 }
 
 if (updates.size() == 0) {

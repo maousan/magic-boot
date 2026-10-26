@@ -25,6 +25,7 @@
 let macAddress = body.macAddress
 let ip = body.ip
 let remark = body.remark
+let name = body.name
 
 if (macAddress == null || (macAddress + '').trim() == '') {
     exit 0, 'MAC地址不能为空'
@@ -38,6 +39,9 @@ ip = (ip + '').trim()
 if (remark != null) {
     remark = (remark + '').trim()
 }
+if (name != null) {
+    name = (name + '').trim()
+}
 
 let exists = db.selectValue("""
     select count(1) from t_led_device where mac_address = #{macAddress}
@@ -48,10 +52,11 @@ if (exists > 0) {
 }
 
 db.update("""
-    insert into t_led_device (mac_address, ip, remark)
-    values (#{macAddress}, #{ip}, #{remark})
+    insert into t_led_device (mac_address, name, ip, remark)
+    values (#{macAddress}, #{name}, #{ip}, #{remark})
 """, {
     macAddress: macAddress,
+    name: name,
     ip: ip,
     remark: remark
 })

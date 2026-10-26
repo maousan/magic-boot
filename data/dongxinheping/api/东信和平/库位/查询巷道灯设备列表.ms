@@ -37,6 +37,7 @@
 const rows = db.select("""
     select
         mac_address,
+        name,
         ip,
         remark
     from t_led_device
