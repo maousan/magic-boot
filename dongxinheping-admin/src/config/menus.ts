@@ -42,7 +42,6 @@ export const menuNodes: MenuNode[] = [
     { label: 'App 运行日志', key: 'AppDeviceLog' },
     { label: '系统授权', key: 'SystemLicense' },
     { label: '授权签发', key: 'LicenseIssue' },
-    { label: '数据库管理', key: 'DatabaseManagement' },
     { label: '定时任务', key: 'JobManagement' },
     { label: 'AIMS 配置', key: 'AimsConfig' },
     { label: 'Magic-API', key: 'MagicApiConsole' },
