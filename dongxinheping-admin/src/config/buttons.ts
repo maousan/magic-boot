@@ -26,6 +26,7 @@ export const routeButtons: Record<string, ButtonDef[]> = {
     { action: 'delete', label: '删除' },
   ],
   MenuPermission: [{ action: 'save', label: '保存配置' }],
+  SystemConfig: [{ action: 'save', label: '保存配置' }],
   WarehouseLocation: [
     { action: 'create', label: '手动添加' },
     { action: 'update', label: '编辑' },

@@ -37,6 +37,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'system-license', name: 'SystemLicense', component: () => import('@/views/SystemLicense.vue'), meta: { label: '系统授权' } },
       { path: 'admin-user', name: 'AdminUser', component: () => import('@/views/AdminUser.vue'), meta: { label: '用户管理' } },
       { path: 'menu-permission', name: 'MenuPermission', component: () => import('@/views/MenuPermission.vue'), meta: { label: '菜单权限' } },
+      { path: 'system-config', name: 'SystemConfig', component: () => import('@/views/SystemConfig.vue'), meta: { label: '系统配置' } },
       { path: 'role-management', name: 'RoleManagement', component: () => import('@/views/RoleManagement.vue'), meta: { label: '角色管理' } },
       { path: 'license-issue', name: 'LicenseIssue', component: () => import('@/views/LicenseIssue.vue'), meta: { label: '授权签发' } },
       { path: 'logs', name: 'RealtimeLog', component: () => import('@/views/RealtimeLog.vue'), meta: { label: '实时日志' } },

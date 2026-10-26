@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "5f5a6aa7b12e400da07b653a3216c600",
+  "name" : "系统配置",
+  "type" : "api",
+  "parentId" : "57e460bde8674929a0b7abc6ed21fa26",
+  "path" : "/configure",
+  "createTime" : null,
+  "updateTime" : null,
+  "createBy" : null,
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

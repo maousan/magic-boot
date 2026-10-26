@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "4516f947849e42068a0af5e3fbe9d638",
+  "name" : "系统配置",
+  "type" : "function",
+  "parentId" : "0",
+  "path" : "sys-config",
+  "createTime" : null,
+  "updateTime" : null,
+  "createBy" : null,
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}
