@@ -6,9 +6,12 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.json.JSONUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.ssssssss.magicapi.core.context.RequestEntity;
 import org.ssssssss.magicapi.core.interceptor.ResultProvider;
 import org.ssssssss.magicapi.core.model.JsonBean;
+import org.ssssssss.magicboot.config.LogSwitchConfig;
 import org.ssssssss.magicboot.entity.MagicErrorLog;
 import org.ssssssss.magicboot.service.MagicErrorLogService;
 
@@ -21,8 +24,14 @@ import java.util.Map;
 @Component
 public class ExceptionResultProvider implements ResultProvider {
 
+	private static final Logger log = LoggerFactory.getLogger(ExceptionResultProvider.class);
+
 	@Autowired
 	private MagicErrorLogService magicErrorLogService;
+
+	// 系统配置开关：error-log.enable=false 时不落库（配置页可切，保存即时生效）
+	@Autowired
+	private LogSwitchConfig logSwitchConfig;
 
 	@Override
 	public Object buildResult(RequestEntity requestEntity, int code, String message, Object data) {
@@ -32,15 +41,31 @@ public class ExceptionResultProvider implements ResultProvider {
 
 	@Override
 	public Object buildException(RequestEntity requestEntity, Throwable throwable) {
-		// 记录错误日志到数据库
-		String errorLogId = saveErrorLog(requestEntity, throwable);
+		// 记录错误日志到数据库（error-log.enable=false 时跳过，响应不再带错误ID）
+		boolean saveAttempted = false;
+		String errorLogId = null;
+		if (logSwitchConfig.isErrorLogEnabled()) {
+			saveAttempted = true;
+			errorLogId = saveErrorLog(requestEntity, throwable);
+		}
 
 		if(throwable.getCause() instanceof DisableServiceException){
 			return buildResult(requestEntity, 500, "此账号已被临时封禁，请联系管理员");
 		}
 
+		// 落库失败（尝试过且无ID）时返回原始异常信息（空则类名），客户端可诊断；
+		// 不再返回既查不了库也无意义的 ERROR_LOG_SAVE_FAILED 占位符，失败原因由 saveErrorLog 留服务端日志
+		if (errorLogId == null && saveAttempted) {
+			Throwable actualException = throwable.getCause() != null ? throwable.getCause() : throwable;
+			String originalMessage = actualException.getMessage();
+			if (originalMessage == null || originalMessage.trim().isEmpty()) {
+				originalMessage = actualException.getClass().getSimpleName();
+			}
+			return buildResult(requestEntity, 500, "系统内部出现错误: " + originalMessage);
+		}
+
 		// 返回包含错误日志ID的信息
-		String errorMessage = "系统内部出现错误，错误ID: " + errorLogId;
+		String errorMessage = errorLogId != null ? "系统内部出现错误，错误ID: " + errorLogId : "系统内部出现错误";
 		return buildResult(requestEntity, 500, errorMessage, errorLogId);
 	}
 
@@ -57,7 +82,11 @@ public class ExceptionResultProvider implements ResultProvider {
 
 			// 请求信息
 			if (requestEntity.getApiInfo() != null) {
-				errorLog.setRequestPath(requestEntity.getApiInfo().getPath());
+				// 2026-10-21 改因：记录完整请求 URI（含分组前缀，如 /api/location/batch-epc/bind），
+				// 脚本段路径在多分组下定位困难；与访问日志（magic_access_log）口径一致
+				errorLog.setRequestPath(requestEntity.getRequest() != null
+						? requestEntity.getRequest().getRequestURI()
+						: requestEntity.getApiInfo().getPath());
 				errorLog.setRequestMethod(requestEntity.getApiInfo().getMethod());
 			}
 
@@ -134,8 +163,9 @@ public class ExceptionResultProvider implements ResultProvider {
 
 			return errorLogId;
 		} catch (Exception e) {
-			// 如果保存日志失败，返回一个默认ID
-			return "ERROR_LOG_SAVE_FAILED";
+			// 落库失败必须留服务端日志（否则无法排查），返回 null 由调用方改走原始异常信息分支
+			log.error("保存错误日志到数据库失败", e);
+			return null;
 		}
 	}
 }

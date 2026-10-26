@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "7953230a18d442449d373a48b0ff3e35",
+  "name" : "错误日志",
+  "type" : "api",
+  "parentId" : "57e460bde8674929a0b7abc6ed21fa26",
+  "path" : "/error-log",
+  "createTime" : null,
+  "updateTime" : null,
+  "createBy" : null,
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

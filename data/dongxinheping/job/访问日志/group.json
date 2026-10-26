@@ -1,0 +1,14 @@
+{
+  "properties": {},
+  "id": "773f68957add4b70ad062f67fc2cd0df",
+  "name": "访问日志",
+  "type": "job",
+  "parentId": "0",
+  "path": "/access-log",
+  "createTime": null,
+  "updateTime": null,
+  "createBy": null,
+  "updateBy": null,
+  "paths": [],
+  "options": []
+}

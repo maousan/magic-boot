@@ -1,0 +1,14 @@
+{
+  "properties" : { },
+  "id" : "bb5ffce7c9a74a6a962e38a8e12b7262",
+  "name" : "访问日志",
+  "type" : "api",
+  "parentId" : "57e460bde8674929a0b7abc6ed21fa26",
+  "path" : "/access-log",
+  "createTime" : null,
+  "updateTime" : null,
+  "createBy" : null,
+  "updateBy" : null,
+  "paths" : [ ],
+  "options" : [ ]
+}

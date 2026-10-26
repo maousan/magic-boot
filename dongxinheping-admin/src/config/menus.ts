@@ -36,6 +36,8 @@ export const menuNodes: MenuNode[] = [
     { label: '角色管理', key: 'RoleManagement' },
     { label: '菜单权限', key: 'MenuPermission' },
     { label: '系统配置', key: 'SystemConfig' },
+    { label: '访问日志', key: 'AccessLog' },
+    { label: '错误日志', key: 'ErrorLog' },
     { label: 'App 版本管理', key: 'AppVersion' },
     { label: 'App 运行日志', key: 'AppDeviceLog' },
     { label: '系统授权', key: 'SystemLicense' },

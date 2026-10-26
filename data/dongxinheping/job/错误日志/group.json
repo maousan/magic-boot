@@ -1,0 +1,14 @@
+{
+  "properties": {},
+  "id": "307cb79bb76f4a0f9002fd494767a2aa",
+  "name": "错误日志",
+  "type": "job",
+  "parentId": "0",
+  "path": "/error-log",
+  "createTime": null,
+  "updateTime": null,
+  "createBy": null,
+  "updateBy": null,
+  "paths": [],
+  "options": []
+}
