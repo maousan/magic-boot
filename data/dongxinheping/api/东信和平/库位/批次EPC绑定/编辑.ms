@@ -23,6 +23,7 @@
 }
 ================================
 import log
+import '@/sys-config/getValue' as getSysConfig
 
 let id = body.id
 let batchId = body.batchId
@@ -72,6 +73,20 @@ let epcConflict = db.select("""
 """, {id: id, epc: epc})
 if(epcConflict != null && epcConflict.size() > 0){
     exit 400, 'EPC已绑定其他记录'
+}
+
+// 2026-10-21 新增：严格1箱1标配置存 sys_configure（key: batch-epc.strict-one-label，值 true/false，无记录视为 false=一箱多标）
+// 开启后编辑落到的批次已有其它记录（非本条）时拒绝
+// 2026-10-21 改因：配置读取改走 getSysConfig 函数（进程内 60s TTL 缓存，系统配置页保存后即时刷新），避免每次编辑直查配置表
+// let strictOne = db.selectValue("select configure_value from sys_configure where configure_key = 'batch-epc.strict-one-label' and is_del = 0")
+let strictOne = getSysConfig('batch-epc.strict-one-label', false)
+if((strictOne + '') == 'true'){
+    let boxOthers = db.select("""
+        select id, epc from t_batch_epc where status = 1 and batch_id = #{batchId} and epc != #{epc} and id != #{id}
+    """, { batchId: batchId, epc: epc, id: id })
+    if(boxOthers != null && boxOthers.size() > 0){
+        exit 400, '严格1箱1标模式：该批次已绑定其它EPC ' + boxOthers.get(0).epc
+    }
 }
 
 // batchId 格式为 locationId_sku_lotNo（locationId、sku 不含下划线），同步维护三个拆分列；

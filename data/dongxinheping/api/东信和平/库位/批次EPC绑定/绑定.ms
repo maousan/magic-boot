@@ -37,6 +37,7 @@
 import log
 import cn.hutool.core.util.IdUtil
 import '@/utils/parseLot' as parseLot
+import '@/sys-config/getValue' as getSysConfig
 
 let locationId = body.locationId
 let raw = body.batchId
@@ -114,6 +115,20 @@ if(epcRow != null && epcRow.batchId == batchId){
         sku: epcRow.sku,
         lotNo: epcRow.lotNo,
         bindTime: db.selectValue("select bind_time from t_batch_epc where id = #{id}", {id: epcRow.id})
+    }
+}
+
+// 2026-10-21 新增：严格1箱1标配置存 sys_configure（key: batch-epc.strict-one-label，值 true/false，无记录视为 false=一箱多标）
+// 开启后该批次已绑其它活跃 EPC 时拒绝——插新行与 EPC 改绑到该批次共用此拦截
+// 2026-10-21 改因：配置读取改走 getSysConfig 函数（进程内 60s TTL 缓存，系统配置页保存后即时刷新），避免每次绑定直查配置表
+// let strictOne = db.selectValue("select configure_value from sys_configure where configure_key = 'batch-epc.strict-one-label' and is_del = 0")
+let strictOne = getSysConfig('batch-epc.strict-one-label', false)
+if((strictOne + '') == 'true'){
+    let boxOthers = db.select("""
+        select id, epc from t_batch_epc where status = 1 and batch_id = #{batchId} and epc != #{epc}
+    """, { batchId: batchId, epc: epc })
+    if(boxOthers != null && boxOthers.size() > 0){
+        exit 400, '严格1箱1标模式：该批次已绑定其它EPC ' + boxOthers.get(0).epc
     }
 }
 
