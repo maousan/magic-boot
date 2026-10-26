@@ -36,7 +36,9 @@ const maxPages = 7
 const placeholderData = {}
 // const dataFields = ['warehouseId', 'sku', 'lotAtt09', 'qty', 'qtyAllocated', 'qtyPa', 'editTime']
 // 2026-10-15 stgFlag 补入占位清单：行数变少时高位 stgFlag_N 不在报文中、AIMS 合并保留旧值，靠占位空串清理
-const dataFields = ['warehouseId', 'sku', 'lotAtt09', 'qty', 'qtyAllocated', 'qtyPa', 'editTime', 'stgFlag']
+// 2026-10-21 userDefine3 补入占位清单：开始下发 user_define3，高位槽同样需要空串清理防残留
+// 2026-10-21 userDefine1 补入占位清单：job/按库位更新标签均下发 userDefine1，此前漏登记致高位槽无空串清理（同 stgFlag 残留问题）
+const dataFields = ['warehouseId', 'sku', 'lotAtt09', 'qty', 'qtyAllocated', 'qtyPa', 'editTime', 'stgFlag', 'userDefine1', 'userDefine3']
 var slotIdx = 1
 while(slotIdx <= batchSize * maxPages){
     for(fieldName in dataFields){

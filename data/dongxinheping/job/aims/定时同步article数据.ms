@@ -171,7 +171,8 @@ let appendInventoryRowsToArticleData = (articleItem, inventoryRows, pageIndex) =
         putIndexedField(articleItem.data, 'stgFlag', pageIndex, rowIndex, row.stgFlag)
         putIndexedField(articleItem.data, 'userDefine1', pageIndex, rowIndex, row.userDefine1)
         // putIndexedField(articleItem.data, 'userDefine2', pageIndex, rowIndex, valueOf(row, 'user_define2', 'userDefine2'))
-        // putIndexedField(articleItem.data, 'userDefine3', pageIndex, rowIndex, valueOf(row, 'user_define3', 'userDefine3'))
+        // 2026-10-21 开始下发 user_define3（裸值透传；空值靠占位模板空串清理高位槽）
+        putIndexedField(articleItem.data, 'userDefine3', pageIndex, rowIndex, valueOf(row, 'user_define3', 'userDefine3'))
         // putIndexedField(articleItem.data, 'userDefine4', pageIndex, rowIndex, valueOf(row, 'user_define4', 'userDefine4'))
         // putIndexedField(articleItem.data, 'userDefine5', pageIndex, rowIndex, valueOf(row, 'user_define5', 'userDefine5'))
         rowIndex = rowIndex + 1

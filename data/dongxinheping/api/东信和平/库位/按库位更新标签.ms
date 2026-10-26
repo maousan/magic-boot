@@ -162,7 +162,8 @@ while(pageIndex <= maxPages){
         // 2026-10-15 对齐生产口径：userDefine1 归一 1/0 下发（原注释未下发）
         putIndexedField(articleItem.data, 'userDefine1', pageIndex, rowIndex, row.userDefine1)
         // putIndexedField(articleItem.data, 'userDefine2', pageIndex, rowIndex, row.userDefine2)
-        // putIndexedField(articleItem.data, 'userDefine3', pageIndex, rowIndex, row.userDefine3)
+        // 2026-10-21 开始下发 user_define3（裸值透传；空值靠占位模板空串清理高位槽），与定时同步任务口径一致
+        putIndexedField(articleItem.data, 'userDefine3', pageIndex, rowIndex, row.userDefine3)
         // putIndexedField(articleItem.data, 'userDefine4', pageIndex, rowIndex, row.userDefine4)
         // putIndexedField(articleItem.data, 'userDefine5', pageIndex, rowIndex, row.userDefine5)
         rowIndex = rowIndex + 1

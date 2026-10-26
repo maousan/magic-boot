@@ -96,7 +96,8 @@
 ================================
 let sql = """
     select warehouse_id, location_id, sku, lot_att09,
-           qty, qty_allocated, qty_pa, edit_time, update_time
+           qty, qty_allocated, qty_pa, edit_time, update_time,
+           user_define3
     from t_inventory
     <where>
     <if test="warehouseId != null and warehouseId != ''">

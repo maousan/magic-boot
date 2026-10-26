@@ -129,6 +129,7 @@ export interface InventoryItem {
   qtyPa: number
   editTime: string
   updateTime: string
+  userDefine3?: string | null
 }
 
 // 通用分页响应

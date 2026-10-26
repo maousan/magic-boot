@@ -193,6 +193,8 @@ const columns: DataTableColumns<InventoryItem> = [
   { title: '仓库ID', key: 'warehouseId', width: 120 },
   { title: '库位码', key: 'locationId', width: 180 },
   { title: '产品代码', key: 'sku', width: 180 },
+  // 2026-10-21 新增：产品描述 = t_inventory.user_define3（与 AIMS 下发的 userDefine3 同源）
+  { title: '产品描述', key: 'userDefine3', width: 200, ellipsis: { tooltip: { contentStyle: { maxWidth: '420px', whiteSpace: 'pre-wrap' } } }, render: (row) => row.userDefine3 || '-' },
   { title: '批次号', key: 'lotAtt09', width: 120 },
   { title: '库存数量', key: 'qty', width: 100, align: 'right' },
   { title: '待拣货数量', key: 'qtyAllocated', width: 100, align: 'right' },
