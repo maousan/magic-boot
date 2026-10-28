@@ -86,6 +86,9 @@ let sql = """
     <if test="sku != null and sku != ''">
     and sku like concat('%', #{sku}, '%')
     </if>
+    <if test="materialName != null and materialName != ''">
+    and material_name like concat('%', #{materialName}, '%')
+    </if>
     <if test="lotNo != null and lotNo != ''">
     and lot_no like concat('%', #{lotNo}, '%')
     </if>

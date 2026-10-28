@@ -13,6 +13,7 @@
       <n-space :size="12" class="table-page-toolbar">
         <n-input v-model:value="searchLocationId" placeholder="库位号" clearable style="width: 140px" @keyup.enter="fetchData" />
         <n-input v-model:value="searchSku" placeholder="物料编码" clearable style="width: 170px" @keyup.enter="fetchData" />
+        <n-input v-model:value="searchMaterialName" placeholder="物料名称" clearable style="width: 200px" @keyup.enter="fetchData" />
         <n-input v-model:value="searchLotNo" placeholder="批次号" clearable style="width: 220px" @keyup.enter="fetchData" />
         <n-input v-model:value="searchEpc" placeholder="EPC" clearable style="width: 220px" @keyup.enter="fetchData" />
         <n-select
@@ -118,6 +119,7 @@ const showUnbind = ref(false)
 const searchStatus = ref<number | null>(null)
 const searchLocationId = ref('')
 const searchSku = ref('')
+const searchMaterialName = ref('')
 const searchLotNo = ref('')
 const searchEpc = ref('')
 const unbindTarget = ref<BatchEpcBinding | null>(null)
@@ -214,6 +216,7 @@ async function fetchData() {
       status: searchStatus.value ?? undefined,
       locationId: searchLocationId.value || undefined,
       sku: searchSku.value || undefined,
+      materialName: searchMaterialName.value || undefined,
       lotNo: searchLotNo.value || undefined,
       epc: searchEpc.value || undefined,
     })
